@@ -12,7 +12,7 @@ class User(AbstractUser):
     # UUID 기본키. 새로운 사용자가 생성될 때마다 고유한 UUID 자동 할당
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  
     
-    username = models.CharField(max_length=150)
+    username = None
     email = models.EmailField(_('email address'), unique=True)
     login_type = models.CharField(max_length=10, choices=[('general', 'General'), ('social', 'Social')], default='general')
     provider = models.CharField(max_length=50, null=True, blank=True)
@@ -27,7 +27,7 @@ class User(AbstractUser):
     last_login = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = []
 
     objects = UserManager()
 
