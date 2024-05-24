@@ -39,7 +39,31 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # 앱 추가
     'accounts',
+    # 설치한 라이브러리들
+    'rest_framework',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'dj_rest_auth.registration',
 ]
+
+# dj-rest-auth
+REST_USE_JWT = True             # JWT 사용 여부
+JWT_AUTH_COOKIE = 'my-app-auth' # 호출할 Cookie Key값
+JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'  # Refresh Token Cookie Key 값 (사용하는 경우)
+
+#django-allauth
+SITE_ID = 1                                 # 해당 도메인의 id (django_site 테이블의 id)
+ACCOUNT_UNIQUE_EMAIL = True                 # User email unique 사용 여부
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username' # User username 필드
+ACCOUNT_USERNAME_REQUIRED = True            # User username 필수 여부
+ACCOUNT_EMAIL_REQUIRED = True               # 이메일 필수 여부
+ACCOUNT_AUTHENTICATION_METHOD = 'email'     # 로그인 인증 수단 ('username', 'email', 'username_email' 중 선택)
+ACCOUNT_EMAIL_VERIFICATION = 'none'         # 이메일 인증 필수 여부 ('none', 'optional', 'mandatory' 중 선택)
+# 이메일 인증은 추후 mandatory로 바꿀 예정
 
 AUTH_USER_MODEL = 'accounts.User' # 사용할 User 모델 선언
 
