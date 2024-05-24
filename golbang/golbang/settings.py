@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from datetime import datetime, timedelta
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-e3!-^7za-g978%j$)_ukfo2*f%i!r))ch(qet1c_^kki@uug&w'
+SECRET_KEY = os.environ.get("SECRET_KEY") # 환경변수를 사용할 파일
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -38,17 +39,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
     # 앱 추가
     'accounts',
     # 설치한 라이브러리들
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
     'dj_rest_auth',
-    'django.contrib.sites',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google', # 구글 소셜로그인
     'dj_rest_auth.registration',
+    'django_extensions',
 ]
 
 # dj-rest-auth
@@ -106,6 +110,28 @@ SIMPLE_JWT = {
 }
 
 
+# 구글 소셜 로그인 관련 설정
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    }
+}
+
+AUTHENTICATION_BACKENDS = (
+	# Needed to login by username in Django admin, regardless of 'allauth'
+	'django.contrib.auth.backends.ModelBackend',
+
+	# 'allauth' specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -130,6 +156,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                #'allauth.account.context_processors.account',
+                #'allauth.socialaccount.context_processors.socialaccount',
             ],
         },
     },
