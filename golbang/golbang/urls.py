@@ -10,7 +10,6 @@ registry.register(provider.GoogleProvider)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('golbang/accounts/v1/', include('accounts.urls')),
+    path('accounts/', include('accounts.urls')),
     path('accounts/', include('allauth.urls')),
-    #path('golbang/accounts/v2/', include('allauth.urls')),
 ]

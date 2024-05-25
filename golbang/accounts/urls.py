@@ -1,11 +1,19 @@
 # accounts/urls.py
 
 from django.urls import path, include
+from accounts import views
 
 urlpatterns = [
     path('', include('dj_rest_auth.urls')), # 로그인
     path('registration/', include('dj_rest_auth.registration.urls')), # 회원가입
+
+    # 구글 소셜로그인
+    path('google/login/', views.google_login, name='google_login'),
+    path('google/callback/', views.google_callback, name='google_callback'),
+    path('google/login/finish/', views.GoogleLogin.as_view(), name='google_login_todjango'),
 ]
+
+
 
 '''
 dj_rest_auth을 사용하는 경우, 아래 url을 모두 사용할 수 있다.
