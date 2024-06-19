@@ -9,7 +9,7 @@ from .models import *
 from allauth.socialaccount.models import SocialAccount
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from .form import UserProfileForm
+# from .form import UserProfileForm
 
 from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
@@ -275,17 +275,17 @@ class GoogleLogin(SocialLoginView):
 
 
 
-@login_required
-def complete_profile(request):
-    if request.method == 'POST':
-        form = UserProfileForm(request.POST, instance=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('profile')  # 프로필 페이지로 리디렉션
-    else:
-        form = UserProfileForm(instance=request.user)
+# @login_required
+# def complete_profile(request):
+#     if request.method == 'POST':
+#         form = UserProfileForm(request.POST, instance=request.user)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('profile')  # 프로필 페이지로 리디렉션
+#     else:
+#         form = UserProfileForm(instance=request.user)
     
-    return render(request, 'accounts/complete_profile.html', {'form': form})
+#     return render(request, 'accounts/complete_profile.html', {'form': form})
 
     # Redis
     # def increase_views(self):
