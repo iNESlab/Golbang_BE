@@ -2,6 +2,7 @@
 
 from django.urls import path, include
 from accounts import views
+from .views import complete_profile
 
 urlpatterns = [
     path('', include('dj_rest_auth.urls')), # 로그인
@@ -11,6 +12,9 @@ urlpatterns = [
     path('google/login/', views.google_login, name='google_login'),
     path('google/callback/', views.google_callback, name='google_callback'),
     path('google/login/finish/', views.GoogleLogin.as_view(), name='google_login_todjango'),
+
+    path('complete-profile/', complete_profile, name='complete_profile'),
+
 ]
 
 
