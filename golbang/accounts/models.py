@@ -22,13 +22,13 @@ class User(AbstractUser):
 
     full_name = models.CharField("이름", max_length=128, default='Unknown')
     
-    email = models.EmailField(_('email address'), unique=True)
+    email = models.EmailField("이메일주소", unique=True)
     login_type = models.CharField(max_length=10, choices=[('general', 'General'), ('social', 'Social')], default='general')
     provider = models.CharField(max_length=50, null=True, blank=True)
     
     phone_number = models.CharField("전화번호", max_length=20, default="000-000-0000")
     address = models.CharField("거주지 주소", max_length=255, null=True, blank=True)
-    date_of_birth = models.DateField(default=date.today)
+    date_of_birth = models.DateField("생일", default=date.today)
     handicap = models.CharField("핸디캡 정보", max_length=20, default='N/A')
     student_id = models.CharField("학번", max_length=50, null=True, blank=True)
     
@@ -41,13 +41,13 @@ class User(AbstractUser):
     is_active = models.BooleanField(default=True)
 
     USERNAME_FIELD = 'username' 
-    REQUIRED_FIELDS = ['last_name', 'phone_number', 'email', 'address', 'date_of_birth']
+    REQUIRED_FIELDS = ['full_name', 'phone_number', 'email', 'address', 'date_of_birth']
 
     objects = UserManager()
 
     # 객체를 문자열로 표현하는 함수
     def __str__(self):
-        return f"{self.username} / {self.email} / {self.last_name}"
+        return f"{self.username} / {self.email} / {self.full_name}"
         # e.g. "minbory925 / minbory925@email.com / Minjeong"
 
     # 사용자가 특정 권한을 가지고 있는지 여부를 결정

@@ -7,7 +7,7 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.utils.translation import gettext_lazy as _
 
 class UserManager(BaseUserManager):
-    def create_user(self, username, email, password, last_name, phone_number, date_of_birth, **extra_fields):
+    def create_user(self, username, email, password, full_name, phone_number, date_of_birth, **extra_fields):
         if not username:
             raise ValueError("User must have a username")
         if not email:
@@ -15,7 +15,7 @@ class UserManager(BaseUserManager):
         
         user = self.model(
             username = username,
-            last_name = last_name,
+            full_name = full_name,
             email = self.normalize_email(email),
             phone_number = phone_number,
             date_of_birth = date_of_birth,
@@ -27,11 +27,11 @@ class UserManager(BaseUserManager):
         return user
 
     # python manage.py createsuperuser 명령어 입력 시 해당 함수가 사용됨
-    def create_superuser(self, username, last_name, email, phone_number, password, date_of_birth, **extra_fields):
+    def create_superuser(self, username, full_name, email, phone_number, password, date_of_birth, **extra_fields):
         user = self.create_user(
             username = username,
             password = password,
-            last_name = last_name,
+            full_name = full_name,
             email = email,
             phone_number = phone_number,
             date_of_birth = date_of_birth,
