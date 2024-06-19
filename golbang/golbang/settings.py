@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     # 데이터베이스
-    'golbang',
+    # 'golbang_DB',
     # 앱 추가
     'accounts',
     # 설치한 라이브러리들
@@ -187,7 +187,7 @@ WSGI_APPLICATION = 'golbang.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'golbang',
+        'NAME': 'golbang_DB',
         'USER': 'root',
         'PASSWORD': '1234',
         'HOST': 'localhost',
