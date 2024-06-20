@@ -7,7 +7,9 @@ import os
 from rest_framework import status
 from .models import *
 from allauth.socialaccount.models import SocialAccount
-from django.shortcuts import redirect
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+# from .form import UserProfileForm
 
 from dj_rest_auth.registration.views import SocialLoginView
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
@@ -15,6 +17,7 @@ from allauth.socialaccount.providers.google import views as google_view
 
 import json
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +238,7 @@ def google_callback(request):
             return JsonResponse(accept_json)
 
         except SocialAccount.DoesNotExist:
-            # User는 있는데 SocialAccount가 없을 때 (=일반회원으로 가입된 이메일일때)
+            # User는 있는데 SocialAccount가 없을 때 (=일반회원으로 가입된 이메일일때) -> 그래도 새로 만들어지게 해야 함
             return JsonResponse({'err_msg': 'email exists but not social user'}, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
@@ -269,3 +272,36 @@ class GoogleLogin(SocialLoginView):
         except Exception as e:
             logger.exception("Error during Google login")
             return JsonResponse({'err_msg': 'error during Google login', 'exception': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+# @login_required
+# def complete_profile(request):
+#     if request.method == 'POST':
+#         form = UserProfileForm(request.POST, instance=request.user)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('profile')  # 프로필 페이지로 리디렉션
+#     else:
+#         form = UserProfileForm(instance=request.user)
+    
+#     return render(request, 'accounts/complete_profile.html', {'form': form})
+
+    # Redis
+    # def increase_views(self):
+    #     cache_key = f'course_{self.object.id}_views'
+    #     # Redis에 조회수를 저장
+    #     current_views = cache.get(cache_key, self.object.views)
+    #     cache.set(cache_key, current_views + 1)
+
+    # def update_last_update(self):
+    #     last_update_key = f'last_update_{self.object.id}_time'
+    #     last_update_time = cache.get(last_update_key)
+
+    #     if not last_update_time or (timezone.now() - last_update_time).seconds > 300:
+    #         cache_key = f'course_{self.object.id}_views'
+    #         self.object.views = cache.get(cache_key)
+    #         self.object.save()
+
+    #         # Redis에 마지막 업데이트 시간 저장
+    #         cache.set(last_update_key, timezone.now())

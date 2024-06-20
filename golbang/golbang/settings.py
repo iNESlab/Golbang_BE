@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    # 데이터베이스
+    # 'golbang_DB',
     # 앱 추가
     'accounts',
     # 설치한 라이브러리들
@@ -65,8 +67,8 @@ JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'  # Refresh Token Cookie Key 값 (�
 #django-allauth
 SITE_ID = 1                                 # 해당 도메인의 id (django_site 테이블의 id)
 ACCOUNT_UNIQUE_EMAIL = True                 # User email unique 사용 여부
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None    # User username 필드
-ACCOUNT_USERNAME_REQUIRED = False           # User username 필수 여부
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'    # User username 필드
+ACCOUNT_USERNAME_REQUIRED = True           # User username 필수 여부
 ACCOUNT_EMAIL_REQUIRED = True               # 이메일 필수 여부
 ACCOUNT_AUTHENTICATION_METHOD = 'email'     # 로그인 인증 수단 ('username', 'email', 'username_email' 중 선택)
 ACCOUNT_EMAIL_VERIFICATION = 'none'         # 이메일 인증 필수 여부 ('none', 'optional', 'mandatory' 중 선택)
@@ -175,10 +177,21 @@ WSGI_APPLICATION = 'golbang.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'golbang_DB',
+        'USER': 'root',
+        'PASSWORD': '1234',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
 
