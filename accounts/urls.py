@@ -9,10 +9,14 @@ accounts/urls.py
 '''
 
 from django.urls import path
+from auth.api import LoginApi, RefreshJWTToken, LogoutApi
 from . import views
 
 urlpatterns = [
-    path('signup/', views.signup, name='signup'),  # 회원가입 엔드포인트
-    path('login/', views.login, name='login'),     # 로그인 엔드포인트
-    path('logout/', views.logout, name='logout'),  # 로그아웃 엔드포인트
+    path('signup/', views.signup, name='signup'),           # 회원가입 엔드포인트
+    # path('login/', views.login, name='login'),       # 로그인 엔드포인트
+    # path('logout/', views.logout, name='logout'),    # 로그아웃 엔드포인트
+    path('login/', LoginApi.as_view(), name='login'),       # 로그인 엔드포인트
+    path('logout/', LogoutApi.as_view(), name='logout'),    # 로그아웃 엔드포인트
+    path('refresh/', RefreshJWTToken.as_view(), name='refresh_token'),  # 토큰 갱신 엔드포인트
 ]

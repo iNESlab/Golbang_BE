@@ -90,8 +90,9 @@ def generate_access_token(user):
     # JWT 토큰을 생성
     access_token = jwt.encode(
         access_token_payload,
-        settings.SECRET_KEY, algorithm='HS256'
-    ).decode('utf-8')
+        settings.SECRET_KEY, 
+        algorithm='HS256'
+    )
     
     return access_token # 생성된 액세스 토큰 반환
 
@@ -107,8 +108,9 @@ def generate_refresh_token(user):
     # JWT 리프레시 토큰을 생성
     refresh_token = jwt.encode(
         refresh_token_payload,
-        settings.REFRESH_TOKEN_SECRET, algorithm='HS256'
-    ).decode('utf-8')
+        settings.REFRESH_TOKEN_SECRET, 
+        algorithm='HS256'
+    )
     
     return refresh_token # 생성된 리프레시 토큰 반환
 

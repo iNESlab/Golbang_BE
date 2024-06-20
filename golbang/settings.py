@@ -32,6 +32,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY') # 환경변수를 사용할 파일
+REFRESH_TOKEN_SECRET = env('REFRESH_TOKEN_SECRET') 
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -77,11 +78,23 @@ REST_USE_JWT = True
 
 SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=0, minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
 }
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',  # 클라이언트의 도메인 추가
+]
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:8000',  # 클라이언트의 도메인 추가
+]
+
+# CSRF 설정
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

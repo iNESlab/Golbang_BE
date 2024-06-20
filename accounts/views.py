@@ -15,7 +15,8 @@ from rest_framework.response import Response                        # API 응답
 from rest_framework_simplejwt.tokens import RefreshToken            # JWT 토큰 생성
 from django.contrib.auth import authenticate                        # 자격 증명으로 사용자 인증
 from django.contrib.auth.models import update_last_login            # 마지막으로 로그인한 시간 업데이트
-from accounts.serializers import UserSerializer                     # 사용자 모델의 직렬화 및 역직렬화 처리
+from accounts.serializers import UserSerializer
+from auth.authenticate import jwt_login                     # 사용자 모델의 직렬화 및 역직렬화 처리
 
 # 회원가입
 @api_view(['POST']) # 유저 데이터 생성
@@ -37,22 +38,37 @@ def login(request):
     email = request.data.get('email')
     password = request.data.get('password')
 
+    # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
+    if (email is None) or (password is None):
+        return Response({
+            "message": "email/password required"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
     user = authenticate(email=email, password=password) # 이메일과 비밀번호를 사용하여 사용자 인증. (유효하지 않을 경우, 'None'이 반환됨)
     
     # 인증에 실패한 경우, 401 Unauthorized 응답을 반환
     if user is None:
-        return Response({'message': '아이디 또는 비밀번호가 일치하지 않습니다.'}, status=status.HTTP_401_UNAUTHORIZED)
-
+        return Response({
+            'message': '아이디 또는 비밀번호가 일치하지 않습니다.'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    ## 비밀번호가 일치하지 않는 경우 -> 400 bad request응답
+    if not user.check_password(password):
+        return Response({
+            "message": "비밀번호가 일치하지 않습니다"
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
     # 인증에 성공할 경우, 
-    refresh = RefreshToken.for_user(user)   # 새 JWT 리프레시 토큰 생성
+    # refresh = RefreshToken.for_user(user)   # 새 JWT 리프레시 토큰 생성
     update_last_login(None, user)           # 마지막 로그인 시간 업데이트
 
-    # 새로 생성된 리프레시 토큰과 액세스 토큰을 포함하여 200 OK 반환
-    return Response({
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-    }, status=status.HTTP_200_OK)
+    # # 새로 생성된 리프레시 토큰과 액세스 토큰을 포함하여 200 OK 반환
+    # return Response({
+    #     'refresh': str(refresh),
+    #     'access': str(refresh.access_token),
+    # }, status=status.HTTP_200_OK)
 
+    response = Response(status=status.HTTP_200_OK)  # 200 OK 응답 객체 생성하여
+    return jwt_login(response, user)                # jwt_login 함수 호출하면서 응답객체에 토큰 설정하고 반환
 
 # 로그아웃
 @api_view(['POST'])
