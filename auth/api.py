@@ -12,7 +12,7 @@ import jwt
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response    # API의 응답
-from django.contrib.auth import get_user_model  # 현재 활성화된 사용자 모델
+from django.contrib.auth import get_user_model, authenticate  # 현재 활성화된 사용자 모델, 인증
 from django.conf import settings                # Django 프로젝트의 설정 파일
 from django.utils.decorators import method_decorator    # 클래스 기반 뷰애 데코레이터 적용하기 위한 함수형 데코레이터
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie  # CSRF 보호를 위한 데코레이터
@@ -34,18 +34,19 @@ class LoginApi(APIView):
         이메일과 비밀번호를 통해 로그인 시도
         key값 : email, password
         '''
-        # 요청 데이터로부터 이메일과 비밀번호 가져옴
-        email = request.data.get('email')
+        # 요청 데이터로부터 이메일 또는 아이디가 들어간 username필드와 비밀번호 가져옴
+        username_or_email = request.data.get('username')
         password = request.data.get('password')
         
         # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
-        if (email is None) or (password is None):
+        if (username_or_email is None) or (password is None):
             return Response({
-                "message": "email/password required"
+                "message": "username/email and password required"
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 주어진 이메일로 사용자 조회
-        user = User.objects.filter(email=email).first()
+        # 사용자 인증
+        user = authenticate(username=username_or_email, password=password)
+
         ## 사용자가 없는 경우 -> 404 not found 응답
         if user is None:
             return Response({

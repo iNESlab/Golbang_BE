@@ -125,6 +125,13 @@ TEMPLATES = [
     },
 ]
 
+# django가 사용자 인증을 위해 사용할 백엔드 정의
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',    # 기본 Django 인증 백엔드 (세션 기반 인증 시스템)
+    'auth.authenticate.EmailorUsernameAuthBackend', # 사용자 정의 인증 백엔드 (직접 정의 / 이메일 or 사용자 아이디를 사용해서 인증)
+)
+
+
 WSGI_APPLICATION = 'golbang.wsgi.application'
 
 

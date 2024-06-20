@@ -12,12 +12,37 @@ from rest_framework.authentication import BaseAuthentication, CSRFCheck # DRF �
 from django.conf import settings                # django 설정 파일
 from django.contrib.auth import get_user_model  # 현재 활성화된 사용자 모델
 import datetime
+from django.contrib.auth import backends
+from django.db.models import Q
+
 
 User = get_user_model()
 
 '''
 DRF의 인증 클래스와 함께 사용되어 요청의 JWT 토큰을 검증하는 클래스
 '''
+class EmailorUsernameAuthBackend(backends.ModelBackend):
+    def authenticate(self, request, username=None, password=None, **kwargs):
+        if username is None:
+            username = kwargs.get(User.USERNAME_FIELD)
+        if username is None or password is None:
+            return None
+        try:
+            user = User.objects.get(
+                Q(userId__exact=username) |  # userId 필드를 사용
+                Q(email__exact=username)
+            )
+            if user.check_password(password) and self.user_can_authenticate(user):
+                return user
+        except User.DoesNotExist:
+            return None
+
+    def get_user(self, user_id):
+        try:
+            return User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return None
+
 class SafeJWTAuthentication(BaseAuthentication): # BaseAuthentication을 상속받아 JWT 인증 클래스를 정의
     # 요청(request)에서 인증 정보를 확인하는 함수
     def authenticate(self, request):
