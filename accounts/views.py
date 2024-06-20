@@ -1,83 +1,61 @@
 '''
-MVP demo ver 0.0.1
-2024.06.19
+MVP demo ver 0.0.2
+2024.06.20
 accounts/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리
 현재 기능:
-- 회원가입, 로그인, 로그아웃
+- 회원가입
 '''
 
 from rest_framework import status                                   # HTTP 응답 상태 코드를 제공하는 모듈
 from rest_framework.decorators import api_view, permission_classes  # 함수기반 API 뷰, 뷰에 대한 접근 권한
-from rest_framework.permissions import AllowAny, IsAuthenticated  # 권한 클래스
+from rest_framework.permissions import AllowAny  # 권한 클래스
 from rest_framework.response import Response                        # API 응답 생성 
-from rest_framework_simplejwt.tokens import RefreshToken            # JWT 토큰 생성
-from django.contrib.auth import authenticate                        # 자격 증명으로 사용자 인증
-from django.contrib.auth.models import update_last_login            # 마지막으로 로그인한 시간 업데이트
 from accounts.serializers import UserSerializer
-from auth.authenticate import jwt_login                     # 사용자 모델의 직렬화 및 역직렬화 처리
+from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
+from django.contrib.auth import get_user_model
 
-# 회원가입
+User = get_user_model()
+
+
+# 회원가입 step 1 
 @api_view(['POST']) # 유저 데이터 생성
 @permission_classes([AllowAny]) # 누구나 접근 가능
-def signup(request):
-    serializer = UserSerializer(data=request.data) # 요청 데이터를 이용해 UserSerializer 객체 생성
+def signup_first_step(request):
+    form = UserCreationFirstStepForm(data=request.data)
+    if form.is_valid():
+        user = form.save(commit=False)
+        user.set_password(form.cleaned_data["password1"])
+        user.save()
+        return Response({"message": "First step completed successfully", "user_id": user.id}, status=status.HTTP_201_CREATED)
+    else:
+        return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+# def signup(request):
+#     serializer = UserSerializer(data=request.data) # 요청 데이터를 이용해 UserSerializer 객체 생성
     
-    if serializer.is_valid(raise_exception=True):   # 직렬화된 데이터 유효성 검증 (유효하지 않은 경우, 예외 발생 -> 404 Bad Request 응답 반환)
-        user = serializer.save()                    # 유효한 데이터를 저장하여 새로운 사용자 객체를 생성
-        user.set_password(request.data.get('password')) # password는 해시화하여 저장
-        user.save() # 객체를 DB에 저장
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+#     if serializer.is_valid(raise_exception=True):   # 직렬화된 데이터 유효성 검증 (유효하지 않은 경우, 예외 발생 -> 404 Bad Request 응답 반환)
+#         user = serializer.save()                    # 유효한 데이터를 저장하여 새로운 사용자 객체를 생성
+#         user.set_password(request.data.get('password')) # password는 해시화하여 저장
+#         user.save() # 객체를 DB에 저장
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-# 로그인
-@api_view(['POST']) # 로그인 자격 증명 확인
-@permission_classes([AllowAny]) # 누구나 접근 가능
-def login(request):
-    # 이메일과 비밀번호를 가져옴
-    email = request.data.get('email')
-    password = request.data.get('password')
-
-    # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
-    if (email is None) or (password is None):
-        return Response({
-            "message": "email/password required"
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    user = authenticate(email=email, password=password) # 이메일과 비밀번호를 사용하여 사용자 인증. (유효하지 않을 경우, 'None'이 반환됨)
-    
-    # 인증에 실패한 경우, 401 Unauthorized 응답을 반환
-    if user is None:
-        return Response({
-            'message': '아이디 또는 비밀번호가 일치하지 않습니다.'
-        }, status=status.HTTP_401_UNAUTHORIZED)
-    ## 비밀번호가 일치하지 않는 경우 -> 400 bad request응답
-    if not user.check_password(password):
-        return Response({
-            "message": "비밀번호가 일치하지 않습니다"
-        }, status=status.HTTP_400_BAD_REQUEST)
-        
-    # 인증에 성공할 경우, 
-    # refresh = RefreshToken.for_user(user)   # 새 JWT 리프레시 토큰 생성
-    update_last_login(None, user)           # 마지막 로그인 시간 업데이트
-
-    # # 새로 생성된 리프레시 토큰과 액세스 토큰을 포함하여 200 OK 반환
-    # return Response({
-    #     'refresh': str(refresh),
-    #     'access': str(refresh.access_token),
-    # }, status=status.HTTP_200_OK)
-
-    response = Response(status=status.HTTP_200_OK)  # 200 OK 응답 객체 생성하여
-    return jwt_login(response, user)                # jwt_login 함수 호출하면서 응답객체에 토큰 설정하고 반환
-
-# 로그아웃
+# 회원가입 step 2
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) # 권한이 있어야 접근 가능
-def logout(request):
+@permission_classes([AllowAny])
+def signup_second_step(request):
+    user_id = request.data.get('user_id')
+    if not user_id:
+        return Response({"message": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        refresh_token = request.data["refresh"]
-        token = RefreshToken(refresh_token)
-        token.blacklist()
-        return Response(status=status.HTTP_205_RESET_CONTENT)
-    except Exception as e:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    form = UserCreationSecondStepForm(data=request.data, instance=user)
+    if form.is_valid():
+        form.save()
+        return Response({"message": "Second step completed successfully"}, status=status.HTTP_200_OK)
+    else:
+        return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
