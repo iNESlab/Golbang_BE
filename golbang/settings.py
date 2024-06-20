@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # DRF 관련 라이브러리
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist', # 로그아웃을 위한 블랙리스트
 ]
 
 AUTH_USER_MODEL = 'accounts.User' # Custom User Model

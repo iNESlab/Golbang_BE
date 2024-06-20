@@ -5,12 +5,12 @@ accounts/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리
 현재 기능:
-- 회원가입, 로그인
+- 회원가입, 로그인, 로그아웃
 '''
 
 from rest_framework import status                                   # HTTP 응답 상태 코드를 제공하는 모듈
 from rest_framework.decorators import api_view, permission_classes  # 함수기반 API 뷰, 뷰에 대한 접근 권한
-from rest_framework.permissions import AllowAny                     # 권한 클래스 (누구나 접근 가능; 주로 회원가입이나 로그인과 같은 공개 API에 사용)
+from rest_framework.permissions import AllowAny, IsAuthenticated  # 권한 클래스
 from rest_framework.response import Response                        # API 응답 생성 
 from rest_framework_simplejwt.tokens import RefreshToken            # JWT 토큰 생성
 from django.contrib.auth import authenticate                        # 자격 증명으로 사용자 인증
@@ -52,3 +52,16 @@ def login(request):
         'refresh': str(refresh),
         'access': str(refresh.access_token),
     }, status=status.HTTP_200_OK)
+
+
+# 로그아웃
+@api_view(['POST'])
+@permission_classes([IsAuthenticated]) # 권한이 있어야 접근 가능
+def logout(request):
+    try:
+        refresh_token = request.data["refresh"]
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+    except Exception as e:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
