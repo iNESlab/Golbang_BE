@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
 ]
 
+AUTH_USER_MODEL = 'accounts.User' # Custom User Model
+
 # REST framework
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (

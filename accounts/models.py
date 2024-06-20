@@ -21,7 +21,7 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, email, userId, password=None, **extra_fields):
         extra_fields.setdefault('is_admin', True)
-        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
 
         return self.create_user(email, userId, password, **extra_fields)
 
@@ -48,8 +48,7 @@ class User(AbstractBaseUser):
     last_login = models.DateTimeField("최근 접속일", auto_now=True)
 
     # manage
-    is_staff = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=False) # 관리자
     is_active = models.BooleanField(default=True)
 
     objects = UserManager()  # 유저 매니저 설정
