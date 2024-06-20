@@ -1,3 +1,9 @@
+'''
+MVP demo ver 0.0.1
+2024.06.19
+accounts/form.py
+'''
+
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from .models import User

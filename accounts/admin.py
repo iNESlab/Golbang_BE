@@ -1,3 +1,9 @@
+'''
+MVP demo ver 0.0.1
+2024.06.19
+accounts/admin.py
+'''
+
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin

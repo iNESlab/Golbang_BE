@@ -9,6 +9,11 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
+'''
+MVP demo ver 0.0.1
+2024.06.19
+golbang/settings.py
+'''
 
 from datetime import timedelta
 import os

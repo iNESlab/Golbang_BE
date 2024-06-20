@@ -1,3 +1,9 @@
+'''
+MVP demo ver 0.0.1
+2024.06.19
+accounts/apps.py
+'''
+
 from django.apps import AppConfig
 
 

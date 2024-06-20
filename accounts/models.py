@@ -1,3 +1,9 @@
+'''
+MVP demo ver 0.0.1
+2024.06.19
+accounts/models.py
+'''
+
 from django.db import models
 from django.contrib.auth.models import (BaseUserManager, AbstractBaseUser)
 
