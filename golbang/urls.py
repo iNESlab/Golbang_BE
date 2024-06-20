@@ -1,22 +1,18 @@
-"""
-URL configuration for golbang project.
+'''
+MVP demo ver 0.0.1
+2024.06.19
+golbang/urls.py
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+역할: 골방 프로젝트 전체의 엔드포인트 라우팅
+현재 기능:
+- admin
+- accounts
+'''
+
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin.site.urls),            # admin 페이지
+    path('api/user/', include('accounts.urls')),    #  # accounts 앱의 URL 
 ]
