@@ -72,6 +72,3 @@ class User(AbstractBaseUser):
     def is_staff(self):
         # True일 경우, django의 관리자 화면에 로그인할 수 있음
         return self.is_admin 
-    
-    class Meta:
-        db_table = 'user' # 테이블명을 user로 설정
