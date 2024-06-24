@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 '''
-MVP demo ver 0.0.1
-2024.06.19
+MVP demo ver 0.0.3
+2024.06.27
 golbang/settings.py
 '''
 
@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     'accounts',
 
     # ==========
-    # DRF 관련 라이브러리
+    # DRF (Django Rest Framework)
     # ==========
     'rest_framework',
     'rest_framework_simplejwt',
@@ -66,7 +66,7 @@ INSTALLED_APPS = [
     # OAUTH (drf-social-oauth2)
     # ==========
     'oauth2_provider',
-    'social_django',
+    'social_django', # Python social auth django app
     'drf_social_oauth2',
     
 ]
@@ -151,6 +151,7 @@ AUTHENTICATION_BACKENDS = (
     'drf_social_oauth2.backends.DjangoOAuth2',      # 소셜 로그인 인증 백엔드 
 )
 
+# oauth2_settings.DEFAULTS['ACCESS_TOKEN_EXPIRE_SECONDS'] = 1.577e7
 
 WSGI_APPLICATION = 'golbang.wsgi.application'
 
