@@ -50,13 +50,25 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # ==========
     # 애플리케이션
+    # ==========
     'accounts',
 
+    # ==========
     # DRF 관련 라이브러리
+    # ==========
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist', # 로그아웃을 위한 블랙리스트
+
+    # ==========
+    # OAUTH (drf-social-oauth2)
+    # ==========
+    'oauth2_provider',
+    'social_django',
+    'drf_social_oauth2',
+    
 ]
 
 AUTH_USER_MODEL = 'accounts.User' # Custom User Model
@@ -70,6 +82,9 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT를 통한 인증방식 사용
+        #drf-social-oauth2
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
+        'drf_social_oauth2.authentication.SocialAuthentication',
     ),
 }
 
@@ -120,6 +135,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
+                # drf-social-oauth2
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -129,6 +148,7 @@ TEMPLATES = [
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',    # 기본 Django 인증 백엔드 (세션 기반 인증 시스템)
     'auth.authenticate.EmailorUsernameAuthBackend', # 사용자 정의 인증 백엔드 (직접 정의 / 이메일 or 사용자 아이디를 사용해서 인증)
+    'drf_social_oauth2.backends.DjangoOAuth2',      # 소셜 로그인 인증 백엔드 
 )
 
 
