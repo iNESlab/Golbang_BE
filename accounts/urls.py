@@ -1,14 +1,16 @@
 '''
 MVP demo ver 0.0.1
-2024.06.19
+2024.06.27
 accounts/urls.py
 
 역할: accounts 앱 내의 URL API 엔드포인트 설정
 현재 기능:
 - 회원가입, 로그인, 로그아웃
+- 소셜 로그인(구글,)
 '''
 
 from django.urls import path
+from accounts.social_login import GoogleLogin
 from auth.api import LoginApi, RefreshJWTToken, LogoutApi
 from . import views
 
@@ -18,4 +20,6 @@ urlpatterns = [
     path('login/', LoginApi.as_view(), name='login'),       # 로그인 엔드포인트
     path('logout/', LogoutApi.as_view(), name='logout'),    # 로그아웃 엔드포인트
     path('refresh/', RefreshJWTToken.as_view(), name='refresh_token'),  # 토큰 갱신 엔드포인트
-]
+    path('social-login/google/', GoogleLogin.as_view(), name='google_login'),  # 구글 소셜 로그인 엔드포인트 추가
+
+]   
