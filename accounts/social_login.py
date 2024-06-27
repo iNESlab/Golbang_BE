@@ -6,16 +6,25 @@ accounts/social_login.py
 역할: 사용자가 소셜 로그인 시, 사용자 정보를 처리하는 view
 - 코드 가독성과 유지보수성을 높이기 위해 views.py로부터 파일을 분리
 기능:
-- 구글
+- 구글, 네이버
 '''
+from django.conf import settings
 from django.urls import reverse
 import requests
-from django.conf import settings
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 from django.shortcuts import redirect, render
 from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from json import JSONDecodeError
 
 User = get_user_model()
 
+# 구글 로그인
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def google_login(request):
     """
     구글 로그인 URL로 리디렉션
@@ -29,6 +38,8 @@ def google_login(request):
     )
     return redirect(google_auth_url)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def google_callback(request):
     """
     구글 OAuth2 콜백 처리
@@ -57,6 +68,8 @@ def google_callback(request):
     user_info_response = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
     user_info = user_info_response.json()
 
+    print("===GOOGLE USER INFO:", user_info)  # 디버깅을 위한 출력
+
     email = user_info.get("email")
     if not email:
         return redirect('google_login')
@@ -73,21 +86,95 @@ def google_callback(request):
             password=password
         )
         user.save()
-        
+
     # 세션에 사용자 이메일 저장
     request.session['user_email'] = email
 
     # 로그인 후 리디렉션할 뷰로 변경
     return redirect('login_success')
 
-def login_success(request):
+# 네이버 로그인
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def naver_login(request):
     """
-    로그인 성공 페이지 렌더링
+    네이버 로그인 URL로 리디렉션
     """
-    user_email = request.session.get('user_email')
-    if not user_email:
-        return redirect('google_login_test')
+    client_id = settings.SOCIAL_AUTH_NAVER_CLIENT_ID
+    response_type = "code"
+    redirect_uri = request.build_absolute_uri(reverse('naver_callback'))
+    state = settings.STATE
+    url = "https://nid.naver.com/oauth2.0/authorize"
+    return redirect(
+        f'{url}?response_type={response_type}&client_id={client_id}&redirect_uri={redirect_uri}&state={state}'
+    )
 
-    user = User.objects.get(email=user_email)
-    print("로그인 성공: ", user)
-    return render(request, 'login_success.html', {'user': user})
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def naver_callback(request):
+    """
+    네이버 OAuth2 콜백 처리
+    """
+    try:
+        grant_type = 'authorization_code'
+        client_id = settings.SOCIAL_AUTH_NAVER_CLIENT_ID
+        client_secret = settings.SOCIAL_AUTH_NAVER_CLIENT_SECRET
+        code = request.GET.get('code')
+        state = request.GET.get('state')
+
+        parameters = f"grant_type={grant_type}&client_id={client_id}&client_secret={client_secret}&code={code}&state={state}"
+
+        token_request = requests.get(
+            f"https://nid.naver.com/oauth2.0/token?{parameters}"
+        )
+
+        token_response_json = token_request.json()
+        error = token_response_json.get("error", None)
+
+        if error is not None:
+            raise JSONDecodeError(error)
+
+        access_token = token_response_json.get("access_token")
+
+        user_info_request = requests.get(
+            "https://openapi.naver.com/v1/nid/me",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+
+        if user_info_request.status_code != 200:
+            return JsonResponse({"error": "failed to get email"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_info = user_info_request.json().get("response")
+        print("===NAVER USER INFO:", user_info)  # 디버깅을 위한 출력
+
+        email = user_info.get("email")
+
+        if not email:
+            return JsonResponse({
+                "error": "Can't Get Email Information from Naver",
+                "user_info": user_info
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            password = User.objects.make_random_password()
+            user = User.objects.create(
+                email=email,
+                userId=email.split('@')[0],
+                login_type='social',
+                provider='naver',
+                password=password
+            )
+            user.save()
+
+        # 세션에 사용자 이메일 저장
+        request.session['user_email'] = email
+
+        # 로그인 후 리디렉션할 뷰로 변경
+        return redirect('login_success')
+
+    except Exception as e:
+        return JsonResponse({
+            "error": str(e),
+        }, status=status.HTTP_404_NOT_FOUND)

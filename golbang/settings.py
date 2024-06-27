@@ -22,7 +22,6 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 # Take environment variables from .env file
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
@@ -33,6 +32,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY') # 환경변수를 사용할 파일
 REFRESH_TOKEN_SECRET = env('REFRESH_TOKEN_SECRET') 
+
+MAIN_DOMAIN = env('MAIN_DOMAIN')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -165,6 +166,9 @@ AUTHENTICATION_BACKENDS = (
 )
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+STATE = env('STATE')
+
 # Social Oauth2
 ## Google  Social Login 설정
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('SOCIAL_AUTH_GOOGLE_CLIENT_ID') 
@@ -175,8 +179,9 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 ]
 
 ## Naver Social Login 설정
-SOCIAL_AUTH_NAVER_KEY = env('SOCIAL_AUTH_NAVER_CLIENT_ID')
-SOCIAL_AUTH_NAVER_SECRET = env('SOCIAL_AUTH_NAVER_SECRET')
+SOCIAL_AUTH_NAVER_CLIENT_ID = env('SOCIAL_AUTH_NAVER_CLIENT_ID')
+SOCIAL_AUTH_NAVER_CLIENT_SECRET = env('SOCIAL_AUTH_NAVER_SECRET')
+SOCIAL_AUTH_NAVER_REDIRECT_URI = env('NAVER_CALLBACK_URI')
 SOCIAL_AUTH_NAVER_SCOPE = [
     'email',
     'name',
