@@ -155,19 +155,37 @@ AUTHENTICATION_BACKENDS = (
     'auth.authenticate.EmailorUsernameAuthBackend', # 사용자 정의 인증 백엔드 (직접 정의 / 이메일 or 사용자 아이디를 사용해서 인증)
     # drf-social-oauth2
     'drf_social_oauth2.backends.DjangoOAuth2',      # 소셜 로그인 인증 백엔드 
-    # Google Oauth2
+    # Social Oauth2
     'social_core.backends.google.GoogleOAuth2',     # 구글 소셜 로그인 백엔드 추가
-
+    'social_core.backends.naver.NaverOAuth2',       # 네이버 소셜 로그인 백엔드 추가
+    'social_core.backends.kakao.KakaoOAuth2',       # 카카오 소셜 로그인 백엔드 추가
 )
 
-# Google OAUTH2
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('GOOGLE_CLIENT_ID') 
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env('GOOGLE_CLIENT_SECRET')
-
-# 구글 소셜 로그인에서 이메일을 가져오기 위한 설정
+# Social Oauth2
+## Google  Social Login 설정
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('SOCIAL_AUTH_GOOGLE_CLIENT_ID') 
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env('SOCIAL_AUTH_GOOGLE_SECRET')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
+]
+
+## Naver Social Login 설정
+SOCIAL_AUTH_NAVER_KEY = env('SOCIAL_AUTH_NAVER_CLIENT_ID')
+SOCIAL_AUTH_NAVER_SECRET = env('SOCIAL_AUTH_NAVER_SECRET')
+SOCIAL_AUTH_NAVER_SCOPE = [
+    'email',
+    'name',
+    'nickname',
+    'birthday',
+]
+
+# KAKAO 소셜 로그인 설정
+SOCIAL_AUTH_KAKAO_KEY = env('SOCIAL_AUTH_KAKAO_KEY')
+SOCIAL_AUTH_KAKAO_SECRET = env('SOCIAL_AUTH_KAKAO_SECRET')
+SOCIAL_AUTH_KAKAO_SCOPE = [
+    'account_email',
+    'profile_nickname',
 ]
 
 
