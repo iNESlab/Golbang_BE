@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.1
-2024.06.19
+MVP demo ver 0.0.3
+2024.06.27
 accounts/models.py
 '''
 
@@ -20,6 +20,11 @@ class UserManager(BaseUserManager):
             raise ValueError('Users must have a user ID')
         
         email = self.normalize_email(email)
+
+        # 소셜 로그인일 경우 비밀번호 정보가 없기 때문에 따로 처리해준다.
+        if password is None: 
+            password = self.make_random_password()  # 기본 비밀번호 설정
+
         user = self.model(email=email, userId=userId, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -35,7 +40,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser):
     # step 1
     userId = models.CharField("사용자 아이디", unique=True, max_length=150, default='unknown_user')
-    password = models.CharField("비밀번호", max_length=256)
+    password = models.CharField("비밀번호", max_length=256, null=True, blank=True) # # Oauth 로그인을 위해 비밀번호 빈 값 허용
     email = models.EmailField("이메일", unique=True)
     login_type = models.CharField(max_length=10, choices=[('general', 'General'), ('social', 'Social')], default='general')
     provider = models.CharField(max_length=50, null=True, blank=True)

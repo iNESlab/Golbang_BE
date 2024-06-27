@@ -8,6 +8,9 @@ accounts/views.py
 - 회원가입
 '''
 
+from django.conf import settings
+from django.urls import reverse
+import requests
 from rest_framework import status                                   # HTTP 응답 상태 코드를 제공하는 모듈
 from rest_framework.decorators import api_view, permission_classes  # 함수기반 API 뷰, 뷰에 대한 접근 권한
 from rest_framework.permissions import AllowAny  # 권한 클래스
@@ -15,14 +18,17 @@ from rest_framework.response import Response                        # API 응답
 from accounts.serializers import UserSerializer
 from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
 from django.contrib.auth import get_user_model
+from django.shortcuts import redirect, render
 
 User = get_user_model()
-
 
 # 회원가입 step 1 
 @api_view(['POST']) # 유저 데이터 생성
 @permission_classes([AllowAny]) # 누구나 접근 가능
 def signup_first_step(request):
+    """
+    회원가입 첫 단계 - 사용자 기본 정보 입력
+    """
     form = UserCreationFirstStepForm(data=request.data)
     if form.is_valid():
         user = form.save(commit=False)
@@ -44,6 +50,9 @@ def signup_first_step(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup_second_step(request):
+    """
+    회원가입 두 번째 단계 - 추가 정보 입력
+    """
     user_id = request.data.get('user_id')
     if not user_id:
         return Response({"message": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -59,3 +68,10 @@ def signup_second_step(request):
         return Response({"message": "Second step completed successfully"}, status=status.HTTP_200_OK)
     else:
         return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# 소셜 회원가입 & 로그인
+def social_login(request):
+    """
+    소셜 로그인 테스트 페이지 렌더링
+    """
+    return render(request, 'login.html')
