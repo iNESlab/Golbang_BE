@@ -75,7 +75,7 @@ def google_login(request):
     """
     google_client_id = settings.SOCIAL_AUTH_GOOGLE_CLIENT_ID
     # 클라이언트 애플리케이션은 사 사용자를 해당 소셜 로그인 제공자(구글, 네이버, 카카오)의 인증 페이지로 리디렉션한다.
-    redirect_uri = request.build_absolute_uri(reverse('google_callback'))
+    redirect_uri = settings.GOOGLE_CALLBACK_URL
     # 사용자가 로그인하고 인증을 완료하면, 소셜 로그인 제공자는 사전에 등록된 콜백 URL로 사용자를 다시 리디렉션한다.
     google_auth_url = (
         f"https://accounts.google.com/o/oauth2/auth?response_type=code"
@@ -149,7 +149,7 @@ def naver_login(request):
     네이버 로그인 URL로 리디렉션
     """
     naver_client_id = settings.SOCIAL_AUTH_NAVER_CLIENT_ID
-    redirect_uri = request.build_absolute_uri(reverse('naver_callback'))
+    redirect_uri = settings.NAVER_CALLBACK_URL
     state = settings.STATE
     naver_auth_url = (
         f"https://nid.naver.com/oauth2.0/authorize?response_type=code"
@@ -228,7 +228,7 @@ def kakao_login(request):
     카카오 로그인 URL로 리디렉션
     """
     kakao_rest_api_key = settings.SOCIAL_AUTH_KAKAO_CLIENT_ID
-    redirect_uri = request.build_absolute_uri(reverse('kakao_callback'))
+    redirect_uri = settings.KAKAO_CALLBACK_URL
     kakao_auth_url = (
         f"https://kauth.kakao.com/oauth/authorize?response_type=code"
         f"&client_id={kakao_rest_api_key}&redirect_uri={redirect_uri}"
