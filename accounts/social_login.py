@@ -74,7 +74,9 @@ def google_login(request):
     구글 로그인 URL로 리디렉션
     """
     google_client_id = settings.SOCIAL_AUTH_GOOGLE_CLIENT_ID
+    # 클라이언트 애플리케이션은 사 사용자를 해당 소셜 로그인 제공자(구글, 네이버, 카카오)의 인증 페이지로 리디렉션한다.
     redirect_uri = request.build_absolute_uri(reverse('google_callback'))
+    # 사용자가 로그인하고 인증을 완료하면, 소셜 로그인 제공자는 사전에 등록된 콜백 URL로 사용자를 다시 리디렉션한다.
     google_auth_url = (
         f"https://accounts.google.com/o/oauth2/auth?response_type=code"
         f"&client_id={google_client_id}&redirect_uri={redirect_uri}"
@@ -89,10 +91,11 @@ def google_callback(request):
     구글 OAuth2 콜백 처리
     """
     try:
-        code = request.GET.get('code') # 구글에서 반환된 코드 가져옴
+        code = request.GET.get('code') # 구글에서 반환된 인증 코드 추출
         if not code: # 코드가 없으면 로그인 페이지로 리디렉션
             return redirect('google_login')
 
+        # 인증 코드를 사용하여 소셜 로그인 제공자에게 액세스 토큰을 요청
         token_url = "https://oauth2.googleapis.com/token"
         token_data = {
             "code": code,
@@ -104,6 +107,7 @@ def google_callback(request):
         access_token = get_access_token(token_url, token_data)
         
         # user_info_url: 소셜 로그인에서 액세스 토큰을 사용하여 사용자 정보를 가져오는 역할
+        # 액세스 토큰을 사용하여 사용자 정보를 가져온다.
         user_info_url = "https://www.googleapis.com/oauth2/v3/userinfo"
         user_info_response = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
         user_info = user_info_response.json()
@@ -163,6 +167,10 @@ def naver_callback(request):
         code = request.GET.get('code') # 네이버에서 반환된 코드 가져옴
         state = request.GET.get('state')
 
+        if not code: # 코드가 없으면 로그인 페이지로 리디렉션
+            return redirect('naver_login')
+        
+        # 인증 코드를 사용하여 소셜 로그인 제공자에게 액세스 토큰을 요청
         token_url = "https://nid.naver.com/oauth2.0/token"
         token_data = {
             "grant_type": "authorization_code",
@@ -174,6 +182,7 @@ def naver_callback(request):
         access_token = get_access_token(token_url, token_data)  # 액세스 토큰 가져옴
 
         # user_info_url: 소셜 로그인에서 액세스 토큰을 사용하여 사용자 정보를 가져오는 역할
+        # 액세스 토큰을 사용하여 사용자 정보를 가져온다.
         user_info_url = "https://openapi.naver.com/v1/nid/me"
         user_info_response = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
 
@@ -186,13 +195,11 @@ def naver_callback(request):
         print("===NAVER USER INFO===", user_info)
 
         email = user_info.get("email")
-        name = user_info.get("name", "Unknown")
+        name = user_info.get("name", "Unknown") # 이름이 없으면 "Unknown"으로 설정
 
+        # 이메일이 없으면 로그인 페이지로 리디렉션
         if not email:
-            return JsonResponse({
-                "error": "Can't Get Email Information from Naver",
-                "user_info": user_info
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return redirect('naver_login')
 
         try: # 기존 사용자인지 확인
             user = User.objects.get(email=email)
@@ -235,10 +242,11 @@ def kakao_callback(request):
     카카오 OAuth2 콜백 처리
     """
     try:
-        code = request.GET.get('code')
-        if not code:
+        code = request.GET.get('code') # 카카오에서 반환된 인증 코드 추출
+        if not code: # 코드가 없으면 로그인 페이지로 리디렉션
             return redirect('kakao_login')
-
+        
+        # 인증 코드를 사용하여 소셜 로그인 제공자에게 액세스 토큰을 요청
         token_url = "https://kauth.kakao.com/oauth/token"
         token_data = {
             "grant_type": "authorization_code",
@@ -250,6 +258,7 @@ def kakao_callback(request):
         access_token = get_access_token(token_url, token_data) # 액세스 토큰 가져옴
 
         # user_info_url: 소셜 로그인에서 액세스 토큰을 사용하여 사용자 정보를 가져오는 역할
+        # 액세스 토큰을 사용하여 사용자 정보를 가져온다.
         user_info_url = "https://kapi.kakao.com/v2/user/me"
         user_info_response = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
         user_info = user_info_response.json()
@@ -261,11 +270,9 @@ def kakao_callback(request):
         email = kakao_account.get("email")
         nickname = kakao_account.get("profile").get("nickname", "Unknown") # 닉네임이 없으면 "Unknown"으로 설정
 
+        # 이메일이 없으면 로그인 페이지로 리디렉션
         if not email:
-            return JsonResponse({
-                "error": "Can't Get Email Information from Kakao",
-                "user_info": user_info
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return redirect('kakao_login')
 
         try: # 기존 사용자인지 확인
             user = User.objects.get(email=email)
