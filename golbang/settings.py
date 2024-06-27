@@ -131,7 +131,7 @@ ROOT_URLCONF = 'golbang.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -148,6 +148,9 @@ TEMPLATES = [
     },
 ]
 
+# 템플릿 경로 
+TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
+
 # django가 사용자 인증을 위해 사용할 백엔드 정의
 AUTHENTICATION_BACKENDS = (
     # django
@@ -160,7 +163,8 @@ AUTHENTICATION_BACKENDS = (
     'social_core.backends.naver.NaverOAuth2',       # 네이버 소셜 로그인 백엔드 추가
     'social_core.backends.kakao.KakaoOAuth2',       # 카카오 소셜 로그인 백엔드 추가
 )
-
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 # Social Oauth2
 ## Google  Social Login 설정
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('SOCIAL_AUTH_GOOGLE_CLIENT_ID') 
