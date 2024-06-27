@@ -75,3 +75,15 @@ def social_login(request):
     소셜 로그인 테스트 페이지 렌더링
     """
     return render(request, 'login.html')
+
+def login_success(request):
+    """
+    로그인 성공 페이지 렌더링
+    """
+    user_email = request.session.get('user_email')
+    if not user_email:
+        return redirect('social_login')
+
+    user = User.objects.get(email=user_email)
+    print("로그인 성공: ", user)
+    return render(request, 'login_success.html', {'user': user})
