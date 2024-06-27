@@ -10,7 +10,7 @@ accounts/urls.py
 '''
 
 from django.urls import path
-from accounts.social_login import google_callback, google_login, naver_callback, naver_login
+from accounts.social_login import google_callback, google_login, kakao_callback, kakao_login, naver_callback, naver_login
 from .views import signup_first_step, signup_second_step, social_login, login_success
 from auth.api import LoginApi, RefreshJWTToken, LogoutApi
 
@@ -21,16 +21,18 @@ urlpatterns = [
     path('login/', LoginApi.as_view(), name='login'),       # 로그인 엔드포인트
     path('logout/', LogoutApi.as_view(), name='logout'),    # 로그아웃 엔드포인트
     path('refresh/', RefreshJWTToken.as_view(), name='refresh_token'),  # 토큰 갱신 엔드포인트
-    
+    # 소셜 로그인
     path('social-login/', social_login, name='social_login'),
-
+    ## 구글
     path('google-login/', google_login, name='google_login'),
     path('google-callback/', google_callback, name='google_callback'),
-
-    # 네이버 로그인 경로 추가
+    ## 네이버 
     path('naver-login/', naver_login, name='naver_login'),
     path('naver-callback/', naver_callback, name='naver_callback'),
-
+    ## 카카오
+    path('kakao-login/', kakao_login, name='kakao_login'),
+    path('kakao-callback/', kakao_callback, name='kakao_callback'),
+    # 소셜 로그인 성공 엔드포인트
     path('login-success/', login_success, name='login_success'),
 
 ]   
