@@ -150,10 +150,26 @@ TEMPLATES = [
 
 # django가 사용자 인증을 위해 사용할 백엔드 정의
 AUTHENTICATION_BACKENDS = (
+    # django
     'django.contrib.auth.backends.ModelBackend',    # 기본 Django 인증 백엔드 (세션 기반 인증 시스템)
     'auth.authenticate.EmailorUsernameAuthBackend', # 사용자 정의 인증 백엔드 (직접 정의 / 이메일 or 사용자 아이디를 사용해서 인증)
+    # drf-social-oauth2
     'drf_social_oauth2.backends.DjangoOAuth2',      # 소셜 로그인 인증 백엔드 
+    # Google Oauth2
+    'social_core.backends.google.GoogleOAuth2',     # 구글 소셜 로그인 백엔드 추가
+
 )
+
+# Google OAUTH2
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('GOOGLE_CLIENT_ID') 
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env('GOOGLE_CLIENT_SECRET')
+
+# 구글 소셜 로그인에서 이메일을 가져오기 위한 설정
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+
 
 # oauth2_settings.DEFAULTS['ACCESS_TOKEN_EXPIRE_SECONDS'] = 1.577e7
 
