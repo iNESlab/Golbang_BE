@@ -71,6 +71,11 @@ INSTALLED_APPS = [
     'oauth2_provider',
     'social_django', # Python social auth django app
     'drf_social_oauth2',
+
+    # ==========
+    # Cross-Origin Resource Sharing (CORS)
+    # ==========
+    'corsheaders',
     
 ]
 
@@ -116,14 +121,21 @@ SIMPLE_JWT = {
 # CSRF_COOKIE_NAME = 'csrftoken'
 # CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
+CORS_ORIGIN_ALLOW_ALL = True  # 모든 도메인 허용 (개발 중에만)
+# 실제 운영 환경에서는 아래와 같이 특정 도메인만 허용하도록 설정해야 합니다.
+# CORS_ORIGIN_WHITELIST = ['http://localhost:3000', 'https://your-production-domain.com']
+
+CORS_ALLOW_CREDENTIALS = True
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # CORS
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 
