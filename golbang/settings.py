@@ -57,6 +57,7 @@ INSTALLED_APPS = [
 
     # ==========
     # DRF (Django Rest Framework)
+    # - REST API 엔드포인트를 위해 필요하다.
     # ==========
     'rest_framework',
     'rest_framework_simplejwt',
@@ -64,6 +65,7 @@ INSTALLED_APPS = [
 
     # ==========
     # OAUTH (drf-social-oauth2)
+    # - 이메일 비밀번호 및 구글과 페이스북과 같이 소셜로그인을 위한 oauth2 토큰 기반 인증을 가능하게 합
     # ==========
     'oauth2_provider',
     'social_django', # Python social auth django app
@@ -99,17 +101,19 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:8000',  # 클라이언트의 도메인 추가
-]
+# 아래는 필요 없음
+# 일단 주석처리
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://localhost:8000',  # 클라이언트의 도메인 추가
+# ]
 
-CORS_ORIGIN_WHITELIST = [
-    'http://localhost:8000',  # 클라이언트의 도메인 추가
-]
+# CORS_ORIGIN_WHITELIST = [
+#     'http://localhost:8000',  # 클라이언트의 도메인 추가
+# ]
 
-# CSRF 설정
-CSRF_COOKIE_NAME = 'csrftoken'
-CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+# # CSRF 설정
+# CSRF_COOKIE_NAME = 'csrftoken'
+# CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
