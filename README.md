@@ -2,6 +2,62 @@
 
 # Golbang BackEnd
 
+## 사전 준비
+Python version: 3.12.3
+
+## 프로젝트 설정
+
+### 1단계: 저장소 클론
+
+먼저, git을 사용하여 저장소를 로컬 컴퓨터에 클론합니다. 
+
+```sh
+git clone https://github.com/iNESlab/Golbang_BE.git
+cd Golbang_BE
+```
+또는 저장소를 fork 한 후, 개인 저장소에서 클론합니다. 
+
+### 2단계: 가상 환경 생성 (선택 사항)
+종속성을 관리하고 다른 프로젝트와의 충돌을 피하기 위해 가상 환경을 생성하는 것을 권장합니다.
+- Windows:
+``` sh
+python -m venv venv
+venv\Scripts\activate
+```
+
+- macOS/Linux:
+```sh
+python -m venv venv
+source venv/bin/activate
+```
+
+### 3단계: 종속성 설치
+가상 환경을 활성화한 후, requirements.txt 파일에 나열된 종속성을 설치합니다.
+```sh
+pip install -r requirements.txt
+```
+
+### 4단계: 프로젝트 실행
+프로젝트가 잘 실행되는지 확인해보세요!
+```sh
+python manage.py runserver
+```
+
+잘 실행된다면 프로젝트에 기여해주시면 됩니다 :D
+
+### 가상환경 비활성화
+```sh
+deactivate
+```
+
+## 기여
+1. 저장소를 포크하기
+2. 새 브랜치를 생성하기 (git checkout -b feat/branch).
+3. 변경사항을 적용하기
+4. 변경사항을 커밋하기 (git commit -m 'feat: Add some feature'). 커밋할 때는 아래 커밋 컨벤션을 지켜주세요!
+5. 브랜치에 푸시하기 (git push origin feature-branch).
+6. 새 풀 리퀘스트를 생성하기
+
 > **커밋 컨벤션, 브랜치, pull request 꼭 지키기 !**
 > [[git][fork][bash] git bash로 협업하기 - Forking Workflow](https://co-deok.tistory.com/16)
 
