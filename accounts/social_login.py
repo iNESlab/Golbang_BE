@@ -83,6 +83,7 @@ def google_login(request):
         f"&scope=openid%20email%20profile"
     )
     return redirect(google_auth_url) # 구글 로그인 페이지로 리디렉션
+    #return JsonResponse({"auth_url": google_auth_url})
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -132,6 +133,11 @@ def google_callback(request):
         response = Response(status=status.HTTP_200_OK)
         response = jwt_login(response, user) # 기존 사용자라면 JWT 토큰 생성
 
+        # JWT 토큰을 JSON 응답으로 반환
+        # return JsonResponse({
+        #     "access_token": response.data['access_token'],
+        #     "refresh_token": response.data['refresh_token'],
+        # })
         return response
     
     except Exception as e:
@@ -156,6 +162,7 @@ def naver_login(request):
         f"&client_id={naver_client_id}&redirect_uri={redirect_uri}&state={state}"
     )
     return redirect(naver_auth_url)   # 네이버 로그인 페이지로 리디렉션
+    #return JsonResponse({"auth_url": naver_auth_url})
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -234,6 +241,7 @@ def kakao_login(request):
         f"&client_id={kakao_rest_api_key}&redirect_uri={redirect_uri}"
     )
     return redirect(kakao_auth_url) # 카카오 로그인 페이지로 리디렉션
+    #return JsonResponse({"auth_url": kakao_auth_url})
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
