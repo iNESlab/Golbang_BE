@@ -71,6 +71,11 @@ INSTALLED_APPS = [
     'oauth2_provider',
     'social_django', # Python social auth django app
     'drf_social_oauth2',
+
+    # ==========
+    # Cross-Origin Resource Sharing (CORS)
+    # ==========
+    'corsheaders',
     
 ]
 
@@ -116,14 +121,21 @@ SIMPLE_JWT = {
 # CSRF_COOKIE_NAME = 'csrftoken'
 # CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
+CORS_ORIGIN_ALLOW_ALL = True  # 모든 도메인 허용 (개발 중에만)
+# 실제 운영 환경에서는 아래와 같이 특정 도메인만 허용하도록 설정해야 합니다.
+# CORS_ORIGIN_WHITELIST = ['http://localhost:3000', 'https://your-production-domain.com']
+
+CORS_ALLOW_CREDENTIALS = True
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # CORS
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 
@@ -169,19 +181,22 @@ LOGOUT_REDIRECT_URL = '/'
 
 STATE = env('STATE')
 
+GOOGLE_CALLBACK_URL = env('GOOGLE_CALLBACK_URL')
+KAKAO_CALLBACK_URL = env('KAKAO_CALLBACK_URL')
+NAVER_CALLBACK_URL = env('NAVER_CALLBACK_URL')
+
 # Social Oauth2
 ## Google  Social Login 설정
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env('SOCIAL_AUTH_GOOGLE_CLIENT_ID') 
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env('SOCIAL_AUTH_GOOGLE_SECRET')
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+SOCIAL_AUTH_GOOGLE_CLIENT_ID = env('SOCIAL_AUTH_GOOGLE_CLIENT_ID') 
+SOCIAL_AUTH_GOOGLE_SECRET = env('SOCIAL_AUTH_GOOGLE_SECRET')
+SOCIAL_AUTH_GOOGLE_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
 ]
 
 ## Naver Social Login 설정
 SOCIAL_AUTH_NAVER_CLIENT_ID = env('SOCIAL_AUTH_NAVER_CLIENT_ID')
-SOCIAL_AUTH_NAVER_CLIENT_SECRET = env('SOCIAL_AUTH_NAVER_SECRET')
-SOCIAL_AUTH_NAVER_REDIRECT_URI = env('NAVER_CALLBACK_URI')
+SOCIAL_AUTH_NAVER_SECRET = env('SOCIAL_AUTH_NAVER_SECRET')
 SOCIAL_AUTH_NAVER_SCOPE = [
     'email',
     'name',
@@ -189,9 +204,9 @@ SOCIAL_AUTH_NAVER_SCOPE = [
     'birthday',
 ]
 
-# KAKAO 소셜 로그인 설정
-SOCIAL_AUTH_KAKAO_CLIENT_ID = env('SOCIAL_AUTH_KAKAO_KEY')
-SOCIAL_AUTH_KAKAO_CLIENT_SECRET = env('SOCIAL_AUTH_KAKAO_SECRET')
+## Kakao Social Login 설정
+SOCIAL_AUTH_KAKAO_CLIENT_ID = env('SOCIAL_AUTH_KAKAO_CLIENT_ID')
+SOCIAL_AUTH_KAKAO_SECRET = env('SOCIAL_AUTH_KAKAO_SECRET')
 SOCIAL_AUTH_KAKAO_SCOPE = [
     'account_email',
     'profile_nickname',

@@ -1,11 +1,12 @@
 '''
-MVP demo ver 0.0.2
-2024.06.20
+MVP demo ver 0.0.3
+2024.06.28
 accounts/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리
 현재 기능:
-- 회원가입
+- 일반 회원가입
+- 소셜 회원가입 & 로그인, 로그인 성공
 '''
 
 from django.conf import settings

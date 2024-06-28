@@ -1,12 +1,12 @@
 '''
-MVP demo ver 0.0.1
+MVP demo ver 0.0.3
 2024.06.27
 accounts/urls.py
 
 역할: accounts 앱 내의 URL API 엔드포인트 설정
 현재 기능:
-- 회원가입, 로그인, 로그아웃
-- 소셜 로그인(구글,)
+- 회원가입, 로그인, 로그아웃, 토큰재발급
+- 소셜 로그인(구글, 카카오, 네이버)
 '''
 
 from django.urls import path
