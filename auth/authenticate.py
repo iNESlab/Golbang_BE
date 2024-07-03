@@ -1,9 +1,13 @@
 '''
-MVP demo ver 0.0.1
-2024.06.20
+MVP demo ver 0.0.2
+2024.07.03
 auth/authenticate.py
 
 JWT 토큰을 사용한 사용자 인증 로직을 처리
+- JWT 토큰 검증 
+- 액세스 토큰 생성, 리프레시 토큰 생성
+- 로그인 응답에 대한 JWT 토큰 설정
+- 로그아웃 처리
 '''
 
 import jwt
