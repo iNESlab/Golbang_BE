@@ -8,6 +8,7 @@ JWT 토큰을 사용한 사용자 인증 로직을 처리
 - 액세스 토큰 생성, 리프레시 토큰 생성
 - 로그인 응답에 대한 JWT 토큰 설정
 - 로그아웃 처리
+- 토큰 만료 여부 확인
 '''
 
 import jwt
@@ -18,7 +19,6 @@ from django.contrib.auth import get_user_model  # 현재 활성화된 사용자 
 import datetime
 from django.contrib.auth import backends
 from django.db.models import Q
-
 
 User = get_user_model()
 
@@ -146,15 +146,32 @@ def generate_refresh_token(user):
 # 로그인 후 응답에 JWT 토큰을 설정하는 함수
 def jwt_login(response, user):
     access_token = generate_access_token(user)      # 액세스 토큰 생성
-    refresh_token = generate_refresh_token(user)    # 리프레시 토큰을 생성
+    refresh_token = None
+
+    # 액세스 토큰이 만료될 경우에만 리프레시 토큰 생성
+    if is_token_expired(access_token):
+        refresh_token = generate_refresh_token(user) # 리프레시 토큰 생성
     
     # 응답 객체에 데이터
     data = {
         'access_token': access_token,
-        'refresh_token': refresh_token,
     }
     
+    if refresh_token:
+        data['refresh_token'] = refresh_token
+        response.set_cookie(key="refreshtoken", value=refresh_token, httponly=True) # 리프레시 토큰을 HTTP 전용 쿠키로 설정
+    
     response.data = data
-    response.set_cookie(key="refreshtoken", value=refresh_token, httponly=True) # 리프레시 토큰을 HTTP 전용 쿠키로 설정
     
     return response # 응답 객체 반환
+
+# 토큰 만료 확인 함수
+def is_token_expired(token):
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        exp = datetime.datetime.fromtimestamp(payload['exp'])
+        return exp < datetime.datetime.utcnow()
+    except jwt.ExpiredSignatureError:
+        return True
+    except Exception:
+        return False
