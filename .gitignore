@@ -3,3 +3,6 @@
 .DS_Store
 __pycache__/
 *.pyc
+# 가상환경 제외
+gb_env
+gbvenv
