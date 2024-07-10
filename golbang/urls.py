@@ -14,6 +14,6 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),            # admin 페이지
-    path('api/user/', include('accounts.urls')),    #  # accounts 앱의 URL 
+    path('api/v1/users/', include('accounts.urls')),    #  # accounts 앱의 URL 
     path('auth/', include('drf_social_oauth2.urls', namespace='drf')),
 ]
