@@ -25,7 +25,7 @@ class ClubViewSet(viewsets.ModelViewSet):
     # 모임 생성 메서드
     def create(self, request, *args, **kwargs):
         '''
-        POST 요청 시 처리되는 함수
+        POST 요청 시 모임(Club 생성)
         '''
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -33,7 +33,60 @@ class ClubViewSet(viewsets.ModelViewSet):
         read_serializer = ClubSerializer(club)
         response_data = {
             'code': status.HTTP_201_CREATED,
-            'message': 'Club created successfully',
+            'message': 'successfully Club created',
             'data': read_serializer.data
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+    # 특정 모임 조회 메서드
+    def retrieve(self, request, *args, **kwargs):
+        """
+        GET 요청 시 특정 모임(Club) 정보 반환
+        요청 데이터: Club ID
+        응답 데이터: Club 정보 (club ID, 이름, 설명, 이미지, 멤버, 관리자, 생성일)
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+    # 모임 정보 수정 메서드
+    def update(self, request, *args, **kwargs):
+        """
+        PUT 요청 시 모임의 정보를 수정
+        요청 데이터: 모임 정보 (이름, 설명, 이미지)
+        응답 데이터: 수정된 모임 정보 (club ID, 이름, 설명, 이미지, 수정일)
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        club = serializer.save()
+        read_serializer = ClubSerializer(club)
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully updated',
+            'data': read_serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+    # 모임 삭제 메서드
+    def destroy(self, request, *args, **kwargs):
+        """
+        DELETE 요청 시 모임 삭제
+        요청 데이터: 모임 ID
+        응답 데이터: 삭제 완료 메시지
+        """
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        response_data = {
+            'status': status.HTTP_204_NO_CONTENT,
+            'message': 'Successfully Deleted the Club'
+        }
+        return Response(response_data, status=status.HTTP_204_NO_CONTENT)
