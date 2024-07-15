@@ -9,8 +9,6 @@ Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬�
 기능:
 - 모임 및 사용자 데이터를 JSON 형식으로 변환
 - 모임 생성 및 업데이트 시 사용되는 데이터 검증
-Serializers가 필요한 이유:
-- 
 '''
 
 from rest_framework import serializers
