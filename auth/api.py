@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.1
-2024.06.20
+MVP demo ver 0.0.2
+2024.07.22
 auth/api.py
 
 역할: DRF REST API
@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model, authenticate  # 현재 활성화
 from django.conf import settings                # Django 프로젝트의 설정 파일
 from django.utils.decorators import method_decorator    # 클래스 기반 뷰애 데코레이터 적용하기 위한 함수형 데코레이터
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie  # CSRF 보호를 위한 데코레이터
-from auth.authenticate import generate_access_token, jwt_login # JWT 토큰 생성하고 로그인 처리하는 함수 
+from auth.authenticate import generate_access_token, jwt_login # JWT 토큰 생성하고 로그인 처리하는 함수
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken # RefreshToken
 
@@ -26,24 +26,24 @@ User = get_user_model() # 사용자 모델을 변수에 할당
 로그인 로직 처리하는 클래스 기반 뷰
 '''
 @method_decorator(ensure_csrf_cookie, name="dispatch") # 뷰가 호출될 때마다 CSRF 쿠키를 설정
-class LoginApi(APIView): 
+class LoginApi(APIView):
     permission_classes = [AllowAny]  # 로그인 엔드포인트에 대한 접근 권한 설정
 
     def post(self, request, *args, **kwargs): # HTTP POST 요청
         '''
         이메일과 비밀번호를 통해 로그인 시도
-        key값 : email, password
+        key값 : username, password
         '''
         # 요청 데이터로부터 이메일 또는 아이디가 들어간 username필드와 비밀번호 가져옴
         username_or_email = request.data.get('username')
         password = request.data.get('password')
-        
+
         # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
         if (username_or_email is None) or (password is None):
             return Response({
                 "message": "username/email and password required"
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # 사용자 인증
         user = authenticate(username=username_or_email, password=password)
 
@@ -57,10 +57,17 @@ class LoginApi(APIView):
             return Response({
                 "message": "비밀번호가 일치하지 않습니다"
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        response = Response(status=status.HTTP_200_OK)  # 200 OK 응답 객체 생성하여
-        return jwt_login(response, user)                # jwt_login 함수 호출하면서 응답객체에 토큰 설정하고 반환
-        
+
+        # response = Response(status=status.HTTP_200_OK)  # 200 OK 응답 객체 생성하여
+        # return jwt_login(response, user)                # jwt_login 함수 호출하면서 응답객체에 토큰 설정하고 반환
+        refresh = RefreshToken.for_user(user)
+        response = Response({
+            'access_token': str(refresh.access_token),
+            'refresh_token': str(refresh),
+        }, status=status.HTTP_200_OK)
+
+        response.set_cookie(key="refreshtoken", value=str(refresh), httponly=True)
+        return response
 
 '''
 JWT 토큰 갱신 로직을 처리하는 클래스 기반 뷰
@@ -69,14 +76,14 @@ JWT 토큰 갱신 로직을 처리하는 클래스 기반 뷰
 class RefreshJWTToken(APIView):
     def post(self, request, *args, **kwargs): # HTTP POST 요청을 처리
         refresh_token = request.COOKIES.get('refreshtoken') # 요청 쿠키에서 리프레시 토큰을 가져옴
-        
+
         # 리프레시 토큰이 제공되지 않는 경우 -> 403 Forbidden 응답
         if refresh_token is None:
             return Response({
                 "message": "Authentication credentials were not provided."
             }, status=status.HTTP_403_FORBIDDEN)
-        
-        # JWT 디코딩 
+
+        # JWT 디코딩
         try:
             payload = jwt.decode(
                 # 프레시 토큰을 디코딩하여 페이로드를 가져옴
@@ -86,10 +93,10 @@ class RefreshJWTToken(APIView):
             return Response({
                 "message": "expired refresh token, please login again."
             }, status=status.HTTP_403_FORBIDDEN)
-        
+
         # 페이로드에서 가져온 사용자 ID로 사용자를 조회
         user = User.objects.filter(id=payload['user_id']).first()
-        
+
         # 예외처리
         ## 사용자가 없는 경우 -> 400 Bad Request 응답
         if user is None:
@@ -101,16 +108,16 @@ class RefreshJWTToken(APIView):
             return Response({
                 "message": "user is inactive"
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # 새 엑세스 토큰 생성
         access_token = generate_access_token(user)
-        
+
         return Response( # 새 액세스 토큰을 포함하여 200 OK 응답을 반환
             {
                 'access_token': access_token,
             }
         )
-        
+
 '''
 로그아웃 로직을 처리하는 클래스 기반 뷰
 '''        

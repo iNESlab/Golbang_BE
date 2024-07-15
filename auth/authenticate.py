@@ -112,6 +112,7 @@ def generate_access_token(user):
     # 액세스 토큰의 페이로드를 정의
     access_token_payload = {
         'user_id': user.id,
+        'token_type': 'access',
         'exp': datetime.datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
         'iat': datetime.datetime.utcnow(),
     }
@@ -130,6 +131,7 @@ def generate_refresh_token(user):
     # 리프레시 토큰의 페이로드를 정의
     refresh_token_payload = {
         'user_id': user.id,
+        'token_type': 'refresh',
         'exp': datetime.datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
         'iat': datetime.datetime.utcnow(),
     }

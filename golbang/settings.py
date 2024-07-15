@@ -38,9 +38,11 @@ REFRESH_TOKEN_SECRET = env('REFRESH_TOKEN_SECRET')
 MAIN_DOMAIN = env('MAIN_DOMAIN')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False # 프로덕션 환경에서는 False로 해야 함
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    MAIN_DOMAIN
+]
 
 # Static files (CSS, JavaScript, Images)
 # 기본 파일 시스템 설정
@@ -127,7 +129,10 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
 
 # 아래는 필요 없음
 # 일단 주석처리
