@@ -13,7 +13,10 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path('admin/', admin.site.urls),            # admin 페이지
-    path('api/user/', include('accounts.urls')),    #  # accounts 앱의 URL 
+    path('admin/', admin.site.urls),  # admin 페이지
+    path('api/user/', include('accounts.urls')),  # accounts 앱의 URL
+    path('api/event/', include('events.urls')),
+    path('api/club-member/', include('clubMembers.urls')),
+    path('api/participant/', include('participants.urls')),
     path('auth/', include('drf_social_oauth2.urls', namespace='drf')),
 ]
