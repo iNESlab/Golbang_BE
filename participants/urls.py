@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import ParticipantViewSet
 
-# end point: api/v1/participant
+# end point: api/v1/participants
 router = DefaultRouter()
 router.register(r'', ParticipantViewSet,'participants')
 
