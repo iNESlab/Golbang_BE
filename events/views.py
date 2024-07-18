@@ -5,16 +5,17 @@ from rest_framework import viewsets
 
 from clubMembers.models import ClubMember
 from .models import Event
-from .serializers import EventCreateSerializer
+from .serializers import EventCreateSerializer, EventDetailSerializer
 
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
-    serializer_class = EventCreateSerializer
 
     def get_serializer_class(self):
-        # if self.action in ['list', 'retrieve']:
-        #   return EventResponseSerializer
+        if self.action in ['list', 'retrieve']:
+            return EventDetailSerializer
+        elif self.action == 'create':
+            return EventCreateSerializer
         return EventCreateSerializer
 
     def create(self, request, *args, **kwargs):
@@ -28,12 +29,9 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Invalid club_member_id"}, status=status.HTTP_400_BAD_REQUEST)
         data = request.data.copy()
         data['club_member_id'] = club_member.pk
-        print("에러2: ", data)
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        print("에러3", serializer.validated_data)
         serializer.save()
-        print("에러9")
 
         # Use the same serializer for response to include all data
         return Response(serializer.data, status=status.HTTP_201_CREATED)
