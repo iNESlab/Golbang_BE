@@ -10,9 +10,9 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import EventViewSet
 
-# end point: api/v1/event/
+# end point: api/v1/events/
 router = DefaultRouter()
-router.register(r'', EventViewSet,'event')
+router.register(r'', EventViewSet,'events')
 
 urlpatterns = [
     path('', include(router.urls)),
