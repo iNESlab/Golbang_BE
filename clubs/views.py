@@ -9,13 +9,14 @@ clubs/views.py
 '''
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from .models import Club
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer
 
 class ClubViewSet(viewsets.ModelViewSet):
     queryset = Club.objects.all()           # 모든 Club 객체 가져오기
-    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+    serializer_class = ClubSerializer
+    permission_classes = [AllowAny]         # 모든 요청 허용
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -54,7 +55,6 @@ class ClubViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-
     # 모임 정보 수정 메서드
     def update(self, request, *args, **kwargs):
         """
@@ -74,7 +74,6 @@ class ClubViewSet(viewsets.ModelViewSet):
             'data': read_serializer.data
         }
         return Response(response_data, status=status.HTTP_200_OK)
-
 
     # 모임 삭제 메서드
     def destroy(self, request, *args, **kwargs):
