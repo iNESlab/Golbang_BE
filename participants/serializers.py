@@ -41,7 +41,7 @@ class ParticipantDetailSerializer(serializers.ModelSerializer):
     # handicap_plus_score = serializers.SerializerMethodField()
     class Meta:
         model = Participant
-        fields = ['participant_id', 'club_member', 'team_type',
+        fields = ['participant_id', 'club_member', 'status_type', 'team_type',
                   'group_type', 'handicap', 'sum_score', 'rank']
 
     # TODO: handicap 모델에서 제거시 같이 제거
