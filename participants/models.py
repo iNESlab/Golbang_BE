@@ -21,6 +21,7 @@ class Participant(models.Model):
         GROUP8 = 8, "8조"
 
     class StatusType(models.TextChoices):
+        ACCEPT_PARTY = "PARTY", "수락 및 회식"
         ACCEPT = "ACCEPT", "수락"
         DENY = "DENY", "거절"
         PENDING = "PENDING", "대기"
