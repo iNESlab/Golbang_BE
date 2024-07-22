@@ -39,7 +39,7 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser):
     # step 1
-    userId = models.CharField("사용자 아이디", unique=True, max_length=150, default='unknown_user')
+    user_id = models.CharField("사용자 아이디", unique=True, max_length=150, default='unknown_user')
     password = models.CharField("비밀번호", max_length=256, null=True, blank=True) # # Oauth 로그인을 위해 비밀번호 빈 값 허용
     email = models.EmailField("이메일", unique=True)
     login_type = models.CharField(max_length=10, choices=[('general', 'General'), ('social', 'Social')], default='general')

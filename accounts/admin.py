@@ -16,20 +16,20 @@ class CustomUserAdmin(BaseUserAdmin):
     add_form = UserCreationFirstStepForm
 
 
-    list_display = ('userId', 'email', 'name', 'phone_number', 'date_of_birth', 'is_admin')
+    list_display = ('user_id', 'email', 'name', 'phone_number', 'date_of_birth', 'is_admin')
     list_filter = ('is_admin',)
     fieldsets = (
-        (None, {'fields': ('userId', 'email', 'password')}),
+        (None, {'fields': ('user_id', 'email', 'password')}),
         ('Personal info', {'fields': ('name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}),
         ('Permissions', {'fields': ('is_admin', 'is_active')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('userId', 'email', 'password1', 'password2', 'name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}
+            'fields': ('user_id', 'email', 'password1', 'password2', 'name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}
         ),
     )
-    search_fields = ('userId', 'email', 'name')
+    search_fields = ('user_id', 'email', 'name')
     ordering = ('email',)
     filter_horizontal = ()
 
