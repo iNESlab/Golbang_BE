@@ -25,7 +25,6 @@ class Participant(models.Model):
         DENY = "DENY", "거절"
         PENDING = "PENDING", "대기"
 
-    participant_id = models.BigAutoField(primary_key=True)
     club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
     team_type = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)

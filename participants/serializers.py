@@ -12,6 +12,7 @@ from participants.models import Participant
 
 
 class ParticipantCreateSerializer(serializers.ModelSerializer):
+    participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     club_member_id = serializers.PrimaryKeyRelatedField(
         queryset=ClubMember.objects.all(),
         source='club_member'
@@ -34,6 +35,7 @@ class ParticipantCreateSerializer(serializers.ModelSerializer):
 
 
 class ParticipantDetailSerializer(serializers.ModelSerializer):
+    participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     club_member = ClubMemberSerializer(read_only=True)
 
     # handicap_plus_score = serializers.SerializerMethodField()

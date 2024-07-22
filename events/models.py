@@ -16,8 +16,6 @@ class Event(models.Model):
         MATCH_PLAY = 'MP', 'Match Play'
         STROKE_PLAY = 'SP', 'Stroke Play'
 
-    # step 1
-    event_id = models.BigAutoField(primary_key=True)
     # Todo: club 테이블 생성후 연결하기
     # club = models.ForeignKey(Club, on_delete=models)
     club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE)

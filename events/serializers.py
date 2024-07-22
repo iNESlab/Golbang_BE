@@ -8,6 +8,7 @@ from participants.serializers import ParticipantCreateSerializer, ParticipantDet
 
 
 class EventCreateSerializer(serializers.ModelSerializer):
+    event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     participants = ParticipantCreateSerializer(source='participant_set', many=True)
     club_member_id = serializers.PrimaryKeyRelatedField(
         queryset=ClubMember.objects.all(),
@@ -43,6 +44,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
 
 class EventDetailSerializer(serializers.ModelSerializer):
     participants = ParticipantDetailSerializer(source='participant_set', many=True, read_only=True)
+    event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     club_member_id = serializers.PrimaryKeyRelatedField(
         queryset=ClubMember.objects.all(),
         required=True,
