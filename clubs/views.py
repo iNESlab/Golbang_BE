@@ -15,9 +15,9 @@ from .models import Club
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer
 
 class ClubViewSet(viewsets.ModelViewSet):
-    queryset = Club.objects.all()           # 모든 Club 객체 가져오기
-    serializer_class = ClubSerializer
-    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+    queryset            = Club.objects.all()           # 모든 Club 객체 가져오기
+    serializer_class    = ClubSerializer
+    permission_classes  = [IsAuthenticated]  # 인증된 사용자만 접근 가능
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -33,9 +33,9 @@ class ClubViewSet(viewsets.ModelViewSet):
         '''
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        club = serializer.save()
+        club            = serializer.save()
         read_serializer = ClubSerializer(club)
-        response_data = {
+        response_data   = {
             'code': status.HTTP_201_CREATED,
             'message': 'successfully Club created',
             'data': read_serializer.data
@@ -49,8 +49,8 @@ class ClubViewSet(viewsets.ModelViewSet):
         요청 데이터: 모임 ID
         응답 데이터: 모임 정보 (ID, 이름, 설명, 이미지, 멤버, 관리자, 생성일)
         """
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
+        instance    = self.get_object()
+        serializer  = self.get_serializer(instance)
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved',
@@ -65,11 +65,11 @@ class ClubViewSet(viewsets.ModelViewSet):
         요청 데이터: 모임 정보 (이름, 설명, 이미지)
         응답 데이터: 수정된 모임 정보 (ID, 이름, 설명, 이미지, 수정일)
         """
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        partial         = kwargs.pop('partial', False)
+        instance        = self.get_object()
+        serializer      = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        club = serializer.save()
+        club            = serializer.save()
         read_serializer = ClubSerializer(club)
         response_data = {
             'status': status.HTTP_200_OK,

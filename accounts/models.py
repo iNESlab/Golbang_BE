@@ -39,19 +39,19 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser):
     # step 1
-    user_id = models.CharField("사용자 아이디", unique=True, max_length=150, default='unknown_user')
-    password = models.CharField("비밀번호", max_length=256, null=True, blank=True) # # Oauth 로그인을 위해 비밀번호 빈 값 허용
-    email = models.EmailField("이메일", unique=True)
-    login_type = models.CharField(max_length=10, choices=[('general', 'General'), ('social', 'Social')], default='general')
-    provider = models.CharField(max_length=50, null=True, blank=True)
+    user_id     = models.CharField("사용자 아이디", unique=True, max_length=150, default='unknown_user')
+    password    = models.CharField("비밀번호", max_length=256, null=True, blank=True) # # Oauth 로그인을 위해 비밀번호 빈 값 허용
+    email       = models.EmailField("이메일", unique=True)
+    login_type  = models.CharField(max_length=10, choices=[('general', 'General'), ('social', 'Social')], default='general')
+    provider    = models.CharField(max_length=50, null=True, blank=True)
     
     # step 2
-    name = models.CharField("이름", max_length=128, default='Unknown')
-    phone_number = models.CharField("전화번호", max_length=20, default='000-000-0000')
-    address = models.CharField("주소", max_length=255, null=True, blank=True)
-    date_of_birth = models.DateField("생일", null=True, blank=True)
-    handicap = models.CharField("핸디캡", max_length=20, default='0')
-    student_id = models.CharField("학번", max_length=50, null=True, blank=True)
+    name            = models.CharField("이름", max_length=128, default='Unknown')
+    phone_number    = models.CharField("전화번호", max_length=20, default='000-000-0000')
+    address         = models.CharField("주소", max_length=255, null=True, blank=True)
+    date_of_birth   = models.DateField("생일", null=True, blank=True)
+    handicap        = models.CharField("핸디캡", max_length=20, default='0')
+    student_id      = models.CharField("학번", max_length=50, null=True, blank=True)
     
     # auto
     created_at = models.DateTimeField("가입일", auto_now_add=True)
@@ -59,12 +59,12 @@ class User(AbstractBaseUser):
     last_login = models.DateTimeField("최근 접속일", auto_now=True)
 
     # manage
-    is_admin = models.BooleanField(default=False) # 관리자
-    is_active = models.BooleanField(default=True)
+    is_admin    = models.BooleanField(default=False) # 관리자
+    is_active   = models.BooleanField(default=True)
 
     objects = UserManager()  # 유저 매니저 설정
 
-    USERNAME_FIELD = 'email'  # 로그인에 사용할 필드 설정
+    USERNAME_FIELD  = 'email'  # 로그인에 사용할 필드 설정
     REQUIRED_FIELDS = ['userId']  # 필수 필드 설정
 
     def __str__(self):

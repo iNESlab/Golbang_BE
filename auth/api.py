@@ -35,8 +35,8 @@ class LoginApi(APIView):
         key값 : username, password
         '''
         # 요청 데이터로부터 이메일 또는 아이디가 들어간 username필드와 비밀번호 가져옴
-        username_or_email = request.data.get('username')
-        password = request.data.get('password')
+        username_or_email   = request.data.get('username')
+        password            = request.data.get('password')
 
         # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
         if (username_or_email is None) or (password is None):
@@ -58,8 +58,8 @@ class LoginApi(APIView):
                 "message": "비밀번호가 일치하지 않습니다"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
+        refresh         = RefreshToken.for_user(user)
+        access_token    = str(refresh.access_token)
 
         response_data = {'access_token': access_token}
 

@@ -147,8 +147,8 @@ def generate_refresh_token(user):
 
 # 로그인 후 응답에 JWT 토큰을 설정하는 함수
 def jwt_login(response, user):
-    access_token = generate_access_token(user)      # 액세스 토큰 생성
-    refresh_token = None
+    access_token    = generate_access_token(user)      # 액세스 토큰 생성
+    refresh_token   = None
 
     # 액세스 토큰이 만료될 경우에만 리프레시 토큰 생성
     if is_token_expired(access_token):
@@ -171,7 +171,7 @@ def jwt_login(response, user):
 def is_token_expired(token):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        exp = datetime.fromtimestamp(payload['exp'])
+        exp     = datetime.fromtimestamp(payload['exp'])
         return exp < datetime.utcnow()
     except jwt.ExpiredSignatureError:
         return True

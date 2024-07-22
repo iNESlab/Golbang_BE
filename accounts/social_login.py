@@ -53,9 +53,9 @@ def get_access_token(token_url, token_data):
     """
     주어진 토큰 URL과 데이터로 액세스 토큰을 가져오는 헬퍼 함수
     """
-    token_response = requests.post(token_url, data=token_data)
+    token_response      = requests.post(token_url, data=token_data)
     token_response_json = token_response.json()
-    access_token = token_response_json.get('access_token') # 액세스 토큰을 응답에서 가져옴
+    access_token        = token_response_json.get('access_token') # 액세스 토큰을 응답에서 가져옴
 
     # 액세스 토큰이 없는 경우 예외 처리
     if not access_token:
@@ -109,15 +109,15 @@ def google_callback(request):
         
         # user_info_url: 소셜 로그인에서 액세스 토큰을 사용하여 사용자 정보를 가져오는 역할
         # 액세스 토큰을 사용하여 사용자 정보를 가져온다.
-        user_info_url = "https://www.googleapis.com/oauth2/v3/userinfo"
-        user_info_response = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
-        user_info = user_info_response.json()
+        user_info_url       = "https://www.googleapis.com/oauth2/v3/userinfo"
+        user_info_response  = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
+        user_info           = user_info_response.json()
 
         # CHECK SUCCESSFULLY LOGIN PROCESS
         print("===GOOGLE LOGIN USER===", user_info)
 
-        email = user_info.get("email")
-        name = user_info.get("name", "Unknown") # 이름이 없으면 "Unknown"으로 설정
+        email   = user_info.get("email")
+        name    = user_info.get("name", "Unknown") # 이름이 없으면 "Unknown"으로 설정
 
         # 이메일이 없으면 로그인 페이지로 리디렉션
         if not email:
@@ -155,8 +155,8 @@ def naver_login(request):
     네이버 로그인 URL로 리디렉션
     """
     naver_client_id = settings.SOCIAL_AUTH_NAVER_CLIENT_ID
-    redirect_uri = settings.NAVER_CALLBACK_URL
-    state = settings.STATE
+    redirect_uri    = settings.NAVER_CALLBACK_URL
+    state           = settings.STATE
     naver_auth_url = (
         f"https://nid.naver.com/oauth2.0/authorize?response_type=code"
         f"&client_id={naver_client_id}&redirect_uri={redirect_uri}&state={state}"
@@ -171,7 +171,7 @@ def naver_callback(request):
     네이버 OAuth2 콜백 처리
     """
     try:
-        code = request.GET.get('code') # 네이버에서 반환된 코드 가져옴
+        code  = request.GET.get('code') # 네이버에서 반환된 코드 가져옴
         state = request.GET.get('state')
 
         if not code: # 코드가 없으면 로그인 페이지로 리디렉션
@@ -190,8 +190,8 @@ def naver_callback(request):
 
         # user_info_url: 소셜 로그인에서 액세스 토큰을 사용하여 사용자 정보를 가져오는 역할
         # 액세스 토큰을 사용하여 사용자 정보를 가져온다.
-        user_info_url = "https://openapi.naver.com/v1/nid/me"
-        user_info_response = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
+        user_info_url       = "https://openapi.naver.com/v1/nid/me"
+        user_info_response  = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
 
         if user_info_response.status_code != 200:
             return JsonResponse({"error": "failed to get user info"}, status=status.HTTP_400_BAD_REQUEST)
@@ -202,7 +202,7 @@ def naver_callback(request):
         print("===NAVER USER INFO===", user_info)
 
         email = user_info.get("email")
-        name = user_info.get("name", "Unknown") # 이름이 없으면 "Unknown"으로 설정
+        name  = user_info.get("name", "Unknown") # 이름이 없으면 "Unknown"으로 설정
 
         # 이메일이 없으면 로그인 페이지로 리디렉션
         if not email:
@@ -234,8 +234,8 @@ def kakao_login(request):
     """
     카카오 로그인 URL로 리디렉션
     """
-    kakao_rest_api_key = settings.SOCIAL_AUTH_KAKAO_CLIENT_ID
-    redirect_uri = settings.KAKAO_CALLBACK_URL
+    kakao_rest_api_key  = settings.SOCIAL_AUTH_KAKAO_CLIENT_ID
+    redirect_uri        = settings.KAKAO_CALLBACK_URL
     kakao_auth_url = (
         f"https://kauth.kakao.com/oauth/authorize?response_type=code"
         f"&client_id={kakao_rest_api_key}&redirect_uri={redirect_uri}"
@@ -255,8 +255,8 @@ def kakao_callback(request):
             return redirect('kakao_login')
         
         # 인증 코드를 사용하여 소셜 로그인 제공자에게 액세스 토큰을 요청
-        token_url = "https://kauth.kakao.com/oauth/token"
-        token_data = {
+        token_url   = "https://kauth.kakao.com/oauth/token"
+        token_data  = {
             "grant_type": "authorization_code",
             "client_id": settings.SOCIAL_AUTH_KAKAO_CLIENT_ID,
             "client_secret": settings.SOCIAL_AUTH_KAKAO_SECRET,
@@ -267,16 +267,16 @@ def kakao_callback(request):
 
         # user_info_url: 소셜 로그인에서 액세스 토큰을 사용하여 사용자 정보를 가져오는 역할
         # 액세스 토큰을 사용하여 사용자 정보를 가져온다.
-        user_info_url = "https://kapi.kakao.com/v2/user/me"
-        user_info_response = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
-        user_info = user_info_response.json()
+        user_info_url       = "https://kapi.kakao.com/v2/user/me"
+        user_info_response  = requests.get(user_info_url, headers={"Authorization": f"Bearer {access_token}"})
+        user_info           = user_info_response.json()
 
         # CHECK SUCCESSFULLY LOGIN PROCESS
         print("===KAKAO USER INFO===", user_info)
 
-        kakao_account = user_info.get("kakao_account")
-        email = kakao_account.get("email")
-        nickname = kakao_account.get("profile").get("nickname", "Unknown") # 닉네임이 없으면 "Unknown"으로 설정
+        kakao_account   = user_info.get("kakao_account")
+        email           = kakao_account.get("email")
+        nickname        = kakao_account.get("profile").get("nickname", "Unknown") # 닉네임이 없으면 "Unknown"으로 설정
 
         # 이메일이 없으면 로그인 페이지로 리디렉션
         if not email:

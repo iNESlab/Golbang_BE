@@ -23,8 +23,8 @@ class UserSerializer(serializers.ModelSerializer):
     JSON 형식으로 변환하거나, JSON 데이터를 User 모델로 변환하는 데 사용됨
     '''
     class Meta:
-        model = User # 직렬화할 모델
-        fields = ('id', 'name', 'email') # 직렬화할 모델의 필드 지정
+        model   = User # 직렬화할 모델
+        fields  = ('id', 'name', 'email') # 직렬화할 모델의 필드 지정
 
 class ClubSerializer(serializers.ModelSerializer):
     '''
@@ -32,11 +32,11 @@ class ClubSerializer(serializers.ModelSerializer):
     클럽의 모든 정보를 포함한 JSON 응답을 생성
     '''
     members = UserSerializer(many=True, read_only=True)
-    admins = UserSerializer(many=True, read_only=True)
+    admins  = UserSerializer(many=True, read_only=True)
 
     class Meta:
-        model = Club # 직렬화할 모델
-        fields = ('id', 'name', 'description', 'image', 'members', 'admins', 'created_at')
+        model   = Club # 직렬화할 모델
+        fields  = ('id', 'name', 'description', 'image', 'members', 'admins', 'created_at')
 
 class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     '''
@@ -44,5 +44,5 @@ class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     클럽의 생성 및 업데이트를 위한 유효성 검사를 수행하고, 유효한 데이터를 모델 인스턴스로 변환
     '''
     class Meta:
-        model = Club
-        fields = ('name', 'description', 'image', 'members', 'admins')
+        model   = Club
+        fields  = ('name', 'description', 'image', 'members', 'admins')
