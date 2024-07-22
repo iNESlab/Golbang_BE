@@ -106,12 +106,12 @@ AUTH_USER_MODEL = 'accounts.User' # Custom User Model
 # REST framework
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
-        #'rest_framework.permissions.IsAuthenticated',  # 인증된 요청인지 확인
-        #'rest_framework.permissions.IsAdminUser',  # 관리자만 접근 가능
+        'rest_framework.permissions.IsAuthenticated',  # 인증된 요청인지 확인
+        'rest_framework.permissions.IsAdminUser',  # 관리자만 접근 가능
         'rest_framework.permissions.AllowAny',  # 누구나 접근 가능
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        #'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT를 통한 인증방식 사용
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT를 통한 인증방식 사용
         #drf-social-oauth2
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
         'drf_social_oauth2.authentication.SocialAuthentication',
@@ -119,17 +119,17 @@ REST_FRAMEWORK = {
 }
 
 # JWT 관련 설정
-# REST_USE_JWT = True
-#
-# SIMPLE_JWT = {
-#     'SIGNING_KEY': SECRET_KEY,
-#     'ACCESS_TOKEN_LIFETIME': timedelta(days=0, minutes=60),
-#     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-#     'ROTATE_REFRESH_TOKENS': False,
-#     'BLACKLIST_AFTER_ROTATION': True,
-#     'ALGORITHM': 'HS256',
-#     'AUTH_HEADER_TYPES': ('Bearer',),
-# }
+#REST_USE_JWT = True
+
+SIMPLE_JWT = {
+    'SIGNING_KEY': SECRET_KEY,
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=0, minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 
 # 아래는 필요 없음

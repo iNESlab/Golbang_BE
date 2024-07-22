@@ -16,7 +16,7 @@ from rest_framework import exceptions           # DRF에서 제공하는 예외 
 from rest_framework.authentication import BaseAuthentication, CSRFCheck # DRF 기본 인증, CSRF 토큰 검사
 from django.conf import settings                # django 설정 파일
 from django.contrib.auth import get_user_model  # 현재 활성화된 사용자 모델
-import datetime
+from datetime import datetime
 from django.contrib.auth import backends
 from django.db.models import Q
 
@@ -113,8 +113,8 @@ def generate_access_token(user):
     access_token_payload = {
         'user_id': user.id,
         'token_type': 'access',
-        'exp': datetime.datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
-        'iat': datetime.datetime.utcnow(),
+        'exp': datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+        'iat': datetime.utcnow(),
     }
     
     # JWT 토큰을 생성
@@ -132,8 +132,8 @@ def generate_refresh_token(user):
     refresh_token_payload = {
         'user_id': user.id,
         'token_type': 'refresh',
-        'exp': datetime.datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
-        'iat': datetime.datetime.utcnow(),
+        'exp': datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+        'iat': datetime.utcnow(),
     }
     
     # JWT 리프레시 토큰을 생성
@@ -171,8 +171,8 @@ def jwt_login(response, user):
 def is_token_expired(token):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        exp = datetime.datetime.fromtimestamp(payload['exp'])
-        return exp < datetime.datetime.utcnow()
+        exp = datetime.fromtimestamp(payload['exp'])
+        return exp < datetime.utcnow()
     except jwt.ExpiredSignatureError:
         return True
     except Exception:

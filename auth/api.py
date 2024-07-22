@@ -1,11 +1,11 @@
 '''
-MVP demo ver 0.0.2
-2024.07.22
+MVP demo ver 0.0.3
+2024.07.23
 auth/api.py
 
 역할: DRF REST API
 목적: views.py 파일 내의 복잡성을 줄이고, 인증 관련 로직을 별도의 파일로 분리하기 위해 만든 파일
-기능: JWT 인증을 사용한 로그인, 로그아웃, 토큰 갱신
+기능: JWT 인증을 사용한 로그인, 로그아웃, 토큰 갱신, 액세스 토큰 만료시 리프레시 토큰과 함께 반환하도록 설정
 '''
 
 import jwt
@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model, authenticate  # 현재 활성화
 from django.conf import settings                # Django 프로젝트의 설정 파일
 from django.utils.decorators import method_decorator    # 클래스 기반 뷰애 데코레이터 적용하기 위한 함수형 데코레이터
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie  # CSRF 보호를 위한 데코레이터
-from auth.authenticate import generate_access_token, jwt_login # JWT 토큰 생성하고 로그인 처리하는 함수
+from auth.authenticate import generate_access_token, jwt_login, is_token_expired  # JWT 토큰 생성하고 로그인 처리하는 함수
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken # RefreshToken
 
@@ -58,16 +58,19 @@ class LoginApi(APIView):
                 "message": "비밀번호가 일치하지 않습니다"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # response = Response(status=status.HTTP_200_OK)  # 200 OK 응답 객체 생성하여
-        # return jwt_login(response, user)                # jwt_login 함수 호출하면서 응답객체에 토큰 설정하고 반환
         refresh = RefreshToken.for_user(user)
-        response = Response({
-            'access_token': str(refresh.access_token),
-            'refresh_token': str(refresh),
-        }, status=status.HTTP_200_OK)
+        access_token = str(refresh.access_token)
 
-        response.set_cookie(key="refreshtoken", value=str(refresh), httponly=True)
-        return response
+        response_data = {'access_token': access_token}
+
+        # 액세스 토큰 만료시 리프레시 토큰과 함께 리턴
+        if is_token_expired(access_token):
+            response_data['refresh_token'] = str(refresh)
+            response = Response(response_data, status=status.HTTP_200_OK)
+            response.set_cookie(key="refreshtoken", value=str(refresh), httponly=True)
+            return response
+        # 액세스 토큰이 만료되지 않았다면 액세스 토큰만 리턴
+        return Response(response_data, status=status.HTTP_200_OK)
 
 '''
 JWT 토큰 갱신 로직을 처리하는 클래스 기반 뷰
