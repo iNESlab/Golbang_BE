@@ -15,8 +15,8 @@ User = get_user_model()
 
 class Club(models.Model):
     name        = models.CharField(max_length=100)
-    description = models.TextField()
-    image       = models.ImageField(upload_to='clubs/')
+    description = models.TextField(null=True, blank=True)
+    image       = models.ImageField(upload_to='clubs/', null=True, blank=True)
     members     = models.ManyToManyField(User, related_name='clubs')        # 모임 멤버
     admins      = models.ManyToManyField(User, related_name='admin_clubs')  # 모임 관리자
     created_at  = models.DateTimeField(auto_now_add=True)
