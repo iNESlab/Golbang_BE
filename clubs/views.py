@@ -15,7 +15,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Club, ClubMember
-from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer
+from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
+    ClubMemberSerializer
+
 
 class ClubViewSet(viewsets.ModelViewSet):
     queryset            = Club.objects.all() # 모든 Club 객체 가져오기
@@ -107,40 +109,58 @@ class ClubViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_204_NO_CONTENT)
 
-    # 모임에 멤버 추가 메서드
-    @action(detail=True, methods=['post'], url_path='members')
-    def add_member(self, request, *args, **kwargs):
+    # 멤버리스트 조회 메서드
+    @action(detail=True, methods=['get'], url_path='members')
+    def retrieve_members(self, request, pk=None):
         """
-        POST 요청 시 모임에 멤버 추가
-        요청 데이터: 유저 ID
-        응답 데이터: 추가된 멤버 정보
-        """
-        club = self.get_object()
-        serializer = ClubMemberAddSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='member')
-        response_data = {
-            'status': status.HTTP_201_CREATED,
-            'message': 'Member successfully added',
-            'data': serializer.data
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
-
-    # 모임에 관리자 추가 메서드
-    @action(detail=True, methods=['post'], url_path='admins')
-    def add_admin(self, request, *args, **kwargs):
-        """
-        POST 요청 시 모임에 관리자 추가
-        요청 데이터: 유저 ID
-        응답 데이터: 추가된 관리자 정보
+        GET 요청 시 특정 모임의 멤버 리스트 반환
+        요청 데이터: 모임 ID
+        응답 데이터: 멤버 리스트 (멤버 ID, 이름, 이메일, 역할)
         """
         club = self.get_object()
-        serializer = ClubAdminAddSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='admin')
+        members = ClubMember.objects.filter(club=club)
+        serializer = ClubMemberSerializer(members, many=True)
         response_data = {
-            'status': status.HTTP_201_CREATED,
-            'message': 'Admin successfully added',
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved members',
             'data': serializer.data
         }
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(response_data, status=status.HTTP_200_OK)
+    #
+    # # 모임에 멤버 추가 메서드
+    # @action(detail=True, methods=['post'], url_path='members')
+    # def add_member(self, request, pk=None):
+    #     """
+    #     POST 요청 시 모임에 멤버 추가
+    #     요청 데이터: 유저 ID
+    #     응답 데이터: 추가된 멤버 정보
+    #     """
+    #     club = self.get_object()
+    #     serializer = ClubMemberAddSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='member')
+    #     response_data = {
+    #         'status': status.HTTP_201_CREATED,
+    #         'message': 'Member successfully added',
+    #         'data': serializer.data
+    #     }
+    #     return Response(response_data, status=status.HTTP_201_CREATED)
+    #
+    # # 모임에 관리자 추가 메서드
+    # @action(detail=True, methods=['post'], url_path='admins')
+    # def add_admin(self, request, pk=None):
+    #     """
+    #     POST 요청 시 모임에 관리자 추가
+    #     요청 데이터: 유저 ID
+    #     응답 데이터: 추가된 관리자 정보
+    #     """
+    #     club = self.get_object()
+    #     serializer = ClubAdminAddSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='admin')
+    #     response_data = {
+    #         'status': status.HTTP_201_CREATED,
+    #         'message': 'Admin successfully added',
+    #         'data': serializer.data
+    #     }
+    #     return Response(response_data, status=status.HTTP_201_CREATED)
