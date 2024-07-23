@@ -14,7 +14,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Club, ClubMember
+from .models import Club, ClubMember, User
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
     ClubMemberSerializer
 
@@ -110,7 +110,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK) # No Content로 할 경우 아무것도 반환하지 않기 때문에 200으로 변경
 
     # 멤버리스트 조회 메서드
-    @action(detail=True, methods=['get'], url_path='members')
+    @action(detail=True, methods=['get'], url_path='members', url_name='members')
     def retrieve_members(self, request, pk=None):
         """
         GET 요청 시 특정 모임의 멤버 리스트 반환
@@ -128,7 +128,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 모임에 멤버 추가 메서드
-    @action(detail=True, methods=['post'], url_path='members')
+    @action(detail=True, methods=['post'], url_path='members', url_name='add_member')
     def add_member(self, request, pk=None):
         """
         POST 요청 시 모임에 멤버 추가
@@ -147,7 +147,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     # 모임에 관리자 추가 메서드
-    @action(detail=True, methods=['post'], url_path='admins')
+    @action(detail=True, methods=['post'], url_path='admins', url_name='add_admin')
     def add_admin(self, request, pk=None):
         """
         POST 요청 시 모임에 관리자 추가
@@ -162,5 +162,28 @@ class ClubViewSet(viewsets.ModelViewSet):
             'status': status.HTTP_201_CREATED,
             'message': 'Admin successfully added',
             'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    # 모임에 멤버 초대 메서드
+    @action(detail=True, methods=['post'], url_path='invite', url_name='invite_member')
+    def invite_member(self, request, pk=None):
+        club = self.get_object()
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'detail': '유효하지 않은 데이터입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not User.objects.filter(id=user_id).exists():
+            return Response({'detail': '해당 사용자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        ClubMember.objects.create(club=club, user_id=user_id, role='member')
+        response_data = {
+            'status': status.HTTP_201_CREATED,
+            'message': 'Member successfully invited',
+            'data': {
+                'club_id': club.id,
+                'user_id': user_id,
+                'status': 'pending'
+            }
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
