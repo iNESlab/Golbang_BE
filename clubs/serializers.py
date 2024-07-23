@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.1
-2024.07.09
+MVP demo ver 0.0.2
+2024.07.24
 clubs/serializers.py
 
 역할: 
@@ -12,7 +12,7 @@ Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬�
 '''
 
 from rest_framework import serializers
-from .models import Club
+from .models import Club, ClubMember
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -26,13 +26,24 @@ class UserSerializer(serializers.ModelSerializer):
         model   = User # 직렬화할 모델
         fields  = ('id', 'name', 'email') # 직렬화할 모델의 필드 지정
 
+class ClubMemberSerializer(serializers.ModelSerializer):
+    '''
+    ClubMember 모델을 직렬화하는 클래스
+    클럽 내의 멤버의 역할에 대한 정보가 담김
+    '''
+    user = UserSerializer()
+
+    class Meta:
+        model = ClubMember
+        fields = ('user', 'role')
+
 class ClubSerializer(serializers.ModelSerializer):
     '''
     Club 모델을 직렬화하는 클래스
     클럽의 모든 정보를 포함한 JSON 응답을 생성
     '''
-    members = UserSerializer(many=True, read_only=True)
-    admins  = UserSerializer(many=True, read_only=True)
+    members = ClubMemberSerializer(many=True, read_only=True, source='clubmember_set')
+    admins = UserSerializer(many=True, read_only=True)
 
     class Meta:
         model   = Club # 직렬화할 모델

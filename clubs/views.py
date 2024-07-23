@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.5
-2024.07.23
+MVP demo ver 0.0.6
+2024.07.24
 clubs/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 모임 API 엔드포인트의 로직을 처리
@@ -11,11 +11,11 @@ clubs/views.py
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import Club
+from .models import Club, ClubMember
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer
 
 class ClubViewSet(viewsets.ModelViewSet):
-    queryset            = Club.objects.all()           # 모든 Club 객체 가져오기
+    queryset            = Club.objects.all() # 모든 Club 객체 가져오기
     serializer_class    = ClubSerializer
     permission_classes  = [IsAuthenticated]  # 인증된 사용자만 접근 가능
 
@@ -34,6 +34,17 @@ class ClubViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         club            = serializer.save()
+
+        # 일반 멤버와 관리자
+        members = request.data.get('members', [])
+        admins = request.data.get('admins', [])
+
+        for member_id in members:
+            ClubMember.objects.create(club=club, user_id=member_id, role='member')
+
+        for admin_id in admins:
+            ClubMember.objects.create(club=club, user_id=admin_id, role='admin')
+
         read_serializer = ClubSerializer(club)
         response_data   = {
             'code': status.HTTP_201_CREATED,
