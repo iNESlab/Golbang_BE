@@ -252,3 +252,46 @@ class ClubViewSet(viewsets.ModelViewSet):
             }
 
         return Response(response_data, status=status.HTTP_200_OK)
+
+    # 모임에 관리자 추가 메서드
+    @action(detail=True, methods=['post'], url_path='admins/(?P<member_id>\d+)', url_name='add_admin')
+    def add_admin(self, request, pk=None, member_id=None):
+        """
+        POST 요청 시 특정 모임의 멤버를 관리자 추가
+        요청 데이터: 없음
+        응답 데이터: 추가된 관리자 정보
+        """
+        club = self.get_object()
+        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
+
+        if not member:
+            return Response({'detail': '해당 멤버를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        member.role = 'admin'
+        member.save()
+        response_data = {
+            'status': status.HTTP_201_CREATED,
+            'message': 'Successfully promoted to admin',
+            'data': {
+                'club_id': club.id,
+                'member_id': member_id,
+            }
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    # 모임의 관리자 삭제 메서드
+    @action(detail=True, methods=['delete'], url_path='admins/(?P<admin_id>\d+)', url_name='remove_admin')
+    def remove_admin(self, request, pk=None, admin_id=None):
+        club = self.get_object()
+        admin = ClubMember.objects.filter(club=club, user_id=admin_id, role='admin').first()
+
+        if not admin:
+            return Response({'detail': '해당 관리자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        admin.role = 'member'
+        admin.save()
+        response_data = {
+            'status': status.HTTP_204_NO_CONTENT,
+            'message': 'Successfully removed from admin',
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
