@@ -29,7 +29,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         '''
         POST 요청 시 모임(Club) 생성
         요청 데이터: 모임명, 설명, 이미지, 멤버, (모임) 관리자
-        응답 데이터: 모임 정보 (club ID, 이름, 설명, 이미지, 멤버, 관리자, 생성일)
+        응답 데이터: 모임 정보 (club ID, 이름, 설명, 이미지, 멤버, 생성일)
         '''
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -82,7 +82,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         club            = serializer.save()
         read_serializer = ClubSerializer(club)
-        response_data = {
+        response_data   = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully updated',
             'data': read_serializer.data

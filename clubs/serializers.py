@@ -43,11 +43,10 @@ class ClubSerializer(serializers.ModelSerializer):
     클럽의 모든 정보를 포함한 JSON 응답을 생성
     '''
     members = ClubMemberSerializer(many=True, read_only=True, source='clubmember_set')
-    admins = UserSerializer(many=True, read_only=True)
 
     class Meta:
         model   = Club # 직렬화할 모델
-        fields  = ('id', 'name', 'description', 'image', 'members', 'admins', 'created_at')
+        fields  = ('id', 'name', 'description', 'image', 'members', 'created_at')
 
 class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     '''
@@ -56,4 +55,4 @@ class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model   = Club
-        fields  = ('name', 'description', 'image', 'members', 'admins')
+        fields  = ('name', 'description', 'image', 'members')

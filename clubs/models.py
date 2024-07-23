@@ -18,8 +18,7 @@ class Club(models.Model):
     name        = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
     image       = models.ImageField(upload_to='clubs/', null=True, blank=True)
-    members     = models.ManyToManyField(User, through='ClubMember', related_name='clubs')
-    admins      = models.ManyToManyField(User, related_name='admin_clubs')
+    members = models.ManyToManyField(User, through='ClubMember', related_name='clubs')
     created_at  = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

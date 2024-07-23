@@ -16,6 +16,6 @@ from clubs.models import Club
 @admin.register(Club)
 class ClubAdmin(admin.ModelAdmin):
     list_display    = ('name', 'created_at')
-    list_filter     = ('admins', 'created_at')
-    search_fields   = ('name', 'members', 'admins')
+    list_filter     = ('created_at',)
+    search_fields   = ('name', 'members')
     ordering        = ('name', 'created_at',)
