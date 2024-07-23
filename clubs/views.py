@@ -189,20 +189,66 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     # 모임 내 특정 멤버 강제 삭제 메서드
-    @action(detail=True, methods=['delete'], url_path='members', url_name='remove_member')
-    def remove_member(self, request, pk=None):
+    @action(detail=True, methods=['delete'], url_path='members/(?P<member_id>\d+)', url_name='remove_member')
+    def remove_member(self, request, pk=None, member_id=None):
+        """
+        DELETE 요청 시 특정 모임 내 특정 멤버 삭제
+        요청 데이터: 없음
+        응답 데이터: 삭제 완료 메시지
+        """
         club = self.get_object()
-        user_id = request.data.get('user_id')
-        if not user_id:
+
+        if not member_id:
             return Response({'detail': '유효하지 않은 데이터입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        member = ClubMember.objects.filter(club=club, user_id=user_id).first()
+        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
         if not member:
             return Response({'detail': '해당 멤버를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
 
         member.delete()
         response_data = {
-            'status': status.HTTP_200_OK,
+            'status': status.HTTP_204_NO_CONTENT,
             'message': 'Successfully Deleted the Member'
         }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    # 초대 받은 멤버가 참여 수락/거절하는 메서드
+    @action(detail=True, methods=['post'], url_path='join', url_name='join_club')
+    def join_club(self, request, pk=None):
+        club = self.get_object()
+        user = request.user
+        status_choice = request.data.get('status')
+
+        if status_choice not in ['accepted', 'declined']:
+            return Response({'detail': '유효하지 않은 데이터입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        member = ClubMember.objects.filter(club=club, user=user).first()
+
+        if not member:
+            return Response({'detail': '초대를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if status_choice == 'accepted':
+            member.role = 'member'
+            member.save()
+            response_data = {
+                'status': status.HTTP_200_OK,
+                'message': 'Successfully joined the club',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user.id,
+                    'status': 'accepted'
+                }
+            }
+        else:
+            member.delete()
+            response_data = {
+                'status': status.HTTP_200_OK,
+                'message': 'Successfully declined the club invitation',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user.id,
+                    'status': 'declined'
+                }
+            }
+
         return Response(response_data, status=status.HTTP_200_OK)
