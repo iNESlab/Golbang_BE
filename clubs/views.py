@@ -1,5 +1,5 @@
 '''
-MVP demo ver 0.0.6
+MVP demo ver 0.0.7
 2024.07.24
 clubs/views.py
 
@@ -7,12 +7,15 @@ clubs/views.py
 기능:
 - Authorization Type: Bearer Token
 - ModelViewSet을 이용하여 모임의 CRUD 기능 구현
+- 기본 정보 수정, 멤버 추가, 관리자 추가 기능 분리
 '''
 from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
 from .models import Club, ClubMember
-from .serializers import ClubSerializer, ClubCreateUpdateSerializer
+from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer
 
 class ClubViewSet(viewsets.ModelViewSet):
     queryset            = Club.objects.all() # 모든 Club 객체 가져오기
@@ -29,7 +32,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         '''
         POST 요청 시 모임(Club) 생성
         요청 데이터: 모임명, 설명, 이미지, 멤버, (모임) 관리자
-        응답 데이터: 모임 정보 (club ID, 이름, 설명, 이미지, 멤버, 생성일)
+        응답 데이터: 모임 정보 (club ID, 이름, 설명, 이미지, 멤버, 관리자, 생성일)
         '''
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -69,10 +72,10 @@ class ClubViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-    # 모임 정보 수정 메서드
+    # 모임 기본 정보 수정 메서드
     def update(self, request, *args, **kwargs):
         """
-        PUT 요청 시 모임의 정보를 수정
+        PUT 요청 시 모임의 기본 정보를 수정
         요청 데이터: 모임 정보 (이름, 설명, 이미지)
         응답 데이터: 수정된 모임 정보 (ID, 이름, 설명, 이미지, 수정일)
         """
@@ -82,7 +85,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         club            = serializer.save()
         read_serializer = ClubSerializer(club)
-        response_data   = {
+        response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully updated',
             'data': read_serializer.data
@@ -103,3 +106,41 @@ class ClubViewSet(viewsets.ModelViewSet):
             'message': 'Successfully Deleted the Club'
         }
         return Response(response_data, status=status.HTTP_204_NO_CONTENT)
+
+    # 모임에 멤버 추가 메서드
+    @action(detail=True, methods=['post'], url_path='members')
+    def add_member(self, request, *args, **kwargs):
+        """
+        POST 요청 시 모임에 멤버 추가
+        요청 데이터: 유저 ID
+        응답 데이터: 추가된 멤버 정보
+        """
+        club = self.get_object()
+        serializer = ClubMemberAddSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='member')
+        response_data = {
+            'status': status.HTTP_201_CREATED,
+            'message': 'Member successfully added',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+    # 모임에 관리자 추가 메서드
+    @action(detail=True, methods=['post'], url_path='admins')
+    def add_admin(self, request, *args, **kwargs):
+        """
+        POST 요청 시 모임에 관리자 추가
+        요청 데이터: 유저 ID
+        응답 데이터: 추가된 관리자 정보
+        """
+        club = self.get_object()
+        serializer = ClubAdminAddSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='admin')
+        response_data = {
+            'status': status.HTTP_201_CREATED,
+            'message': 'Admin successfully added',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)

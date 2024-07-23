@@ -33,7 +33,7 @@ class EmailorUsernameAuthBackend(backends.ModelBackend):
             return None
         try:
             user = User.objects.get(
-                Q(userId__exact=username) |  # userId 필드를 사용
+                Q(user_id__exact=username) |  # user_id 필드를 사용
                 Q(email__exact=username)
             )
             if user.check_password(password) and self.user_can_authenticate(user):

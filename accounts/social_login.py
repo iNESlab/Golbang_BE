@@ -38,7 +38,7 @@ def create_user_and_login(response, email, user_id, name, provider):
     password = User.objects.make_random_password()  # 소셜 로그인이기 때문에 비밀번호는 랜덤하게 생성
     user = User.objects.create(
         email=email,
-        userId=user_id,
+        user_id=user_id,
         name=name,
         login_type='social',
         provider=provider,

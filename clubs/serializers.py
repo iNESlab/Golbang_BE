@@ -1,9 +1,9 @@
 '''
-MVP demo ver 0.0.2
+MVP demo ver 0.0.3
 2024.07.24
 clubs/serializers.py
 
-역할: 
+역할:
 Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬화(Deserialization)를 처리하는 역할로
 모임(Club) 모델에 대한 직렬화(Serialization) 로직을 정의
 기능:
@@ -55,4 +55,20 @@ class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model   = Club
-        fields  = ('name', 'description', 'image', 'members')
+        fields  = ('name', 'description', 'image')
+
+class ClubMemberAddSerializer(serializers.ModelSerializer):
+    '''
+    클럽에 멤버를 추가할 때 사용되는 데이터의 직렬화/역직렬화를 처리하는 클래스
+    '''
+    class Meta:
+        model = ClubMember
+        fields = ('user', 'role')
+
+class ClubAdminAddSerializer(serializers.ModelSerializer):
+    '''
+    클럽에 관리자를 추가할 때 사용되는 데이터의 직렬화/역직렬화를 처리하는 클래스
+    '''
+    class Meta:
+        model = ClubMember
+        fields = ('user', 'role')
