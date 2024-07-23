@@ -187,3 +187,22 @@ class ClubViewSet(viewsets.ModelViewSet):
             }
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+    # 모임 내 특정 멤버 강제 삭제 메서드
+    @action(detail=True, methods=['delete'], url_path='members', url_name='remove_member')
+    def remove_member(self, request, pk=None):
+        club = self.get_object()
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'detail': '유효하지 않은 데이터입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        member = ClubMember.objects.filter(club=club, user_id=user_id).first()
+        if not member:
+            return Response({'detail': '해당 멤버를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        member.delete()
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully Deleted the Member'
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
