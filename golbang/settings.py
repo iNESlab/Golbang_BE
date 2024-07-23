@@ -155,7 +155,9 @@ CORS_ALLOW_CREDENTIALS = True
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware', # 개발 환경에서 CSRF 검사 비활성화 / 아래의 이유
+        # RESTful API: REST API는 일반적으로 상태가 없고 세션을 사용하지 않으며, 토큰 기반 인증(예: JWT)을 많이 사용한다. 이 경우 CSRF 공격의 위험이 줄어든다. 따라서 이러한 API에서는 CSRF 보호를 비활성화하는 것이 일반적
+        # 모바일 애플리케이션: 모바일 앱은 브라우저를 통해 작동하지 않으며, API 요청을 위해 자바스크립트를 실행하지 않는다. 따라서 CSRF 공격의 대상이 되지 않음.
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
