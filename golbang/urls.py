@@ -16,7 +16,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),  # admin 페이지
     path('api/user/', include('accounts.urls')),  # accounts 앱의 URL
     path('api/events/', include('events.urls')),
-    path('api/club-members/', include('clubMembers.urls')),
+    path('api/club_members/', include('clubMembers.urls')),
     path('api/participants/', include('participants.urls')),
     path('auth/', include('drf_social_oauth2.urls', namespace='drf')),
 ]
