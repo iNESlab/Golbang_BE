@@ -1,4 +1,6 @@
 # events/views.py
+from datetime import date, datetime
+
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
@@ -82,13 +84,11 @@ class EventViewSet(viewsets.ModelViewSet):
 
         try:
             event = Event.objects.get(pk=event_id)
-            print('event', event)
         except Event.DoesNotExist:
             return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
         participants = Participant.objects.filter(event=event, club_member__user=user)
-        print('participants', participants)
         if not participants.exists():
             return Response({"status": status.HTTP_404_NOT_FOUND, "message": "참가자 명단에 없습니다."},
                             status=status.HTTP_404_NOT_FOUND)
@@ -108,7 +108,6 @@ class EventViewSet(viewsets.ModelViewSet):
 
     # 이벤트 리스트 조회
     def list(self, request, *args, **kwargs):
-        print('EventViewSet')
         """
         GET 요청 시 해당 달 이벤트 목록(Events) 정보 반환
         요청 데이터: YYYY-MM-DD
@@ -121,41 +120,31 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"status": status.HTTP_404_NOT_FOUND, "message": "user not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        queryset = EventUtils.get_month_events_queryset(request, user)
+        date_str = request.query_params.get('date')
+        if not date_str:
+            date_str = str(date.today())
+
+        try:
+            # 날짜 문자열을 파싱하여 datetime 객체로 변환
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            month = date_obj.month
+            year = date_obj.year
+        except ValueError:
+            return Response({"status": status.HTTP_400_BAD_REQUEST,
+                             "message": "date(YYYY-MM-DD) 형식을 지켜주세요."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        status_type = request.query_params.get('status_type')
+        if status_type not in [None, Participant.StatusType.__members__]:
+            return Response({"status": status.HTTP_400_BAD_REQUEST,
+                             "message": "status_type(null or ACCEPT) 형식을 지켜주세요."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = EventUtils.get_month_events_queryset(year, month, status_type, user)
         serializer = EventDetailSerializer(queryset, many=True)
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully event list',
-            'data': serializer.data
-        }
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-class EventsUpcomingViewSet(viewsets.ModelViewSet):
-    queryset = Event.objects.all()
-    serializer_class = EventDetailSerializer
-
-    def list(self, request, *args, **kwargs):
-        """
-        GET 요청 시 다가 오는 이벤트 목록(Events) 정보 20개 반환
-        응답 데이터: Event (retrieve와 동일) 리스트
-        """
-        user_id = self.request.query_params.get('user_id')
-        #TODO: jwt에서 user_id 추출 가능하면, 토큰 방식으로 교체
-        status_type = request.query_params.get('status_type')
-        print('status_type', status_type)
-
-        try:
-            user = User.objects.get(pk=user_id)
-        except Event.DoesNotExist:
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "user not found"},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        queryset = EventUtils.get_upcoming_events(status_type, user)
-        serializer = EventDetailSerializer(queryset, many=True)
-        response_data = {
-            'status': status.HTTP_200_OK,
-            'message': 'Successfully upcoming events',
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_200_OK)
