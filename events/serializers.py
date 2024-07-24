@@ -58,11 +58,15 @@ class EventDetailSerializer(serializers.ModelSerializer):
     deny_count = serializers.SerializerMethodField(read_only=True)
     pending_count = serializers.SerializerMethodField(read_only=True)
     #TODO: 토큰에서 member_Id 추출하고, 이벤트에서 속한 조, 같은 조 인원을 반환하는 필드 2개 추가해야함
+    member_group = serializers.SerializerMethodField(read_only=True)
+    member_id = serializers.IntegerField(write_only=True)
+    date = serializers.DateField(write_only=True, required=False)
     class Meta:
         model = Event
         fields = ['event_id', 'club_member_id', 'participants', 'participants_count', 'party_count','accept_count',
                   'deny_count', 'pending_count', 'event_title', 'location', 'start_date_time', 'end_date_time',
-                  'repeat_type', 'game_mode', 'alert_date_time', ]
+                  'repeat_type', 'game_mode', 'alert_date_time', 'member_group',
+                  'member_id', 'date']
 
     def get_participants_count(self, obj):
         return obj.participant_set.count()
@@ -74,7 +78,19 @@ class EventDetailSerializer(serializers.ModelSerializer):
         return obj.participant_set.filter(status_type="DENY").count()
     def get_pending_count(self, obj):
         return obj.participant_set.filter(status_type="PENDING").count()
+    def get_member_group(self, obj):
+        return self.context.get('group_type')
 
-class EventListSerializer(serializers.ModelSerializer):
-    event_list = EventDetailSerializer(source='event_set', many=True)
+class EventsComingSoonSerializer(serializers.ModelSerializer):
+    events = EventDetailSerializer(source='id', many=True, read_only=True)
+    event_counts = serializers.SerializerMethodField(read_only=True)
+    status_type = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Event
+        fields = ['event_counts', 'status_type', 'events']
+
+    def get_event_counts(self, obj):
+        return obj.event_set.count()
+
 
