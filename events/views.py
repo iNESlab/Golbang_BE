@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
 
+from accounts.models import User
 from clubMembers.models import ClubMember
-from members.models import Member
 from participants.models import Participant
 from .models import Event
 from .serializers import EventCreateSerializer, EventDetailSerializer
@@ -64,21 +64,20 @@ class EventViewSet(viewsets.ModelViewSet):
         요청 데이터: Event ID
         응답 데이터: Event 정보 (Event ID, 생성자 ID, 참가자 리스트, 제목, 장소, 시작/종료 시간, 반복 타입, 게임 모드, 알람 시간)
         """
-        member_id = request.query_params.get('member_id')
+        user_id = request.query_params.get('user_id')
         event_id = self.kwargs.get('pk')
 
-        if not member_id:
-            return Response({"status": status.HTTP_400_BAD_REQUEST, "message": "member_id is required"},
+        if not user_id:
+            return Response({"status": status.HTTP_400_BAD_REQUEST, "message": "user_id is required"},
                             status=status.HTTP_400_BAD_REQUEST)
         if not event_id:
             return Response({"status": status.HTTP_400_BAD_REQUEST, "message": "event_id is required"},
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            member = Member.objects.get(pk=member_id)
-            print('member', member)
-        except Member.DoesNotExist:
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "member not found"},
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "user not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
         try:
@@ -88,15 +87,15 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        participant = Participant.objects.filter(event=event, club_member__member=member)
-        print('participant', participant)
-        if not participant.exists():
+        participants = Participant.objects.filter(event=event, club_member__user=user)
+        print('participants', participants)
+        if not participants.exists():
             return Response({"status": status.HTTP_404_NOT_FOUND, "message": "참가자 명단에 없습니다."},
                             status=status.HTTP_404_NOT_FOUND)
 
         # Set group_type in context if needed
         context = super().get_serializer_context()
-        context['group_type'] = participant.first().group_type
+        context['group_type'] = participants.first().group_type
 
         instance = self.get_object()
         serializer = self.get_serializer(instance, context=context)
@@ -115,14 +114,14 @@ class EventViewSet(viewsets.ModelViewSet):
         요청 데이터: YYYY-MM-DD
         응답 데이터: Event (retrieve와 동일) 리스트
         """
-        member_id = self.request.query_params.get('member_id')
+        user_id = self.request.query_params.get('user_id')
         try:
-            member = Member.objects.get(pk=member_id)
-        except Event.DoesNotExist:
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "member not found"},
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "user not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        queryset = EventUtils.get_month_events_queryset(request, member)
+        queryset = EventUtils.get_month_events_queryset(request, user)
         serializer = EventDetailSerializer(queryset, many=True)
         response_data = {
             'status': status.HTTP_200_OK,
@@ -141,18 +140,18 @@ class EventsUpcomingViewSet(viewsets.ModelViewSet):
         GET 요청 시 다가 오는 이벤트 목록(Events) 정보 20개 반환
         응답 데이터: Event (retrieve와 동일) 리스트
         """
-        member_id = self.request.query_params.get('member_id')
-        #TODO: jwt에서 member_id 추출 가능하면, 토큰 방식으로 교체
+        user_id = self.request.query_params.get('user_id')
+        #TODO: jwt에서 user_id 추출 가능하면, 토큰 방식으로 교체
         status_type = request.query_params.get('status_type')
         print('status_type', status_type)
 
         try:
-            member = Member.objects.get(pk=member_id)
+            user = User.objects.get(pk=user_id)
         except Event.DoesNotExist:
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "member not found"},
+            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "user not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        queryset = EventUtils.get_upcoming_events(status_type, member)
+        queryset = EventUtils.get_upcoming_events(status_type, user)
         serializer = EventDetailSerializer(queryset, many=True)
         response_data = {
             'status': status.HTTP_200_OK,
