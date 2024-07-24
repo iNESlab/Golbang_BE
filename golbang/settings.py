@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     # ==========
     # 애플리케이션
     # ==========
+    'members',
     'accounts',
     'clubMembers',
     'events',
