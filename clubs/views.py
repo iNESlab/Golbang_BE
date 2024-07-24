@@ -7,7 +7,9 @@ clubs/views.py
 기능:
 - Authorization Type: Bearer Token
 - ModelViewSet을 이용하여 모임의 CRUD 기능 구현
-- 기본 정보 수정, 멤버 추가, 관리자 추가 기능 분리
+- 모임: 생성, 조회, 특정 모임 조회, 특정 모임의 멤버 조회
+- 모임 관리자: 모임 기본 정보 수정, 모임 삭제, 멤버 초대, 멤버 삭제, 관리자로 등록/삭제
+- 모임 멤버: 모임 초대 수락/거절, 모임 나가기
 '''
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -17,7 +19,6 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Club, ClubMember, User
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
     ClubMemberSerializer
-
 
 class ClubViewSet(viewsets.ModelViewSet):
     queryset            = Club.objects.all() # 모든 Club 객체 가져오기
@@ -29,6 +30,9 @@ class ClubViewSet(viewsets.ModelViewSet):
             return ClubCreateUpdateSerializer
         return ClubSerializer
 
+    '''
+    모임
+    '''
     # 모임 생성 메서드
     def create(self, request, *args, **kwargs):
         '''
@@ -74,6 +78,27 @@ class ClubViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
+    # 멤버리스트 조회 메서드
+    @action(detail=True, methods=['get'], url_path='members', url_name='members')
+    def retrieve_members(self, request, pk=None):
+        """
+        GET 요청 시 특정 모임의 멤버 리스트 반환
+        요청 데이터: 모임 ID
+        응답 데이터: 멤버 리스트 (멤버 ID, 이름, 이메일, 역할)
+        """
+        club = self.get_object()
+        members = ClubMember.objects.filter(club=club)
+        serializer = ClubMemberSerializer(members, many=True)
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved members',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    '''
+    모임 관리자
+    '''
     # 모임 기본 정보 수정 메서드
     def update(self, request, *args, **kwargs):
         """
@@ -81,11 +106,11 @@ class ClubViewSet(viewsets.ModelViewSet):
         요청 데이터: 모임 정보 (이름, 설명, 이미지)
         응답 데이터: 수정된 모임 정보 (ID, 이름, 설명, 이미지, 수정일)
         """
-        partial         = kwargs.pop('partial', False)
-        instance        = self.get_object()
-        serializer      = self.get_serializer(instance, data=request.data, partial=partial)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        club            = serializer.save()
+        club = serializer.save()
         read_serializer = ClubSerializer(club)
         response_data = {
             'status': status.HTTP_200_OK,
@@ -107,63 +132,7 @@ class ClubViewSet(viewsets.ModelViewSet):
             'status': status.HTTP_204_NO_CONTENT,
             'message': 'Successfully Deleted the Club'
         }
-        return Response(response_data, status=status.HTTP_200_OK) # No Content로 할 경우 아무것도 반환하지 않기 때문에 200으로 변경
-
-    # 멤버리스트 조회 메서드
-    @action(detail=True, methods=['get'], url_path='members', url_name='members')
-    def retrieve_members(self, request, pk=None):
-        """
-        GET 요청 시 특정 모임의 멤버 리스트 반환
-        요청 데이터: 모임 ID
-        응답 데이터: 멤버 리스트 (멤버 ID, 이름, 이메일, 역할)
-        """
-        club = self.get_object()
-        members = ClubMember.objects.filter(club=club)
-        serializer = ClubMemberSerializer(members, many=True)
-        response_data = {
-            'status': status.HTTP_200_OK,
-            'message': 'Successfully retrieved members',
-            'data': serializer.data
-        }
-        return Response(response_data, status=status.HTTP_200_OK)
-
-    # 모임에 멤버 추가 메서드
-    # @action(detail=True, methods=['post'], url_path='members', url_name='add_member')
-    # def add_member(self, request, pk=None):
-    #     """
-    #     POST 요청 시 모임에 멤버 추가
-    #     요청 데이터: 유저 ID
-    #     응답 데이터: 추가된 멤버 정보
-    #     """
-    #     club = self.get_object()
-    #     serializer = ClubMemberAddSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='member')
-    #     response_data = {
-    #         'status': status.HTTP_201_CREATED,
-    #         'message': 'Member successfully added',
-    #         'data': serializer.data
-    #     }
-    #     return Response(response_data, status=status.HTTP_201_CREATED)
-
-    # 모임 내 멤버를 관리자로 추가하는 메서드
-    @action(detail=True, methods=['post'], url_path='admins', url_name='add_admin')
-    def add_admin(self, request, pk=None):
-        """
-        POST 요청 시 모임에 관리자 추가
-        요청 데이터: 유저 ID
-        응답 데이터: 추가된 관리자 정보
-        """
-        club = self.get_object()
-        serializer = ClubAdminAddSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='admin')
-        response_data = {
-            'status': status.HTTP_201_CREATED,
-            'message': 'Admin successfully added',
-            'data': serializer.data
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(response_data, status=status.HTTP_200_OK)  # No Content로 할 경우 아무것도 반환하지 않기 때문에 200으로 변경
 
     # 모임에 멤버 초대 메서드
     @action(detail=True, methods=['post'], url_path='invite', url_name='invite_member')
@@ -212,47 +181,6 @@ class ClubViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-    # 초대 받은 멤버가 참여 수락/거절하는 메서드
-    @action(detail=True, methods=['post'], url_path='join', url_name='join_club')
-    def join_club(self, request, pk=None):
-        club = self.get_object()
-        user = request.user
-        status_choice = request.data.get('status')
-
-        if status_choice not in ['accepted', 'declined']:
-            return Response({'detail': '유효하지 않은 데이터입니다.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        member = ClubMember.objects.filter(club=club, user=user).first()
-
-        if not member:
-            return Response({'detail': '초대를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if status_choice == 'accepted':
-            member.role = 'member'
-            member.save()
-            response_data = {
-                'status': status.HTTP_200_OK,
-                'message': 'Successfully joined the club',
-                'data': {
-                    'club_id': club.id,
-                    'user_id': user.id,
-                    'status': 'accepted'
-                }
-            }
-        else:
-            member.delete()
-            response_data = {
-                'status': status.HTTP_200_OK,
-                'message': 'Successfully declined the club invitation',
-                'data': {
-                    'club_id': club.id,
-                    'user_id': user.id,
-                    'status': 'declined'
-                }
-            }
-
-        return Response(response_data, status=status.HTTP_200_OK)
-
     # 모임에 관리자 추가 메서드
     @action(detail=True, methods=['post'], url_path=r'admins/(?P<member_id>\d+)', url_name='add_admin')
     def add_admin(self, request, pk=None, member_id=None):
@@ -299,6 +227,50 @@ class ClubViewSet(viewsets.ModelViewSet):
             'status': status.HTTP_204_NO_CONTENT,
             'message': 'Successfully removed from admin',
         }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    '''
+    모임 멤버
+    '''
+    # 초대 받은 멤버가 참여 수락/거절하는 메서드
+    @action(detail=True, methods=['post'], url_path='join', url_name='join_club')
+    def join_club(self, request, pk=None):
+        club = self.get_object()
+        user = request.user
+        status_choice = request.data.get('status')
+
+        if status_choice not in ['accepted', 'declined']:
+            return Response({'detail': '유효하지 않은 데이터입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        member = ClubMember.objects.filter(club=club, user=user).first()
+
+        if not member:
+            return Response({'detail': '초대를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if status_choice == 'accepted':
+            member.role = 'member'
+            member.save()
+            response_data = {
+                'status': status.HTTP_200_OK,
+                'message': 'Successfully joined the club',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user.id,
+                    'status': 'accepted'
+                }
+            }
+        else:
+            member.delete()
+            response_data = {
+                'status': status.HTTP_200_OK,
+                'message': 'Successfully declined the club invitation',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user.id,
+                    'status': 'declined'
+                }
+            }
+
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 모임 나가기 메서드
