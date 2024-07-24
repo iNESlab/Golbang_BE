@@ -5,7 +5,8 @@ ClubMember/models.py
 '''
 from django.db import models
 
+from members.models import Member
 
 # Create your models here.
 class ClubMember(models.Model):
-    club_member_name = models.CharField(max_length=25)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, null=False, blank=True)
