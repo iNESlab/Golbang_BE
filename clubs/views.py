@@ -128,25 +128,25 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 모임에 멤버 추가 메서드
-    @action(detail=True, methods=['post'], url_path='members', url_name='add_member')
-    def add_member(self, request, pk=None):
-        """
-        POST 요청 시 모임에 멤버 추가
-        요청 데이터: 유저 ID
-        응답 데이터: 추가된 멤버 정보
-        """
-        club = self.get_object()
-        serializer = ClubMemberAddSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='member')
-        response_data = {
-            'status': status.HTTP_201_CREATED,
-            'message': 'Member successfully added',
-            'data': serializer.data
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
+    # @action(detail=True, methods=['post'], url_path='members', url_name='add_member')
+    # def add_member(self, request, pk=None):
+    #     """
+    #     POST 요청 시 모임에 멤버 추가
+    #     요청 데이터: 유저 ID
+    #     응답 데이터: 추가된 멤버 정보
+    #     """
+    #     club = self.get_object()
+    #     serializer = ClubMemberAddSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     ClubMember.objects.create(club=club, user_id=serializer.validated_data['user'], role='member')
+    #     response_data = {
+    #         'status': status.HTTP_201_CREATED,
+    #         'message': 'Member successfully added',
+    #         'data': serializer.data
+    #     }
+    #     return Response(response_data, status=status.HTTP_201_CREATED)
 
-    # 모임에 관리자 추가 메서드
+    # 모임 내 멤버를 관리자로 추가하는 메서드
     @action(detail=True, methods=['post'], url_path='admins', url_name='add_admin')
     def add_admin(self, request, pk=None):
         """
@@ -189,7 +189,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     # 모임 내 특정 멤버 강제 삭제 메서드
-    @action(detail=True, methods=['delete'], url_path='members/(?P<member_id>\d+)', url_name='remove_member')
+    @action(detail=True, methods=['delete'], url_path=r'members/(?P<member_id>\d+)', url_name='remove_member')
     def remove_member(self, request, pk=None, member_id=None):
         """
         DELETE 요청 시 특정 모임 내 특정 멤버 삭제
@@ -254,7 +254,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 모임에 관리자 추가 메서드
-    @action(detail=True, methods=['post'], url_path='admins/(?P<member_id>\d+)', url_name='add_admin')
+    @action(detail=True, methods=['post'], url_path=r'admins/(?P<member_id>\d+)', url_name='add_admin')
     def add_admin(self, request, pk=None, member_id=None):
         """
         POST 요청 시 특정 모임의 멤버를 관리자 추가
@@ -280,8 +280,13 @@ class ClubViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     # 모임의 관리자 삭제 메서드
-    @action(detail=True, methods=['delete'], url_path='admins/(?P<admin_id>\d+)', url_name='remove_admin')
+    @action(detail=True, methods=['delete'], url_path=r'admins/remove/(?P<admin_id>\d+)', url_name='remove_admin')
     def remove_admin(self, request, pk=None, admin_id=None):
+        """
+        DELETE 요청 시 특정 모임의 관리자에서 다시 멤버로 role 변경
+        요청 데이터: 없음
+        응답 데이터: 변경된 정보
+        """
         club = self.get_object()
         admin = ClubMember.objects.filter(club=club, user_id=admin_id, role='admin').first()
 
