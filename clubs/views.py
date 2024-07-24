@@ -300,3 +300,25 @@ class ClubViewSet(viewsets.ModelViewSet):
             'message': 'Successfully removed from admin',
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
+    # 모임 나가기 메서드
+    @action(detail=True, methods=['delete'], url_path='leave', url_name='leave_club')
+    def leave_club(self, request, pk=None):
+        """
+        DELETE 요청 시 특정 모임 나가기
+        요청 데이터: 없음
+        응답 데이터: 나가기 완료 메시지
+        """
+        club = self.get_object()
+        user = request.user
+        member = ClubMember.objects.filter(club=club, user=user).first()
+
+        if not member:
+            return Response({'detail': '해당 멤버를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
+
+        member.delete()
+        response_data = {
+            'status': status.HTTP_204_NO_CONTENT,
+            'message': 'Successfully left the club',
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
