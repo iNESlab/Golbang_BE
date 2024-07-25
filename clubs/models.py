@@ -26,8 +26,8 @@ class Club(models.Model):
 
 class ClubMember(models.Model):
     ROLE_CHOICES_TYPE = (
-        ('member', 'Member'),
-        ('admin', 'Admin'),
+        ('member', 'M'),
+        ('admin', 'A'),
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
