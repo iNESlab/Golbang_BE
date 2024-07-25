@@ -70,9 +70,11 @@ class SafeJWTAuthentication(BaseAuthentication): # BaseAuthentication을 상속�
                 access_token, settings.SECRET_KEY, algorithms=['HS256']
             )
         # 예외처리
-        except jwt.ExpiredSignatureError: # 토큰 만료된 경우
-            raise exceptions.AuthenticationFailed('access_token expired')
-        except IndexError: # 토큰 형식이 잘못된 경우
+        except jwt.ExpiredSignatureError:
+            raise exceptions.AuthenticationFailed('Access token expired')
+        except jwt.DecodeError:
+            raise exceptions.AuthenticationFailed('Invalid token')
+        except IndexError:
             raise exceptions.AuthenticationFailed('Token prefix missing')
         
         # 디코딩된 페이로드에서 사용자 ID를 사용하여 인증 자격을 확인
