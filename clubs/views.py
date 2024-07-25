@@ -100,13 +100,13 @@ class ClubViewSet(viewsets.ModelViewSet):
     모임 관리자
     '''
     # 모임 기본 정보 수정 메서드
-    def update(self, request, *args, **kwargs):
+    def partial_update(self, request, *args, **kwargs):
         """
-        PUT 요청 시 모임의 기본 정보를 수정
+        PATCH 요청 시 모임의 기본 정보를 수정
         요청 데이터: 모임 정보 (이름, 설명, 이미지)
         응답 데이터: 수정된 모임 정보 (ID, 이름, 설명, 이미지, 수정일)
         """
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop('partial', True)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -181,51 +181,34 @@ class ClubViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-    # 모임에 관리자 추가 메서드
-    @action(detail=True, methods=['post'], url_path=r'admins/(?P<member_id>\d+)', url_name='add_admin')
-    def add_admin(self, request, pk=None, member_id=None):
+    # 모임 내 특정 멤버 역할 변경 메서드
+    @action(detail=True, methods=['patch'], url_path=r'members/(?P<member_id>\d+)/role', url_name='update_role')
+    def update_role(self, request, pk=None, member_id=None):
         """
-        POST 요청 시 특정 모임의 멤버를 관리자 추가
-        요청 데이터: 없음
-        응답 데이터: 추가된 관리자 정보
+        PATCH 요청 시 모임 내 특정 멤버의 역할을 변경
+        요청 데이터: role(admin/member)
+        응답 데이터: 변경 완료 메시지
         """
         club = self.get_object()
-        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
+        role = request.data.get('role')
 
+        if not role or role not in ['member', 'admin']:
+            return Response({'detail': '유효하지 않은 데이터입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
         if not member:
             return Response({'detail': '해당 멤버를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
 
-        member.role = 'admin'
+        member.role = role
         member.save()
         response_data = {
-            'status': status.HTTP_201_CREATED,
-            'message': 'Successfully promoted to admin',
+            'status': status.HTTP_200_OK,
+            'message': 'Role updated successfully',
             'data': {
                 'club_id': club.id,
                 'member_id': member_id,
+                'role': role
             }
-        }
-        return Response(response_data, status=status.HTTP_201_CREATED)
-
-    # 모임의 관리자 삭제 메서드
-    @action(detail=True, methods=['delete'], url_path=r'admins/remove/(?P<admin_id>\d+)', url_name='remove_admin')
-    def remove_admin(self, request, pk=None, admin_id=None):
-        """
-        DELETE 요청 시 특정 모임의 관리자에서 다시 멤버로 role 변경
-        요청 데이터: 없음
-        응답 데이터: 변경된 정보
-        """
-        club = self.get_object()
-        admin = ClubMember.objects.filter(club=club, user_id=admin_id, role='admin').first()
-
-        if not admin:
-            return Response({'detail': '해당 관리자를 찾을 수 없습니다.'}, status=status.HTTP_404_NOT_FOUND)
-
-        admin.role = 'member'
-        admin.save()
-        response_data = {
-            'status': status.HTTP_204_NO_CONTENT,
-            'message': 'Successfully removed from admin',
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
