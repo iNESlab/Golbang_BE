@@ -74,21 +74,27 @@ class ClubViewSet(viewsets.ModelViewSet):
                 'message': 'Admin field must be a list of valid user IDs, and at least one admin must be specified'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        for member_id in members:
-            if not User.objects.filter(id=member_id).exists(): # 회원 정보가 존재하지 않는 경우,
-                return Response({
-                    'status': 404,
-                    'message': f'User {member_id} is not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-            ClubMember.objects.create(club=club, user_id=member_id, role='member')
-
+        # 중복된 멤버나 관리자가 추가되지 않도록 중복 여부 확인 (관리자 우선 추가)
         for admin_id in admins:
-            if not User.objects.filter(id=admin_id).exists(): # 회원 정보가 존재하지 않는 경우,
+            if not User.objects.filter(id=admin_id).exists(): # 사용자가 존재하지 않는 경우
                 return Response({
                     'status': 404,
                     'message': f'User {admin_id} is not found'
                 }, status=status.HTTP_404_NOT_FOUND)
+            if ClubMember.objects.filter(club=club, user_id=admin_id).exists():
+                continue  # 중복 관리자는 추가하지 않음
             ClubMember.objects.create(club=club, user_id=admin_id, role='admin')
+
+
+        for member_id in members:
+            if not User.objects.filter(id=member_id).exists(): # 사용자가 존재하지 않는 경우
+                return Response({
+                    'status': 404,
+                    'message': f'User {member_id} is not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+            if ClubMember.objects.filter(club=club, user_id=member_id).exists():
+                continue  # 중복 멤버는 추가하지 않음 (또는 이미 관리자로 추가되어 있는 경우)
+            ClubMember.objects.create(club=club, user_id=member_id, role='member')
 
 
         read_serializer = ClubSerializer(club)
@@ -265,7 +271,7 @@ class ClubViewSet(viewsets.ModelViewSet):
                 'message': f'Club {pk} is not found'
             }, status=status.HTTP_404_NOT_FOUND)
 
-        role_type = request.query_params.get('role_type')
+        role_type = request.query_params.get('role_type') # 쿼리 파라미터 데이터 가져오기
 
         if not role_type or role_type not in ['A', 'M']: # 유효하지 않은 데이터인 경우
             return Response({

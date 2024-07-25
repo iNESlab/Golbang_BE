@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.3
-2024.07.24
+MVP demo ver 0.0.4
+2024.07.25
 clubs/serializers.py
 
 역할:
@@ -50,9 +50,14 @@ class ClubSerializer(serializers.ModelSerializer):
 
 class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     '''
-    클럽을 생성하거나 업데이트할 때 사용되는 데이터의 직렬화/역직렬화를 처리하는 클래스
-    클럽의 생성 및 업데이트를 위한 유효성 검사를 수행하고, 유효한 데이터를 모델 인스턴스로 변환
+    모임을 생성하거나 업데이트할 때 사용되는 데이터의 직렬화/역직렬화를 처리하는 클래스
+    모임의 생성 및 업데이트를 위한 유효성 검사를 수행하고, 유효한 데이터를 모델 인스턴스로 변환
+    모임 생성 시 "name"은 필수이고, "description"과 "image"는 필수가 아님
     '''
+    name = serializers.CharField(required=True)
+    description = serializers.CharField(required=False, allow_blank=True)
+    image = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model   = Club
         fields  = ('name', 'description', 'image')
