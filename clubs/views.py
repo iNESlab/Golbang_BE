@@ -10,6 +10,9 @@ clubs/views.py
 - 모임: 생성, 조회, 특정 모임 조회, 특정 모임의 멤버 조회
 - 모임 관리자: 모임 기본 정보 수정, 모임 삭제, 멤버 초대, 멤버 삭제, 관리자로 등록/삭제
 - 모임 멤버: 모임 초대 수락/거절, 모임 나가기
+
+누구나 모임을 생성하고, 자신이 속한 모임을 조회하고, 모임 초대 수락/거절 가능
+관리자는 자신이 관리하는 모임의 정보 수정, 삭제, 멤버 초대, 삭제, 역할 변경 가능
 '''
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
