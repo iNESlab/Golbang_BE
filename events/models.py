@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.db import models
-from clubMembers.models import ClubMember
+from members.models import Member
 
 
 # Create your models here.
@@ -18,7 +18,7 @@ class Event(models.Model):
 
     # Todo: club 테이블 생성후 연결하기
     # club = models.ForeignKey(Club, on_delete=models)
-    club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
     event_title = models.CharField("이벤트 제목", max_length=100, default='unknown_event')
     location = models.CharField("장소", max_length=255, default='unknown_location')
     start_date_time = models.DateTimeField("시작 시간", default=datetime.now)

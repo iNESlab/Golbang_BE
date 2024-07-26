@@ -5,17 +5,17 @@ participants/serializers.py
 '''
 from rest_framework import serializers
 
-from clubMembers.models import ClubMember
-from clubMembers.serializers import ClubMemberSerializer
+from members.models import Member
+from members.serializers import MemberSerializer
 from events.models import Event
 from participants.models import Participant
 
 
 class ParticipantCreateSerializer(serializers.ModelSerializer):
     participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
-    club_member_id = serializers.PrimaryKeyRelatedField(
-        queryset=ClubMember.objects.all(),
-        source='club_member'
+    member_id = serializers.PrimaryKeyRelatedField(
+        queryset=Member.objects.all(),
+        source='member'
     )
     event_id = serializers.PrimaryKeyRelatedField(
         queryset=Event.objects.all(),
@@ -26,9 +26,8 @@ class ParticipantCreateSerializer(serializers.ModelSerializer):
     class Meta:
         managed = True  # True면 장고는 해당 모델에 대해 DB 테이블과 동기화되도록 유지한다. Default True
         model = Participant
-        fields = ['participant_id', 'club_member_id', 'event_id',
-                  'team_type', 'group_type', 'handicap', 'sum_score', 'rank']
-        # TODO: handicap 모델에서 제거시 같이 제거
+        fields = ['participant_id', 'member_id', 'event_id',
+                  'team_type', 'group_type', 'sum_score', 'rank']
 
     def create(self, validated_data):
         return Participant.objects.create(**validated_data)
@@ -36,18 +35,14 @@ class ParticipantCreateSerializer(serializers.ModelSerializer):
 
 class ParticipantDetailSerializer(serializers.ModelSerializer):
     participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
-    club_member = ClubMemberSerializer(read_only=True)
+    member = MemberSerializer(read_only=True)
+    handicap_score = serializers.SerializerMethodField()
+    #TODO: score 테이블 만들어서 연결
 
-    # handicap_plus_score = serializers.SerializerMethodField()
     class Meta:
         model = Participant
-        fields = ['participant_id', 'club_member', 'status_type', 'team_type',
-                  'group_type', 'handicap', 'sum_score', 'rank']
+        fields = ['participant_id', 'member', 'status_type', 'team_type',
+                  'group_type', 'sum_score', 'rank', 'handicap_score']
 
-    # TODO: handicap 모델에서 제거시 같이 제거
-
-    '''
-    TODO: ClubMember와 member 외래키 연결 후 주석 해제
-    def get_handicap_plus_score(self, obj):
-        return obj.club_member.member.handicap + obj.sum_score
-    '''
+    def get_handicap_score(self, obj):
+        return int(obj.sum_score) - int(obj.member.user.handicap)

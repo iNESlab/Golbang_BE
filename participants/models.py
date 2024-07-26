@@ -1,5 +1,5 @@
 from django.db import models
-from clubMembers.models import ClubMember
+from members.models import Member
 from events.models import Event
 
 
@@ -26,12 +26,10 @@ class Participant(models.Model):
         DENY = "DENY", "거절"
         PENDING = "PENDING", "대기"
 
-    club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, null=False, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
     team_type = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
     group_type = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
-    handicap = models.IntegerField("핸디캡", default=0)
-    #TODO: 핸디캡 삭제? 프로필 사진, 유저명을 user 테이블에서 참고할 때, handicap도 불러오기 or SerializerMethod로 계산해서 돌려주기
     status_type = models.CharField("상태", max_length=7, choices=StatusType.choices, default=StatusType.PENDING)
     sum_score = models.IntegerField("총 점수", default=0)
     rank = models.IntegerField("랭킹",default=0)

@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework import viewsets
 
 from accounts.models import User
-from clubMembers.models import ClubMember
+from members.models import Member
 from participants.models import Participant
 from .models import Event
 from .serializers import EventCreateSerializer, EventDetailSerializer
@@ -28,25 +28,25 @@ class EventViewSet(viewsets.ModelViewSet):
         """
         Post 요청 시 모(Event 생성)
         """
-        club_member_id = self.request.query_params.get('club_member_id')
+        member_id = self.request.query_params.get('member_id')
 
-        if not club_member_id:
+        if not member_id:
             response_data = {
                 'status': status.HTTP_400_BAD_REQUEST,
-                'message': "club_member_id is required",
+                'message': "member_id is required",
             }
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
         try:
-            club_member = ClubMember.objects.get(pk=club_member_id)
-        except ClubMember.DoesNotExist:
+            member = Member.objects.get(pk=member_id)
+        except Member.DoesNotExist:
             response_data = {
                 'status': status.HTTP_404_NOT_FOUND,
-                'message': "club_member_id is not found",
+                'message': "member_id is not found",
             }
             return Response(response_data, status=status.HTTP_404_NOT_FOUND)
 
         data = request.data.copy()
-        data['club_member_id'] = club_member.pk
+        data['member_id'] = member.pk
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -88,7 +88,7 @@ class EventViewSet(viewsets.ModelViewSet):
             return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
                             status=status.HTTP_404_NOT_FOUND)
 
-        participants = Participant.objects.filter(event=event, club_member__user=user)
+        participants = Participant.objects.filter(event=event, member__user=user)
         if not participants.exists():
             return Response({"status": status.HTTP_404_NOT_FOUND, "message": "참가자 명단에 없습니다."},
                             status=status.HTTP_404_NOT_FOUND)
