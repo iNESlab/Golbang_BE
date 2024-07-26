@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 '''
-MVP demo ver 0.0.3
-2024.06.27
+MVP demo ver 0.0.4
+2024.07.09
 golbang/settings.py
 '''
 
@@ -22,6 +22,8 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 환경변수 설정
 # Take environment variables from .env file
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
@@ -36,10 +38,30 @@ REFRESH_TOKEN_SECRET = env('REFRESH_TOKEN_SECRET')
 MAIN_DOMAIN = env('MAIN_DOMAIN')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 
 ALLOWED_HOSTS = []
 
+# Static files (CSS, JavaScript, Images)
+# 기본 파일 시스템 설정
+STATIC_URL = '/static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Amazon S3 설정을 위한 조건부 설정
+USE_S3 = env.bool('USE_S3', default=False)
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_LOCATION = 'static'
+
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Application definition
 
@@ -55,14 +77,14 @@ INSTALLED_APPS = [
     # 애플리케이션
     # ==========
     'accounts',
-
+    'clubs',
     # ==========
     # DRF (Django Rest Framework)
     # - REST API 엔드포인트를 위해 필요하다.
     # ==========
     'rest_framework',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist', # 로그아웃을 위한 블랙리스트
+    #'rest_framework_simplejwt',
+    #'rest_framework_simplejwt.token_blacklist', # 로그아웃을 위한 블랙리스트
 
     # ==========
     # OAUTH (drf-social-oauth2)
@@ -97,7 +119,7 @@ REST_FRAMEWORK = {
 }
 
 # JWT 관련 설정
-REST_USE_JWT = True
+#REST_USE_JWT = True
 
 SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
@@ -105,7 +127,10 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
 
 # 아래는 필요 없음
 # 일단 주석처리
@@ -130,7 +155,9 @@ CORS_ALLOW_CREDENTIALS = True
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    #'django.middleware.csrf.CsrfViewMiddleware', # 개발 환경에서 CSRF 검사 비활성화 / 아래의 이유
+        # RESTful API: REST API는 일반적으로 상태가 없고 세션을 사용하지 않으며, 토큰 기반 인증(예: JWT)을 많이 사용한다. 이 경우 CSRF 공격의 위험이 줄어든다. 따라서 이러한 API에서는 CSRF 보호를 비활성화하는 것이 일반적
+        # 모바일 애플리케이션: 모바일 앱은 브라우저를 통해 작동하지 않으며, API 요청을 위해 자바스크립트를 실행하지 않는다. 따라서 CSRF 공격의 대상이 되지 않음.
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -263,11 +290,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
