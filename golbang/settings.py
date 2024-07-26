@@ -98,6 +98,11 @@ INSTALLED_APPS = [
     # Cross-Origin Resource Sharing (CORS)
     # ==========
     'corsheaders',
+
+    # ==========
+    # Swagger
+    # ==========
+    'drf_yasg',
     
 ]
 
