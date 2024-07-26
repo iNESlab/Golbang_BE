@@ -12,7 +12,7 @@ from .models import User
 사용자 생성 폼
 '''
 # step 1
-# 첫 번째 단계 폼에서는 필수 항목인 userId, password, email을 입력받는다.
+# 첫 번째 단계 폼에서는 필수 항목인 user_id, password, email을 입력받는다.
 class UserCreationFirstStepForm(forms.ModelForm):
     # widget을 이용하여 비밀번호가 화면에 표시되지 않도록 설정
     password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
@@ -21,7 +21,7 @@ class UserCreationFirstStepForm(forms.ModelForm):
     class Meta:
         # 폼에 포함할 모델과 필드
         model = User
-        fields = ['userId', 'email']
+        fields = ['user_id', 'email']
 
     # 비밀번호와 비밀번호 확인 필드의 값이 일치하는지 검증
     def clean_password2(self):
@@ -45,8 +45,8 @@ class UserCreationFirstStepForm(forms.ModelForm):
 class UserCreationSecondStepForm(forms.ModelForm):
     class Meta:
          # 폼에 포함할 모델과 필드
-        model = User
-        fields = ['name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id']
+        model   = User
+        fields  = ['name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id']
 
 '''
 사용자 수정 폼
@@ -56,8 +56,8 @@ class UserChangeForm(forms.ModelForm):
     password = ReadOnlyPasswordHashField()
 
     class Meta:
-        model = User
-        fields = ['userId', 'email', 'password', 'name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id', 
+        model   = User
+        fields  = ['user_id', 'email', 'password', 'name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id',
                   'is_active', 'is_admin']
 
     def clean_password(self):

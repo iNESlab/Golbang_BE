@@ -16,22 +16,22 @@ class CustomUserAdmin(BaseUserAdmin):
     add_form = UserCreationFirstStepForm
 
 
-    list_display = ('userId', 'email', 'name', 'phone_number', 'date_of_birth', 'is_admin')
-    list_filter = ('is_admin',)
-    fieldsets = (
-        (None, {'fields': ('userId', 'email', 'password')}),
-        ('Personal info', {'fields': ('name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}),
-        ('Permissions', {'fields': ('is_admin', 'is_active')}),
+    list_display        = ('user_id', 'email', 'name', 'phone_number', 'date_of_birth', 'is_admin')
+    list_filter         = ('is_admin',)
+    fieldsets           = (
+                            (None, {'fields': ('user_id', 'email', 'password')}),
+                            ('Personal info', {'fields': ('name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}),
+                            ('Permissions', {'fields': ('is_admin', 'is_active')}),
     )
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('userId', 'email', 'password1', 'password2', 'name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}
-        ),
+    add_fieldsets       = (
+                            (None, {
+                                'classes': ('wide',),
+                                'fields': ('user_id', 'email', 'password1', 'password2', 'name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}
+                            ),
     )
-    search_fields = ('userId', 'email', 'name')
-    ordering = ('email',)
-    filter_horizontal = ()
+    search_fields       = ('user_id', 'email', 'name')
+    ordering            = ('email',)
+    filter_horizontal   = ()
 
 admin.site.register(User, CustomUserAdmin) # 생성한 커스텀 유저 모델(Custom User Model)과 관리자 폼(Form)을 사용하도록 등록
 admin.site.unregister(Group) # 장고(djagno)에서 기본적으로 제공하는 Group은 사용하지 않도록 설

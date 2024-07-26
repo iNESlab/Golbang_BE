@@ -16,7 +16,7 @@ from rest_framework import exceptions           # DRF에서 제공하는 예외 
 from rest_framework.authentication import BaseAuthentication, CSRFCheck # DRF 기본 인증, CSRF 토큰 검사
 from django.conf import settings                # django 설정 파일
 from django.contrib.auth import get_user_model  # 현재 활성화된 사용자 모델
-import datetime
+from datetime import datetime
 from django.contrib.auth import backends
 from django.db.models import Q
 
@@ -33,7 +33,7 @@ class EmailorUsernameAuthBackend(backends.ModelBackend):
             return None
         try:
             user = User.objects.get(
-                Q(userId__exact=username) |  # userId 필드를 사용
+                Q(user_id__exact=username) |  # user_id 필드를 사용
                 Q(email__exact=username)
             )
             if user.check_password(password) and self.user_can_authenticate(user):
@@ -70,9 +70,11 @@ class SafeJWTAuthentication(BaseAuthentication): # BaseAuthentication을 상속�
                 access_token, settings.SECRET_KEY, algorithms=['HS256']
             )
         # 예외처리
-        except jwt.ExpiredSignatureError: # 토큰 만료된 경우
-            raise exceptions.AuthenticationFailed('access_token expired')
-        except IndexError: # 토큰 형식이 잘못된 경우
+        except jwt.ExpiredSignatureError:
+            raise exceptions.AuthenticationFailed('Access token expired')
+        except jwt.DecodeError:
+            raise exceptions.AuthenticationFailed('Invalid token')
+        except IndexError:
             raise exceptions.AuthenticationFailed('Token prefix missing')
         
         # 디코딩된 페이로드에서 사용자 ID를 사용하여 인증 자격을 확인
@@ -112,8 +114,9 @@ def generate_access_token(user):
     # 액세스 토큰의 페이로드를 정의
     access_token_payload = {
         'user_id': user.id,
-        'exp': datetime.datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
-        'iat': datetime.datetime.utcnow(),
+        'token_type': 'access',
+        'exp': datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+        'iat': datetime.utcnow(),
     }
     
     # JWT 토큰을 생성
@@ -130,8 +133,9 @@ def generate_refresh_token(user):
     # 리프레시 토큰의 페이로드를 정의
     refresh_token_payload = {
         'user_id': user.id,
-        'exp': datetime.datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
-        'iat': datetime.datetime.utcnow(),
+        'token_type': 'refresh',
+        'exp': datetime.utcnow() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+        'iat': datetime.utcnow(),
     }
     
     # JWT 리프레시 토큰을 생성
@@ -145,8 +149,8 @@ def generate_refresh_token(user):
 
 # 로그인 후 응답에 JWT 토큰을 설정하는 함수
 def jwt_login(response, user):
-    access_token = generate_access_token(user)      # 액세스 토큰 생성
-    refresh_token = None
+    access_token    = generate_access_token(user)      # 액세스 토큰 생성
+    refresh_token   = None
 
     # 액세스 토큰이 만료될 경우에만 리프레시 토큰 생성
     if is_token_expired(access_token):
@@ -169,8 +173,8 @@ def jwt_login(response, user):
 def is_token_expired(token):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-        exp = datetime.datetime.fromtimestamp(payload['exp'])
-        return exp < datetime.datetime.utcnow()
+        exp     = datetime.fromtimestamp(payload['exp'])
+        return exp < datetime.utcnow()
     except jwt.ExpiredSignatureError:
         return True
     except Exception:

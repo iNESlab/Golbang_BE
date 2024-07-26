@@ -15,12 +15,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         # 직렬화할 모델과 포함할 필드들을 정의
-        model = get_user_model()
-        fields = ('userId', 'email', 'password', 'name')
+        model   = get_user_model()
+        fields  = ('user_id', 'email', 'password', 'name')
 
 # 사용자 모델의 직렬화 및 역직렬화 처리 - 비밀번호가 필요없는 다른 테이블에서 사용할 용도
 class UserInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = get_user_model()
-        fields = ('userId', 'email', 'name')
+        model   = get_user_model()
+        fields  = ('user_id', 'email', 'name')
