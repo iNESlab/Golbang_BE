@@ -1,12 +1,13 @@
 '''
-MVP demo ver 0.0.1
-2024.06.19
+MVP demo ver 0.0.2
+2024.07.25
 golbang/urls.py
 
 역할: 골방 프로젝트 전체의 엔드포인트 라우팅
 현재 기능:
 - admin
 - accounts
+- club(모임)
 '''
 
 from django.contrib import admin
