@@ -14,7 +14,7 @@ class EventUtils:
         end_date = datetime(next_month_year, next_month, 1)
 
         events = (Event.objects
-                  .filter(participant__member__user=user,
+                  .filter(participant__club_member__user=user,
                           start_date_time__gte=start_date,
                           start_date_time__lt=end_date)
                   .order_by('start_date_time'))

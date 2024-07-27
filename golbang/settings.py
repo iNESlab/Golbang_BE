@@ -78,7 +78,6 @@ INSTALLED_APPS = [
     # ==========
     'accounts',
     'clubs',
-    'members',
     'events',
     'participants',
 

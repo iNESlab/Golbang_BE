@@ -1,5 +1,6 @@
 from django.db import models
-from members.models import Member
+
+from clubs.models import ClubMember
 from events.models import Event
 
 
@@ -22,14 +23,16 @@ class Participant(models.Model):
 
     class StatusType(models.TextChoices):
         ACCEPT_PARTY = "PARTY", "수락 및 회식"
-        ACCEPT = "ACCEPT", "수락"
-        DENY = "DENY", "거절"
-        PENDING = "PENDING", "대기"
+        ACCEPT       = "ACCEPT", "수락"
+        DENY         = "DENY", "거절"
+        PENDING      = "PENDING", "대기"
 
-    member = models.ForeignKey(Member, on_delete=models.CASCADE, null=False, blank=True)
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
-    team_type = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
-    group_type = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
+    club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
+    event       = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
+    team_type   = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
+    group_type  = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
     status_type = models.CharField("상태", max_length=7, choices=StatusType.choices, default=StatusType.PENDING)
-    sum_score = models.IntegerField("총 점수", default=0)
-    rank = models.IntegerField("랭킹",default=0)
+    sum_score   = models.IntegerField("총 점수", default=0)
+    rank        = models.IntegerField("랭킹",default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
