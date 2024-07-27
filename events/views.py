@@ -8,7 +8,7 @@ from rest_framework import viewsets
 from clubs.models import ClubMember, Club
 from participants.models import Participant
 from .models import Event
-from .serializers import EventCreateSerializer, EventDetailSerializer
+from .serializers import EventCreateUpdateSerializer, EventDetailSerializer
 from .utils import EventUtils
 
 
@@ -16,17 +16,19 @@ class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
 
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.action in ['retrieve','partial_udpate']:
             return EventDetailSerializer
-        elif self.action == 'create':
-            return EventCreateSerializer
-        return EventCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return EventCreateUpdateSerializer
+        return EventCreateUpdateSerializer
 
     # 이벤트 생성 메서드
     def create(self, request, *args, **kwargs):
+        # TODO: 참가자 중복 검사 추가. 근데, 개발중에는 빠른 확인을 위해 중복 허용하겠습니다!
         """
         Post 요청 시 이벤트(Event) 생성
-        요청 데이터: Event ID
+        요청 데이터: Event 정보 ('club_id', 'member_id', 'participants', 'event_title', 'location',
+                  'start_date_time', 'end_date_time', 'repeat_type', 'game_mode', 'alert_date_time')
         응답 데이터: Event 정보 (Event ID, 생성자 ID, 참가자 리스트, 제목, 장소, 시작/종료 시간, 반복 타입, 게임 모드, 알람 시간)
         """
         user = self.request.user
@@ -35,29 +37,16 @@ class EventViewSet(viewsets.ModelViewSet):
         try:
             club = Club.objects.get(id=club_id)
         except Club.DoesNotExist:
-            response_data = {
-                'status': status.HTTP_404_NOT_FOUND,
-                'message': "club_id is not found",
-            }
-            return Response(response_data, status=status.HTTP_404_NOT_FOUND)
+            return Response({'status': status.HTTP_404_NOT_FOUND,'message': "club_id is not found"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         member = ClubMember.objects.get(user=user, club=club)
-        if member is None:
-            response_data = {
-                'status': status.HTTP_401_UNAUTHORIZED,
-                'message': "user is not a club_member",
-            }
-            return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
-        if member.role != "admin":
-            response_data = {
-                'status': status.HTTP_401_UNAUTHORIZED,
-                'message': "user is not a club_admin",
-            }
-            return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
+        if member is None or member.role != "admin":
+            return Response({'status': status.HTTP_401_UNAUTHORIZED, 'message': "user is not a club_admin"},
+                            status=status.HTTP_401_UNAUTHORIZED)
 
         data = request.data.copy()
         data['club_id'] = club.id
-        data['member_id'] = member.id
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -68,6 +57,32 @@ class EventViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        # TODO: 참가자 중복 검사 추가. 근데, 개발중에는 빠른 확인을 위해 중복 허용하겠습니다!
+        user = self.request.user
+        event_id = self.kwargs.get('pk')
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:
+            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        member = ClubMember.objects.get(user=user, club=event.club)
+        if member is None or member.role != "admin":
+            return Response({'status': status.HTTP_401_UNAUTHORIZED, 'message': "user is not a club_admin",},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        serializer = self.get_serializer(event, data=request.data, partial=True)  # 여기서 partial=True
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully updated',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
 
     # 이벤트 조회 메서드
     def retrieve(self, request, *args, **kwargs):
@@ -137,10 +152,33 @@ class EventViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         queryset = EventUtils.get_month_events_queryset(year, month, status_type, user)
-        serializer = EventDetailSerializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True)
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully event list',
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
+# 이벤트 삭제 메서드 (DELETE)
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        event_id = self.kwargs.get('pk')
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:
+            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        member = ClubMember.objects.get(user=user,club=event.club)
+
+        if member is None or member.role != "admin":
+            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        self.perform_destroy(event)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def perform_destroy(self, instance):
+        instance.delete()
