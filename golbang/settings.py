@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 '''
-MVP demo ver 0.0.4
-2024.07.09
+MVP demo ver 0.0.5
+2024.07.27
 golbang/settings.py
 '''
 
@@ -121,6 +121,7 @@ REST_FRAMEWORK = {
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
         'drf_social_oauth2.authentication.SocialAuthentication',
     ),
+    'EXCEPTION_HANDLER': 'golbang.utils.custom_exception_handler',
 }
 
 # JWT 관련 설정
