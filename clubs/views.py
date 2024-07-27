@@ -17,7 +17,7 @@ clubs/views.py
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 
 from django.http import Http404
 
@@ -25,18 +25,34 @@ from .models import Club, ClubMember, User
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
     ClubMemberSerializer
 
+class IsMemberOfClub(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        # 사용자가 모임의 멤버인지 확인
+        return ClubMember.objects.filter(club=obj, user=request.user).exists()
+
 class ClubViewSet(viewsets.ModelViewSet):
     '''
     모임 관련 CRUD 클래스
     '''
     queryset            = Club.objects.all() # 모든 Club 객체 가져오기
     serializer_class    = ClubSerializer
-    permission_classes  = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+    permission_classes  = [IsAuthenticated, IsMemberOfClub]  # 인증된 사용자만 접근 가능
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return ClubCreateUpdateSerializer
         return ClubSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return Club.objects.filter(members=user)  # 사용자가 속한 모임만 반환
+
+    def get_permissions(self):
+        if self.action == 'retrieve':
+            self.permission_classes = [IsAuthenticated, IsMemberOfClub]
+        return super().get_permissions()
+
+
 
     '''
     모임
