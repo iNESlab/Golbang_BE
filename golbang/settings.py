@@ -78,6 +78,9 @@ INSTALLED_APPS = [
     # ==========
     'accounts',
     'clubs',
+    'events',
+    'participants',
+
     # ==========
     # DRF (Django Rest Framework)
     # - REST API 엔드포인트를 위해 필요하다.
