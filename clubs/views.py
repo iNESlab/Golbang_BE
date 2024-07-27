@@ -1,6 +1,6 @@
 '''
 MVP demo ver 0.0.8
-2024.07.25
+2024.07.27
 clubs/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 모임 API 엔드포인트의 로직을 처리
@@ -10,6 +10,7 @@ clubs/views.py
 - 모임: 생성, 조회, 특정 모임 조회, 특정 모임의 멤버 조회
 - 모임 관리자: 모임 기본 정보 수정, 모임 삭제, 멤버 초대, 멤버 삭제, 관리자로 등록/삭제
 - 모임 멤버: 모임 초대 수락/거절, 모임 나가기
+- 사용자가 자신의 모임만 볼 수 있도록 권한 및 쿼리셋 필터링 추가
 
 누구나 모임을 생성하고, 자신이 속한 모임을 조회하고, 모임 초대 수락/거절 가능
 관리자는 자신이 관리하는 모임의 정보 수정, 삭제, 멤버 초대, 삭제, 역할 변경 가능
@@ -26,33 +27,60 @@ from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberA
     ClubMemberSerializer
 
 class IsMemberOfClub(BasePermission):
+    '''
+    사용자가 모임에 속한 멤버인지 확인하는 권한 클래스
+    '''
+    def has_permission(self, request, view):
+        # 요청한 사용자가 어떤 모임의 멤버인지 확인 (뷰 수준, 리스트 뷰, 생성 뷰에 사용)
+        # ex. 모임 목록 보기
+        return ClubMember.objects.filter(user=request.user).exists()
+
     def has_object_permission(self, request, view, obj):
-        # 사용자가 모임의 멤버인지 확인
+        # 요청한 사용자가 특정 모임의 멤버인지 확인 (객체 수준, 특정 모임 객체 조회, 수정, 삭제 등에 사용)
+        # ex. 특정 모임 정보 보기
         return ClubMember.objects.filter(club=obj, user=request.user).exists()
+
+class IsClubAdmin(BasePermission):
+    '''
+    사용자가 모임 내에서 관리자 역할을 하는지 확인하는 권한 클래스
+    '''
+    def has_object_permission(self, request, view, obj):
+        # 먼저 사용자가 모임의 멤버인지 확인한 후 (IsMemberOfClub에서 상속받아 사용)
+        if super().has_object_permission(request, view, obj):
+            # 요청한 사용자가 모임의 관리자 역할을 하는지 추가로 확인
+            return ClubMember.objects.filter(club=obj, user=request.user, role='admin').exists()
+        return False
 
 class ClubViewSet(viewsets.ModelViewSet):
     '''
-    모임 관련 CRUD 클래스
+    모임 관련 CRUD 기능 제공 클래스
     '''
-    queryset            = Club.objects.all() # 모든 Club 객체 가져오기
-    serializer_class    = ClubSerializer
-    permission_classes  = [IsAuthenticated, IsMemberOfClub]  # 인증된 사용자만 접근 가능
+    queryset            = Club.objects.all()                # 모든 Club 객체 가져오기
+    serializer_class    = ClubSerializer                    # 기본으로 사용할 시리얼라이저 클래스 설정
+    permission_classes  = [IsAuthenticated, IsMemberOfClub] # 기본 권한: 인증된 사용자이고, 모임의 멤버여야 함
 
     def get_serializer_class(self):
+        # 액션에 따라 사용할 시리얼라이저 클래스 결정
         if self.action in ['create', 'update', 'partial_update']:
             return ClubCreateUpdateSerializer
         return ClubSerializer
 
-    def get_queryset(self):
+    def get_queryset(self): # 데이터베이스로부터 가져온 객체 목록
         user = self.request.user
-        return Club.objects.filter(members=user)  # 사용자가 속한 모임만 반환
+        # 현재 요청한 사용자가 속한 모임만 반환
+        return Club.objects.filter(members=user)
 
     def get_permissions(self):
-        if self.action == 'retrieve':
-            self.permission_classes = [IsAuthenticated, IsMemberOfClub]
+        # 액션에 따라 필요한 권한 설정
+        permission_classes = [IsAuthenticated]  # 기본 권한: 인증된 사용자
+        if self.action in ['retrieve', 'list']:
+            # 모임을 조회하거나 목록을 볼 때는 모임의 멤버여야 함
+            permission_classes.append(IsMemberOfClub)
+        elif self.action in ['partial_update', 'destroy', 'invite_member', 'remove_member', 'update_role']:
+            # 모임을 수정, 삭제하거나 멤버를 초대, 삭제, 관리자로 등록/삭제할 때는 모임의 관리자여야 함
+            permission_classes.extend([IsMemberOfClub, IsClubAdmin])
+        self.permission_classes = permission_classes
         return super().get_permissions()
-
-
 
     '''
     모임
