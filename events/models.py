@@ -17,7 +17,6 @@ class Event(models.Model):
         STROKE_PLAY = 'SP', 'Stroke Play'
 
     club            = models.ForeignKey(Club, on_delete=models.CASCADE)
-    club_member     = models.ForeignKey(ClubMember, on_delete=models.CASCADE) # 이벤트 관리자
     event_title     = models.CharField("이벤트 제목", max_length=100, default='unknown_event')
     location        = models.CharField("장소", max_length=255, default='unknown_location')
     start_date_time = models.DateTimeField("시작 시간", default=datetime.now)
