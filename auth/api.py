@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.3
-2024.07.23
+MVP demo ver 0.0.4
+2024.07.27
 auth/api.py
 
 역할: DRF REST API
@@ -17,7 +17,7 @@ from django.conf import settings                # Django 프로젝트의 설정 
 from django.utils.decorators import method_decorator    # 클래스 기반 뷰애 데코레이터 적용하기 위한 함수형 데코레이터
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie  # CSRF 보호를 위한 데코레이터
 from auth.authenticate import generate_access_token, jwt_login, is_token_expired  # JWT 토큰 생성하고 로그인 처리하는 함수
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken # RefreshToken
 
 User = get_user_model() # 사용자 모델을 변수에 할당
@@ -41,6 +41,7 @@ class LoginApi(APIView):
         # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
         if (username_or_email is None) or (password is None):
             return Response({
+                "status" : status.HTTP_400_BAD_REQUEST,
                 "message": "username/email and password required"
             }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -50,12 +51,14 @@ class LoginApi(APIView):
         ## 사용자가 없는 경우 -> 404 not found 응답
         if user is None:
             return Response({
-                "message": "유저를 찾을 수 없습니다"
+                "status" : status.HTTP_404_NOT_FOUND,
+                "message": "User does not exist(Not Found)"
             }, status=status.HTTP_404_NOT_FOUND)
         ## 비밀번호가 일치하지 않는 경우 -> 400 bad request응답
         if not user.check_password(password):
             return Response({
-                "message": "비밀번호가 일치하지 않습니다"
+                "status" : status.HTTP_400_BAD_REQUEST,
+                "message": "Passwords do not match"
             }, status=status.HTTP_400_BAD_REQUEST)
 
         refresh         = RefreshToken.for_user(user)
@@ -70,7 +73,11 @@ class LoginApi(APIView):
             response.set_cookie(key="refreshtoken", value=str(refresh), httponly=True)
             return response
         # 액세스 토큰이 만료되지 않았다면 액세스 토큰만 리턴
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Successfully Logged In",
+            "data": response_data,
+        }, status=status.HTTP_200_OK)
 
 '''
 JWT 토큰 갱신 로직을 처리하는 클래스 기반 뷰
@@ -83,6 +90,7 @@ class RefreshJWTToken(APIView):
         # 리프레시 토큰이 제공되지 않는 경우 -> 403 Forbidden 응답
         if refresh_token is None:
             return Response({
+                "status" : status.HTTP_403_FORBIDDEN,
                 "message": "Authentication credentials were not provided."
             }, status=status.HTTP_403_FORBIDDEN)
 
@@ -94,22 +102,25 @@ class RefreshJWTToken(APIView):
             )
         except jwt.ExpiredSignatureError: # 리프레시 토큰이 만료된 경우 예외처리 -> 403 Forbidden
             return Response({
-                "message": "expired refresh token, please login again."
+                "status" : status.HTTP_403_FORBIDDEN,
+                "message": "Expired refresh token, please login again."
             }, status=status.HTTP_403_FORBIDDEN)
 
         # 페이로드에서 가져온 사용자 ID로 사용자를 조회
         user = User.objects.filter(id=payload['user_id']).first()
 
         # 예외처리
-        ## 사용자가 없는 경우 -> 400 Bad Request 응답
+        ## 사용자가 없는 경우 -> 404 Not Found 응답
         if user is None:
             return Response({
-                "message": "user not found"
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "status" : status.HTTP_404_NOT_FOUND,
+                "message": "User not found"
+            }, status=status.HTTP_404_NOT_FOUND)
         ## 사용자가 비활성화된 경우 -> 400 Bad Request 응답
         if not user.is_active:
             return Response({
-                "message": "user is inactive"
+                "status" : status.HTTP_400_BAD_REQUEST,
+                "message": "User is inactive"
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 새 엑세스 토큰 생성
@@ -126,7 +137,7 @@ class RefreshJWTToken(APIView):
 '''        
 @method_decorator(csrf_protect, name='dispatch') # 뷰가 호출될 때마다 CSRF 보호를 적용
 class LogoutApi(APIView):
-    permission_classes = [AllowAny]  # 로그인 엔드포인트에 대한 접근 권한 설정
+    permission_classes = [IsAuthenticated]  # 로그인 엔드포인트에 대한 접근 권한 설정
 
     def post(self, request): # HTTP POST 요청을 처리
         '''
@@ -135,6 +146,7 @@ class LogoutApi(APIView):
         try:
             # 202 Accepted 응답 객체를 생성
             response = Response({
+                "status" : status.HTTP_202_ACCEPTED,
                 "message": "Logout success"
                 }, status=status.HTTP_202_ACCEPTED)
             response.delete_cookie('refreshtoken') # 응답 객체에서 리프레시 토큰 쿠키를 삭제
