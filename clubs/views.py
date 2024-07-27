@@ -51,7 +51,7 @@ class ClubViewSet(viewsets.ModelViewSet):
                 "description": "Description field must be a string" if "description" in serializer.errors else None,
                 "image": "Image URL must be a valid URL" if "image" in serializer.errors else None,
                 "members": "Members field must be a list of valid user IDs" if "members" in serializer.errors else None,
-                "admin": "Admin field must be a list of valid user IDs, and at least one admin must be specified" if "admin" in serializer.errors else None,
+                "admins": "Admin field must be a list of valid user IDs, and at least one admin must be specified" if "admin" in serializer.errors else None,
             }
             return Response({
                 "status": 400,
@@ -71,7 +71,7 @@ class ClubViewSet(viewsets.ModelViewSet):
                 'status': 400,
                 'message': 'Invalid request payload',
                 'errors': {'members': 'Members field must be a list of valid user IDs',
-                           'admin': 'Admin field must be a list of valid user IDs'}
+                           'admins': 'Admin field must be a list of valid user IDs'}
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 관리자 필드가 비어있는 경우, 400 반환
