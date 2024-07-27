@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.3
-2024.06.28
+MVP demo ver 0.0.4
+2024.07.27
 accounts/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리

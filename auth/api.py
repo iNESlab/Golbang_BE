@@ -15,7 +15,7 @@ from rest_framework.response import Response    # API의 응답
 from django.contrib.auth import get_user_model, authenticate  # 현재 활성화된 사용자 모델, 인증
 from django.conf import settings                # Django 프로젝트의 설정 파일
 from django.utils.decorators import method_decorator    # 클래스 기반 뷰애 데코레이터 적용하기 위한 함수형 데코레이터
-from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie  # CSRF 보호를 위한 데코레이터
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie, csrf_exempt  # CSRF 보호를 위한 데코레이터
 from auth.authenticate import generate_access_token, jwt_login, is_token_expired  # JWT 토큰 생성하고 로그인 처리하는 함수
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken # RefreshToken
@@ -82,7 +82,7 @@ class LoginApi(APIView):
 '''
 JWT 토큰 갱신 로직을 처리하는 클래스 기반 뷰
 '''
-@method_decorator(csrf_protect, name='dispatch') # 뷰가 호출될 때마다 CSRF 보호를 적용
+@method_decorator(csrf_exempt, name='dispatch')
 class RefreshJWTToken(APIView):
     def post(self, request, *args, **kwargs): # HTTP POST 요청을 처리
         refresh_token = request.COOKIES.get('refreshtoken') # 요청 쿠키에서 리프레시 토큰을 가져옴
@@ -135,7 +135,7 @@ class RefreshJWTToken(APIView):
 '''
 로그아웃 로직을 처리하는 클래스 기반 뷰
 '''        
-@method_decorator(csrf_protect, name='dispatch') # 뷰가 호출될 때마다 CSRF 보호를 적용
+@method_decorator(csrf_exempt, name='dispatch')
 class LogoutApi(APIView):
     permission_classes = [IsAuthenticated]  # 로그인 엔드포인트에 대한 접근 권한 설정
 
@@ -145,14 +145,19 @@ class LogoutApi(APIView):
         '''
         try:
             # 202 Accepted 응답 객체를 생성
+            refresh_token = request.data.get('refresh_token')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+
             response = Response({
-                "status" : status.HTTP_202_ACCEPTED,
-                "message": "Logout success"
-                }, status=status.HTTP_202_ACCEPTED)
-            response.delete_cookie('refreshtoken') # 응답 객체에서 리프레시 토큰 쿠키를 삭제
+                "status": status.HTTP_202_ACCEPTED,
+                "message": "Successfully Logged Out"
+            }, status=status.HTTP_202_ACCEPTED)
+            response.delete_cookie('refreshtoken')
 
             return response
         except Exception as e:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
