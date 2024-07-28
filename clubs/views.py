@@ -25,6 +25,8 @@ from django.http import Http404, QueryDict
 from .models import Club, ClubMember, User
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
     ClubMemberSerializer
+from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
+
 
 class IsMemberOfClub(BasePermission):
     '''
@@ -111,18 +113,7 @@ class ClubViewSet(viewsets.ModelViewSet):
 
         if not serializer.is_valid():
             # 유효성 검사 실패 시 에러 메시지 반환
-            errors = {
-                "name": "Name field is required and must be a non-empty string" if "name" in serializer.errors else None,
-                "description": "Description field must be a string" if "description" in serializer.errors else None,
-                "image": "Image URL must be a valid URL" if "image" in serializer.errors else None,
-                "members": "Members field must be a list of valid user IDs" if "members" in serializer.errors else None,
-                "admins": "Admins field must be a list of valid user IDs, and at least one admin must be specified" if "admins" in serializer.errors else None,
-            }
-            return Response({
-                "status": 400,
-                "message": "Invalid request payload",
-                "errors": {k: v for k, v in errors.items() if v is not None}
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_club_400_invalid_serializer(serializer)
 
         club = serializer.save()  # 유효한 데이터인 경우 모임 생성
 
@@ -132,27 +123,17 @@ class ClubViewSet(viewsets.ModelViewSet):
 
         # 관리자 또는 멤버가 리스트 타입이 아닌 경우, 400 반환
         if not isinstance(members, list) or not isinstance(admins, list):
-            return Response({
-                'status': 400,
-                'message': 'Invalid request payload',
-                'errors': {'members': 'Members field must be a list type of valid user IDs',
-                           'admins': 'Admins field must be a list type of valid user IDs'}
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request('Members and admins fields must be list types of valid user IDs')
 
         # 관리자 필드가 비어있는 경우, 400 반환
         if not admins:
-            return Response({
-                'status': 400,
-                'message': 'Admins field must be a list of valid user IDs, and at least one admin must be specified'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request('Admins field must be a list of valid user IDs, and at least one admin must be specified')
 
         # 중복된 멤버나 관리자가 추가되지 않도록 중복 여부 확인 (관리자 우선 추가)
         for admin_id in admins:
             if not User.objects.filter(id=admin_id).exists(): # 사용자가 존재하지 않는 경우 404 반환
-                return Response({
-                    'status': 404,
-                    'message': f'User {admin_id} is not found'
-                }, status=status.HTTP_404_NOT_FOUND)
+                return handle_404_not_found('User', admin_id)
+
             if ClubMember.objects.filter(club=club, user_id=admin_id).exists():
                 continue  # 중복 관리자는 추가하지 않음
             ClubMember.objects.create(club=club, user_id=admin_id, role='admin')
@@ -160,14 +141,11 @@ class ClubViewSet(viewsets.ModelViewSet):
 
         for member_id in members:
             if not User.objects.filter(id=member_id).exists(): # 사용자가 존재하지 않는 경우 404 반환
-                return Response({
-                    'status': 404,
-                    'message': f'User {member_id} is not found'
-                }, status=status.HTTP_404_NOT_FOUND)
+                return handle_404_not_found('User', member_id)
+
             if ClubMember.objects.filter(club=club, user_id=member_id).exists():
                 continue  # 중복 멤버는 추가하지 않음 (또는 이미 관리자로 추가되어 있는 경우)
             ClubMember.objects.create(club=club, user_id=member_id, role='member')
-
 
         read_serializer = ClubSerializer(club)
         response_data   = {
@@ -182,10 +160,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             instance = self.get_object() # 조회할 모임 객체
         except Http404: # 모임이 존재하지 않는 경우
-            return Response({
-                'status': 404,
-                'message': f'Club {kwargs.get("pk")} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', kwargs.get("pk"))
 
         serializer      = self.get_serializer(instance) # 모임 객체 직렬화
         response_data   = {
@@ -201,10 +176,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             club = self.get_object() # 조회할 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {pk} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', pk)
 
         members = ClubMember.objects.filter(club=club) # 해당 모임의 모든 멤버 저장
         serializer = ClubMemberSerializer(members, many=True) # 멤버 리스트 직렬화
@@ -225,24 +197,12 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             instance = self.get_object() # 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {kwargs.get("pk")} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', kwargs.get("pk"))
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
 
         if not serializer.is_valid(): # 유효하지 않은 데이터가 들어온 경우, 400 반환
-            errors = {
-                "name": "Name field is required and must be a non-empty string" if "name" in serializer.errors else None,
-                "description": "Description field must be a string" if "description" in serializer.errors else None,
-                "image": "Image URL must be a valid URL" if "image" in serializer.errors else None,
-            }
-            return Response({
-                "status": 400,
-                "message": "Invalid request payload",
-                "errors": {k: v for k, v in errors.items() if v is not None}
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_club_400_invalid_serializer(serializer)
 
         club = serializer.save()                # 유훃한 데이터인 경우 정보 업데이트
         read_serializer = ClubSerializer(club)  # 업데이트된 모임 데이터 직렬화
@@ -258,10 +218,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             instance = self.get_object() # 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {kwargs.get("pk")} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', kwargs.get("pk"))
 
         self.perform_destroy(instance) # 모임 객체 삭제
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -272,30 +229,17 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             club = self.get_object() # 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {pk} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', pk)
 
         user_id = request.data.get('user_id')
         if not user_id: # 유효하지 않은 user_id인 경우, 400 반환
-            return Response({
-                'status': 400,
-                'message': 'Invalid request payload',
-                'errors': {'user_id': 'User ID is required and must be a valid integer'}
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request('User ID is required and must be a valid integer')
 
         if not User.objects.filter(id=user_id).exists():  # 사용자가 존재하지 않을 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message':  f'User {user_id} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('User', user_id)
 
         if ClubMember.objects.filter(club=club, user_id=user_id).exists(): # 사용자가 이미 모임에 존재하는 경우, 400 반환
-            return Response({
-                'status': 400,
-                'message': f'User {user_id} is already a member of the club'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request(f'User {user_id} is already a member of the club')
 
         # 새로운 멤버 추가
         ClubMember.objects.create(club=club, user_id=user_id, role='member')
@@ -316,18 +260,12 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             club = self.get_object() # 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {pk} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', pk)
 
         member = ClubMember.objects.filter(club=club, user_id=member_id).first()
 
         if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Member {member_id} is not found in Club {club.id}'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club Member', member_id)
 
         member.delete() # 멤버 삭제
 
@@ -339,26 +277,17 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             club = self.get_object() # 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {pk} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', pk)
 
         role_type = request.query_params.get('role_type') # 쿼리 파라미터 데이터 가져오기
 
         if not role_type or role_type not in ['A', 'M']: # 유효하지 않은 데이터인 경우, 400 반환
-            return Response({
-                'status': 400,
-                'message': 'Invalid role_type value. Please specify \'A\' for admin or \'M\' for member'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request('Invalid role_type value. Please specify \'A\' for admin or \'M\' for member')
 
         member = ClubMember.objects.filter(club=club, user_id=member_id).first()
 
         if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Member {member_id} is not found in Club {club.id}'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club Member', member_id)
 
         member.role = 'admin' if role_type == 'A' else 'member' # 역할 변경
         member.save()
@@ -382,27 +311,15 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             club = self.get_object() # 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {pk} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', pk)
 
         user = request.user # JWT 토큰을 통해 인증된 사용자 정보를 가져옴
         status_choice = request.data.get('status')
 
         if status_choice not in ['accepted', 'declined']: # 유효하지 않은 데이터인 경우, 400 반환
-            return Response({
-                'status': 400,
-                'message': 'status is required. Please specify \'accepted\' or \'declined\''
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request('Status must be \'accepted\' or \'declined\'')
 
         member = ClubMember.objects.filter(club=club, user=user).first()
-
-        if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Member {user.id} is not found in Club {club.id}'
-            }, status=status.HTTP_404_NOT_FOUND)
 
         if status_choice == 'accepted':
             member.role = 'member'
@@ -436,19 +353,13 @@ class ClubViewSet(viewsets.ModelViewSet):
         try:
             club = self.get_object() # 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Club {pk} is not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club', pk)
 
         user = request.user
         member = ClubMember.objects.filter(club=club, user=user).first()
 
         if not member:  # 사용자가 해당 클럽의 멤버가 아닌 경우, 404 반환
-            return Response({
-                'status': 404,
-                'message': f'Member {user.id} is not found in Club {club.id}'
-            }, status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('Club Member', user.id)
 
         member.delete() # 멤버 삭제
 

@@ -6,8 +6,7 @@ golbang/urls.py
 역할: 골방 프로젝트 전체의 엔드포인트 라우팅
 현재 기능:
 - admin
-- accounts
-- club(모임)
+- accounts, club(모임), event(이벤트)
 '''
 
 from django.contrib import admin
