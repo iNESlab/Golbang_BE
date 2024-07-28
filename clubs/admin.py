@@ -4,7 +4,7 @@ MVP demo ver 0.0.1
 clubs/admin.py
 '''
 from django.contrib import admin
-from clubs.models import Club
+from clubs.models import Club, ClubMember
 
 '''
 목록 보기: list_display
@@ -12,6 +12,8 @@ from clubs.models import Club
 검색: search_fields
 정렬: ordering
 '''
+
+admin.site.register(ClubMember)
 
 @admin.register(Club)
 class ClubAdmin(admin.ModelAdmin):
