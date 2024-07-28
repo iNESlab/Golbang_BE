@@ -25,8 +25,12 @@ from django.http import Http404, QueryDict
 from .models import Club, ClubMember, User
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
     ClubMemberSerializer
-from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
-
+from utils.error_handlers import (
+    handle_club_400_invalid_serializer,
+    handle_404_not_found,
+    handle_400_bad_request,
+    custom_exception_handler
+)
 
 class IsMemberOfClub(BasePermission):
     '''

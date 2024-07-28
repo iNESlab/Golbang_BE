@@ -115,7 +115,7 @@ REST_FRAMEWORK = {
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
         'drf_social_oauth2.authentication.SocialAuthentication',
     ),
-    'EXCEPTION_HANDLER': 'golbang.utils.custom_exception_handler', # 커스텀 예외처리
+    'EXCEPTION_HANDLER': 'utils.error_handlers.custom_exception_handler', # 커스텀 예외처리
     'DEFAULT_PARSER_CLASSES': ( # 파싱
             'rest_framework.parsers.JSONParser',
             'rest_framework.parsers.MultiPartParser',
