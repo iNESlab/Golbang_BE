@@ -20,7 +20,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
 
-from django.http import Http404
+from django.http import Http404, QueryDict
 
 from .models import Club, ClubMember, User
 from .serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
@@ -85,9 +85,30 @@ class ClubViewSet(viewsets.ModelViewSet):
     '''
     모임
     '''
+    def process_request_data(self, request):
+        """ 요청 데이터를 적절한 형식으로 변환하여 반환 """
+        if isinstance(request.data, QueryDict):
+            data = dict(request.data)
+            data['name'] = request.data.get('name')
+            data['description'] = request.data.get('description')
+            data['image'] = request.data.get('image')
+            data['members'] = [int(member) for member in request.data.getlist('members')]
+            data['admins'] = [int(admin) for admin in request.data.getlist('admins')]
+        else:
+            data = request.data.copy()
+            data['members'] = [int(member) for member in request.data.get('members', [])]
+            data['admins'] = [int(admin) for admin in request.data.get('admins', [])]
+        return data
+
     # 모임 생성 메서드
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)  # 요청 데이터를 사용해 serializer 초기화
+        # 데이터 복사 및 JSON 요청과 form-data 요청을 구분하여 처리
+        data = self.process_request_data(request)
+        print("Request Data:", request.data)
+        print("Processed Data:", data)
+
+        serializer = self.get_serializer(data=data)  # 요청 데이터를 사용해 serializer 초기화
+
         if not serializer.is_valid():
             # 유효성 검사 실패 시 에러 메시지 반환
             errors = {
@@ -95,7 +116,7 @@ class ClubViewSet(viewsets.ModelViewSet):
                 "description": "Description field must be a string" if "description" in serializer.errors else None,
                 "image": "Image URL must be a valid URL" if "image" in serializer.errors else None,
                 "members": "Members field must be a list of valid user IDs" if "members" in serializer.errors else None,
-                "admins": "Admin field must be a list of valid user IDs, and at least one admin must be specified" if "admin" in serializer.errors else None,
+                "admins": "Admins field must be a list of valid user IDs, and at least one admin must be specified" if "admins" in serializer.errors else None,
             }
             return Response({
                 "status": 400,
@@ -106,23 +127,23 @@ class ClubViewSet(viewsets.ModelViewSet):
         club = serializer.save()  # 유효한 데이터인 경우 모임 생성
 
         # 일반 멤버와 관리자 리스트
-        members = request.data.get('members', [])
-        admins = request.data.get('admins', [])
+        members = data.get('members', [])
+        admins = data.get('admins', [])
 
         # 관리자 또는 멤버가 리스트 타입이 아닌 경우, 400 반환
         if not isinstance(members, list) or not isinstance(admins, list):
             return Response({
                 'status': 400,
                 'message': 'Invalid request payload',
-                'errors': {'members': 'Members field must be a list of valid user IDs',
-                           'admins': 'Admin field must be a list of valid user IDs'}
+                'errors': {'members': 'Members field must be a list type of valid user IDs',
+                           'admins': 'Admins field must be a list type of valid user IDs'}
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 관리자 필드가 비어있는 경우, 400 반환
         if not admins:
             return Response({
                 'status': 400,
-                'message': 'Admin field must be a list of valid user IDs, and at least one admin must be specified'
+                'message': 'Admins field must be a list of valid user IDs, and at least one admin must be specified'
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 중복된 멤버나 관리자가 추가되지 않도록 중복 여부 확인 (관리자 우선 추가)
