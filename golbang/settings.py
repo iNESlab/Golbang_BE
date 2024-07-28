@@ -93,17 +93,11 @@ INSTALLED_APPS = [
     'drf_social_oauth2',
 
     # ==========
-    # Cross-Origin Resource Sharing (CORS)
+    # Other..
     # ==========
-    'corsheaders',
-    # ==========
-    # Swagger
-    # ==========
-    'drf_yasg',
-    # ==========
-    # Amazon S3 (django-storages)
-    # ==========
-    'storages',
+    'corsheaders',  # Cross-Origin Resource Sharing (CORS)
+    'drf_yasg',     # Swagger
+    'storages',     # Amazon S3 (django-storages)
 ]
 
 AUTH_USER_MODEL = 'accounts.User' # Custom User Model
