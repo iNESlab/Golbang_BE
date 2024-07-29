@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.3
-2024.06.28
+MVP demo ver 0.0.4
+2024.07.27
 accounts/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리
@@ -35,7 +35,13 @@ def signup_first_step(request):
         user = form.save(commit=False)
         user.set_password(form.cleaned_data["password1"])
         user.save()
-        return Response({"message": "First step completed successfully", "user_id": user.id}, status=status.HTTP_201_CREATED)
+        return Response({
+            "status": status.HTTP_201_CREATED,
+            "message": "First step completed successfully",
+            "data": {
+                "user_id": user.id
+            }
+        }, status=status.HTTP_201_CREATED)
     else:
         return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
 # def signup(request):
@@ -56,17 +62,26 @@ def signup_second_step(request):
     """
     user_id = request.data.get('user_id')
     if not user_id:
-        return Response({"message": "user_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "status": status.HTTP_400_BAD_REQUEST,
+            "message": "user_id is required"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
-        return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            "status": status.HTTP_404_NOT_FOUND,
+            "message": "User not found"
+        }, status=status.HTTP_404_NOT_FOUND)
     
     form = UserCreationSecondStepForm(data=request.data, instance=user)
     if form.is_valid():
         form.save()
-        return Response({"message": "Second step completed successfully"}, status=status.HTTP_200_OK)
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Second step completed successfully"
+        }, status=status.HTTP_200_OK)
     else:
         return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
 
