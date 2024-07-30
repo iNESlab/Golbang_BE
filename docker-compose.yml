@@ -1,0 +1,37 @@
+# docker-compose.yml(로컬용)
+
+version: '3.8'  # 버전 지정
+services:     # 컨테이너 지정
+
+  web:
+    container_name: web
+    build: .  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
+    command: sh -c "/wait-for-it.sh db:3306 -- python manage.py migrate && python manage.py runserver 0.0.0.0:8000" # 최종 런서버 - 브라우저에서 확인 가능
+    environment:
+      DJANGO_SETTINGS_MODULE: golbang.settings
+    restart: always
+    volumes:  # 파일 시스템 정의
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file: #
+      - .env
+
+  db:
+    container_name: db
+    image: mariadb:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_NAME}
+      MYSQL_USER: ${MYSQL_DB_USER}
+      MYSQL_PASSWORD: ${MYSQL_DB_PASSWORD}
+    ports:  # 포트포워딩 - 로컬의 호스트가 3306포트를 사용 중일 수 있으므로 3307 포트를 도커 컨테이너의 3306 포트로 포워딩해줌
+      - "3307:3306"
+    env_file: # 설정은 .env 파일에 의존
+      - .env
+    volumes:  # 파일 시스템 정의
+      - dbdata:/var/lib/mysql
+
+volumes:
+  dbdata:
