@@ -58,6 +58,7 @@ jobs:
         echo "NAVER_CALLBACK_URL=${{ secrets.NAVER_CALLBACK_URL }}" >> .env
         echo "SOCIAL_AUTH_KAKAO_CLIENT_ID=${{ secrets.SOCIAL_AUTH_KAKAO_CLIENT_ID }}" >> .env
         echo "SOCIAL_AUTH_KAKAO_SECRET=${{ secrets.SOCIAL_AUTH_KAKAO_SECRET }}" >> .env
+        echo "KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }}" >> .env
         echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
         echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
         echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
