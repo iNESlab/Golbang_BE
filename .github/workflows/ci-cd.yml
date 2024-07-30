@@ -78,6 +78,15 @@ jobs:
       run: |
         docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
 
+    - name: Clear migrations
+      run: |
+        find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
+        find . -path "*/migrations/*.pyc"  -delete
+
+    - name: Make migrations
+      run: |
+        docker-compose exec -T web python manage.py makemigrations
+
     - name: Run migrations
       run: |
         docker-compose exec -T web python manage.py migrate
