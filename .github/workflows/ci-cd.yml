@@ -70,13 +70,17 @@ jobs:
       run: |
         docker-compose -f docker-compose.yml up --build -d
 
+    - name: Wait for db to be ready
+      run: |
+        docker-compose exec -T web /wait-for-it.sh db:3306 -- echo "Database is up"
+    
     - name: Run migrations
       run: |
-        docker-compose run web python manage.py migrate
+        docker-compose exec -T web python manage.py migrate
 
     - name: Run tests
       run: |
-        docker-compose run web python manage.py test
+        docker-compose exec -T web python manage.py test
 
     - name: Stop and remove Docker Compose containers
       run: |
