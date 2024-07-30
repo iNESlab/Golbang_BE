@@ -70,18 +70,18 @@ jobs:
       run: |
         docker-compose -f docker-compose.yml up --build -d
 
-    - name: Drop and recreate database
-      run: |
-        docker-compose exec -T db mysql -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
-
     - name: Wait for db to be ready
       run: |
         docker-compose exec -T web /wait-for-it.sh db:3306 -- echo "Database is up"
-    
+
+    - name: Drop and recreate database
+      run: |
+        docker-compose exec -T db /usr/bin/mysql -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
+
     - name: Run migrations
       run: |
         docker-compose exec -T web python manage.py migrate
-
+        
     - name: Run tests
       run: |
         docker-compose exec -T web python manage.py test
