@@ -57,3 +57,15 @@ def handle_400_bad_request(message):
         'status': 400,
         'message': message
     }, status=status.HTTP_400_BAD_REQUEST)
+
+def handle_401_unauthorized(message):
+    return Response({
+        'status': 401,
+        'message': message
+    }, status=status.HTTP_401_UNAUTHORIZED)
+
+def handle_403_FORBIDDEN(message):
+    return Response({
+        'status': 403,
+        'message': message
+    }, status=status.HTTP_403_FORBIDDEN)
