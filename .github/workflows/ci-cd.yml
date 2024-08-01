@@ -101,7 +101,7 @@ jobs:
     
     - name: Drop and recreate database
       run: |
-        docker-compose exec -T db mariadb -h db -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
+        docker-compose run db mariadb -h db -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
 
     - name: Clear migrations
       run: |
