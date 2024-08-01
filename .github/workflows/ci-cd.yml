@@ -20,7 +20,7 @@ jobs:
       db:
         image: mariadb:latest
         ports:
-          - 3306:3306
+          - 3307:3306
         env:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_DB_PASSWORD }}
           MYSQL_DATABASE: ${{ secrets.MYSQL_DB_NAME }}
@@ -106,7 +106,7 @@ jobs:
     
     - name: Drop and recreate database
       run: |
-        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -P 3306 -h db -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
+        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -P 3306 -h db -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
 
     - name: Clear migrations
       run: |
