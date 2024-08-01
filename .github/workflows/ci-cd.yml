@@ -1,6 +1,4 @@
 # .github/workflows/ci-cd.yml
-# 빌드와 테스트를 처리하는 워크플로우
-# .github/workflows/ci-cd.yml
 name: CI/CD using github actions and docker
 
 on:
@@ -20,13 +18,12 @@ jobs:
       db:
         image: mariadb:latest
         ports:
-          - 3307:3306
+          - 3306:3306
         env:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_DB_PASSWORD }}
           MYSQL_DATABASE: ${{ secrets.MYSQL_DB_NAME }}
           MYSQL_USER: ${{ secrets.MYSQL_DB_USER }}
           MYSQL_PASSWORD: ${{ secrets.MYSQL_DB_PASSWORD }}
-        options: --memory=1g  # 메모리 사용량 제한
 
     steps:
     - name: Checkout code
@@ -54,15 +51,11 @@ jobs:
       run: |
         sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
-
+        
     - name: Create .env file
       run: |
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
         echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env
-        echo "MARIADB_ROOT_PASSWORD=${{ secrets.MYSQL_DB_PASSWORD }}" >> .env
-        echo "MARIADB_DATABASE=${{ secrets.MYSQL_DB_NAME }}" >> .env
-        echo "MARIADB_USER=${{ secrets.MYSQL_DB_USER }}" >> .env
-        echo "MARIADB_PASSWORD=${{ secrets.MYSQL_DB_PASSWORD }}" >> .env
         echo "MYSQL_DB_NAME=${{ secrets.MYSQL_DB_NAME }}" >> .env
         echo "MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }}" >> .env
         echo "MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }}" >> .env
@@ -86,31 +79,17 @@ jobs:
         echo "AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}" >> .env
         echo "AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}" >> .env
 
-    
     - name: Build and run Docker Compose
       run: |
-        docker-compose down -v
-        docker-compose up --build -d
-        
+        docker-compose -f docker-compose.yml up --build -d
+
     - name: Wait for db to be ready
       run: |
-        for i in {1..30}; do
-          if docker-compose exec -T db mysqladmin ping -h"db" -u"${{ secrets.MYSQL_DB_USER }}" -p"${{ secrets.MYSQL_DB_PASSWORD }}" --silent; then
-            echo "Database is up"
-            break
-          else
-            echo "Waiting for database..."
-            sleep 5
-          fi
-        done
+        docker-compose exec -T web /wait-for-it.sh db:3306 -- echo "Database is up"
 
-    - name: Check db container logs
-      run: |
-        docker-compose logs db
-    
     - name: Drop and recreate database
       run: |
-        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -P 3306 -h db -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
+        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
 
     - name: Clear migrations
       run: |
