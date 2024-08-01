@@ -96,6 +96,10 @@ jobs:
         find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
         find . -path "*/migrations/*.pyc" -delete
 
+    - name: Clear Django migration history
+      run: |
+        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "USE \`${{ secrets.MYSQL_DB_NAME }}\`; DELETE FROM django_migrations;"
+
     - name: Make migrations
       run: |
         docker-compose run web python manage.py makemigrations
