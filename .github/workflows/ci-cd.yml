@@ -86,11 +86,11 @@ jobs:
 
     - name: Build and run Docker Compose
       run: |
-        docker-compose -f docker-compose.yml up --build -d
-
+        docker-compose up --build -d
+        
     - name: Wait for db to be ready
       run: |
-        docker-compose exec -T web /wait-for-it.sh db:3306 --timeout=60 --strict -- echo "Database is up"
+        docker-compose exec -T web /wait-for-it.sh db:3306 -- echo "Database is up"
 
     - name: Sleep for 20 seconds to ensure db is ready
       run: sleep 20
