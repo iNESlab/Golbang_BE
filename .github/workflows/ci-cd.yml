@@ -1,4 +1,5 @@
 # .github/workflows/ci-cd.yml
+# 빌드와 테스트를 처리하는 워크플로우
 name: CI/CD using github actions and docker
 
 on:
