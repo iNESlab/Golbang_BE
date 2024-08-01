@@ -2,7 +2,7 @@
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-tag_format = "v{{version}}"
+tag_format = "v$version"
 version_scheme = "semver"
 version = "0.1.0" 
 version_files = [
