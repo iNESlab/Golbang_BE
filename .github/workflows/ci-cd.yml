@@ -86,6 +86,10 @@ jobs:
     - name: Sleep for 10 seconds to ensure db is ready
       run: sleep 10
 
+    - name: Check db container logs
+      run: |
+        docker-compose logs db
+        
     - name: Drop and recreate database
       run: |
         docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "DROP DATABASE IF EXISTS \`${{ secrets.MYSQL_DB_NAME }}\`; CREATE DATABASE \`${{ secrets.MYSQL_DB_NAME }}\`;"
