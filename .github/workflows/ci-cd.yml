@@ -98,7 +98,7 @@ jobs:
 
     - name: Clear Django migration history
       run: |
-        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "USE \`${{ secrets.MYSQL_DB_NAME }}\`; DELETE FROM django_migrations;"
+        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "USE \`${{ secrets.MYSQL_DB_NAME }}\`; DROP TABLE IF EXISTS django_migrations;"
 
     - name: Make migrations
       run: |
