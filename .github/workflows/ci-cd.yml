@@ -100,13 +100,7 @@ jobs:
       run: |
         docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "USE \`${{ secrets.MYSQL_DB_NAME }}\`; DROP TABLE IF EXISTS django_migrations;"
 
-    # 중복된 고유 키를 삭제하기 전에 테이블이 존재하는지 확인합니다.
-    - name: Remove duplicate unique key if table exists
-      run: |
-        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "USE \`${{ secrets.MYSQL_DB_NAME }}\`; SELECT 1 FROM social_auth_association LIMIT 1;" \
-        && docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "USE \`${{ secrets.MYSQL_DB_NAME }}\`; ALTER TABLE social_auth_association DROP INDEX IF EXISTS social_auth_association_server_url_handle_078befa2_uniq;" \
-        || echo 'Table does not exist, skipping index removal.'
-        
+  
     - name: Make migrations
       run: |
         docker-compose run web python manage.py makemigrations
