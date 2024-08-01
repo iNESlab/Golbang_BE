@@ -8,18 +8,37 @@ from rest_framework import status
 import math
 import random
 
-from clubs.models import ClubMember
+from clubs.models import ClubMember, Club
+from clubs.views.club_common import IsClubAdmin
 from participants.serializers import ParticipantAutoMatchSerializer
-from utils.error_handlers import handle_400_bad_request
+from utils.error_handlers import handle_400_bad_request, handle_404_not_found
+
 
 @permission_classes([IsAuthenticated])
 class HandicapMatchViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]  # 기본 권한: 인증된 사용자이고, 모임의 멤버여야 함
 
+    def get_permissions(self):
+        self.permission_classes.append(IsClubAdmin)
+        return super().get_permissions()
     def create(self, request):
         competition_type = request.data.get('competition_type')
         group_head_count = request.data.get('group_head_count')
         team_head_count = request.data.get('team_head_count')
         members_data = request.data.get('participants')
+
+        if not members_data:
+            return handle_400_bad_request('participants is required.')
+
+        try:
+            first_member_id = members_data[0]['member_id']
+            member = ClubMember.objects.get(pk=first_member_id)
+            club = member.club
+            self.check_object_permissions(request, club)
+        except ClubMember.DoesNotExist:
+            return handle_404_not_found('club_member', first_member_id)
+        except Club.DoesNotExist:
+            return handle_404_not_found('club', club.id)
 
         if competition_type is None:
             return handle_400_bad_request('Missing competition_type parameter')
@@ -48,14 +67,11 @@ class HandicapMatchViewSet(viewsets.ViewSet):
     def personal_competition(self, members_data, group_head_count):
         member_ids = [member['member_id'] for member in members_data]
         members = ClubMember.objects.filter(id__in=member_ids).select_related('user').order_by('user__handicap')
-        print('members',members)
 
         groups = []
         group_size = math.ceil(len(members) / group_head_count)
-        print('Group size: ', group_size)
         for i in range(group_head_count):
             group_participants = members[i * group_size:(i + 1) * group_size]
-            print('group_participants', group_participants)
             participant_data = [
                 {
                     'member_id': member.id,
@@ -64,7 +80,6 @@ class HandicapMatchViewSet(viewsets.ViewSet):
                 }
                 for member in group_participants
             ]
-            print('participant_data', participant_data)
             serializer = ParticipantAutoMatchSerializer(data=participant_data, many=True)
             if not serializer.is_valid():
                 return handle_400_bad_request('참가자 정보를 다시 확인해주세요.')

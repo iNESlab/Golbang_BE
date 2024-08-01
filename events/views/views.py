@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework import viewsets
 
 from clubs.models import ClubMember, Club
+from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
 from participants.models import Participant
 from events.models import Event
 from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer
@@ -18,6 +19,15 @@ from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 @permission_classes([IsAuthenticated])
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
+    permission_classes = [IsAuthenticated]  # 기본 권한: 인증된 사용자이고, 모임의 멤버여야 함
+
+    def get_permissions(self):
+        # 조회 액션은 로그인한 유저라면 누구나 접근 가능
+        self.permission_classes = [IsAuthenticated]
+        # 나머지 액션은 관리자만 접근 가능
+        if self.action not in ['retrieve', 'list']:
+            self.permission_classes.append(IsClubAdmin)
+        return super().get_permissions()
 
     def get_serializer_class(self):
         if self.action in ['retrieve','list']:
@@ -35,13 +45,13 @@ class EventViewSet(viewsets.ModelViewSet):
                   'start_date_time', 'end_date_time', 'repeat_type', 'game_mode', 'alert_date_time')
         응답 데이터: Event 정보 (Event ID, 생성자 ID, 참가자 리스트, 제목, 장소, 시작/종료 시간, 반복 타입, 게임 모드, 알람 시간)
         """
-        user = self.request.user
         club_id = self.request.query_params.get('club_id')
 
         try:
             club = Club.objects.get(id=club_id)
+            self.check_object_permissions(request, club)
         except Club.DoesNotExist:
-            handle_404_not_found('event', club_id)
+            return handle_404_not_found('club', club_id)
 
         data = request.data.copy()
         data['club_id'] = club.id
@@ -62,6 +72,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
         try:
             event = Event.objects.get(pk=event_id)
+            self.check_object_permissions(request, event.club)
         except Event.DoesNotExist:
             return handle_404_not_found('event', event_id)
 
@@ -153,6 +164,7 @@ class EventViewSet(viewsets.ModelViewSet):
 
         try:
             event = Event.objects.get(pk=event_id)
+            self.check_object_permissions(request, event.club)
         except Event.DoesNotExist:
             return handle_404_not_found('event',event_id)
 
