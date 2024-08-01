@@ -48,13 +48,20 @@ class ParticipantCreateUpdateSerializer(serializers.ModelSerializer):
 class ParticipantDetailSerializer(serializers.ModelSerializer):
     participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     member = ClubMemberSerializer(read_only=True)
-    handicap_score = serializers.SerializerMethodField()
-    #TODO: score 테이블 만들어서 연결
+    sum_score = serializers.SerializerMethodField(read_only=True)
+    handicap_score = serializers.SerializerMethodField(read_only=True)
+    hole_number = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Participant
-        fields = ['participant_id', 'member', 'status_type', 'team_type',
+        fields = ['participant_id', 'member', 'status_type', 'team_type', 'hole_number',
                   'group_type', 'sum_score', 'rank', 'handicap_score']
+    def get_hole_number(self, obj):
+        hole_score = HoleScore.objects.filter(participant=obj).order_by('-hole_number').first()
+        return hole_score.hole_number if hole_score else None
+
+    def get_sum_score(self, obj):
+        return HoleScore.objects.filter(participant=obj).aggregate(total=Sum('score'))['total']
 
     def get_handicap_score(self, obj):
         return int(obj.sum_score) - int(obj.club_member.user.handicap)
