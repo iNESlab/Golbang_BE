@@ -8,12 +8,14 @@ events/urls.py
 '''
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EventViewSet
+
+from events.views.handicap_match_views import HandicapMatchViewSet
+from events.views.views import EventViewSet
 
 # end point: api/v1/events/
 router = DefaultRouter()
 router.register(r'', EventViewSet,'events')
-
+router.register(r'match/handicap', HandicapMatchViewSet, 'handicap_match')
 urlpatterns = [
     path('', include(router.urls)),
 ]

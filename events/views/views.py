@@ -1,24 +1,28 @@
 # events/views.py
 from datetime import date, datetime
 
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
 
 from clubs.models import ClubMember, Club
 from participants.models import Participant
-from .models import Event
-from .serializers import EventCreateUpdateSerializer, EventDetailSerializer
-from .utils import EventUtils
+from events.models import Event
+from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer
+from events.utils import EventUtils
+from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 
 
+@permission_classes([IsAuthenticated])
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
 
     def get_serializer_class(self):
-        if self.action in ['retrieve','partial_udpate']:
+        if self.action in ['retrieve','list']:
             return EventDetailSerializer
-        elif self.action in ['update', 'partial_update']:
+        elif self.action in ['create', 'update']:
             return EventCreateUpdateSerializer
         return EventCreateUpdateSerializer
 
@@ -37,13 +41,7 @@ class EventViewSet(viewsets.ModelViewSet):
         try:
             club = Club.objects.get(id=club_id)
         except Club.DoesNotExist:
-            return Response({'status': status.HTTP_404_NOT_FOUND,'message': "club_id is not found"},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        member = ClubMember.objects.get(user=user, club=club)
-        if member is None or member.role != "admin":
-            return Response({'status': status.HTTP_401_UNAUTHORIZED, 'message': "user is not a club_admin"},
-                            status=status.HTTP_401_UNAUTHORIZED)
+            handle_404_not_found('event', club_id)
 
         data = request.data.copy()
         data['club_id'] = club.id
@@ -60,18 +58,12 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         # TODO: 참가자 중복 검사 추가. 근데, 개발중에는 빠른 확인을 위해 중복 허용하겠습니다!
-        user = self.request.user
         event_id = self.kwargs.get('pk')
 
         try:
             event = Event.objects.get(pk=event_id)
         except Event.DoesNotExist:
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"}, status=status.HTTP_400_BAD_REQUEST)
-
-        member = ClubMember.objects.get(user=user, club=event.club)
-        if member is None or member.role != "admin":
-            return Response({'status': status.HTTP_401_UNAUTHORIZED, 'message': "user is not a club_admin",},
-                            status=status.HTTP_401_UNAUTHORIZED)
+            return handle_404_not_found('event', event_id)
 
         serializer = self.get_serializer(event, data=request.data, partial=True)  # 여기서 partial=True
         serializer.is_valid(raise_exception=True)
@@ -95,17 +87,15 @@ class EventViewSet(viewsets.ModelViewSet):
         event_id = self.kwargs.get('pk')
 
         if not event_id:
-            return Response({"status": status.HTTP_400_BAD_REQUEST, "message": "event_id is required"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request("event id is required")
 
         try:
             event = Event.objects.get(pk=event_id)
         except Event.DoesNotExist:
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('event', event_id)
 
         participants = Participant.objects.filter(event=event, club_member__user=user)
-        if not participants.exists():
+        if not (participants.exists() or ClubMember.objects.get(user=user, club=event.club).role == "admin"):
             return Response({"status": status.HTTP_401_UNAUTHORIZED, "message": "user is not invited"},
                             status=status.HTTP_401_UNAUTHORIZED)
 
@@ -141,15 +131,11 @@ class EventViewSet(viewsets.ModelViewSet):
             month = date_obj.month
             year = date_obj.year
         except ValueError:
-            return Response({"status": status.HTTP_400_BAD_REQUEST,
-                             "message": "date(YYYY-MM-DD) 형식을 지켜주세요."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request("date(YYYY-MM-DD) 형식을 지켜주세요.")
 
         status_type = request.query_params.get('status_type')
-        if status_type not in [None, Participant.StatusType.__members__]:
-            return Response({"status": status.HTTP_400_BAD_REQUEST,
-                             "message": "status_type(null or ACCEPT) 형식을 지켜주세요."},
-                            status=status.HTTP_400_BAD_REQUEST)
+        if not (status_type is None or status_type in Participant.StatusType.__members__):
+            return handle_400_bad_request("status_type(null or ACCEPT) 형식을 지켜주세요.")
 
         queryset = EventUtils.get_month_events_queryset(year, month, status_type, user)
         serializer = self.get_serializer(queryset, many=True)
@@ -168,14 +154,9 @@ class EventViewSet(viewsets.ModelViewSet):
         try:
             event = Event.objects.get(pk=event_id)
         except Event.DoesNotExist:
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
-                            status=status.HTTP_404_NOT_FOUND)
+            return handle_404_not_found('event',event_id)
 
         member = ClubMember.objects.get(user=user,club=event.club)
-
-        if member is None or member.role != "admin":
-            return Response({"status": status.HTTP_404_NOT_FOUND, "message": "event not found"},
-                            status=status.HTTP_404_NOT_FOUND)
 
         self.perform_destroy(event)
         return Response(status=status.HTTP_204_NO_CONTENT)
