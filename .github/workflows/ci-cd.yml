@@ -24,10 +24,10 @@ jobs:
         ports:
           - 3306:3306
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_DB_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.MYSQL_DB_NAME }}
-          MYSQL_USER: ${{ secrets.MYSQL_DB_USER }}
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_DB_PASSWORD }}
+          MARIADB_ROOT_PASSWORD: ${{ secrets.MYSQL_DB_PASSWORD }}
+          MARIADB_DATABASE: ${{ secrets.MYSQL_DB_NAME }}
+          MARIADB_USER: ${{ secrets.MYSQL_DB_USER }}
+          MARIADB_PASSWORD: ${{ secrets.MYSQL_DB_PASSWORD }}
         options: --memory=1g  # 메모리 사용량 제한
 
     steps:
