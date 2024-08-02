@@ -1,6 +1,4 @@
 # docker-compose.yml(로컬용)
-
-version: '3.8'  # 버전 지정
 services:     # 컨테이너 지정
 
   web:
