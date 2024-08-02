@@ -1,0 +1,22 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.28.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        name: black
+        language: python
+
+#  - repo: https://github.com/PyCQA/flake8
+#    rev: 7.1.0
+#    hooks:
+#      - id: flake8
+#        name: flake8
+#        language: python
+#        types: [ python ]
