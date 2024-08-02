@@ -1,3 +1,18 @@
+'''
+MVP demo ver 0.0.3
+2024.08.02
+events/models.py
+
+역할: 참가자(Participant)과 관련된 데이터베이스 모델을 정의
+기능:
+- 참가자 정보 저장 (조, 팀, 수락 상태, 총점, 랭킹, 생성일, 수정일)
+- event, club_member와 각각 1:n관계
+
+역할: 홀 점수(HoleScore)과 관련된 데이터베이스 모델을 정의
+기능:
+- 홀 점수 저장(홀 번호, 점수)
+- participant와 1:n관계
+'''
 from django.db import models
 
 from clubs.models import ClubMember

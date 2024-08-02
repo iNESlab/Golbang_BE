@@ -1,4 +1,11 @@
-# views.py
+'''
+MVP demo ver 0.0.8
+2024.08.02
+events/views/handicap_match_views.py
+
+역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
+- 모임 관리자 : 멤버 핸디캡 자동 매칭 기능(팀전/개인전)
+'''
 
 from rest_framework import viewsets
 from rest_framework.decorators import permission_classes
@@ -16,7 +23,7 @@ from utils.error_handlers import handle_400_bad_request, handle_404_not_found
 
 @permission_classes([IsAuthenticated])
 class HandicapMatchViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]  # 기본 권한: 인증된 사용자이고, 모임의 멤버여야 함
+    permission_classes = [IsAuthenticated]  # 기본 권한: 인증된 사용자
 
     def get_permissions(self):
         self.permission_classes.append(IsClubAdmin)

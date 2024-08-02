@@ -1,14 +1,14 @@
 '''
-MVP demo ver 0.0.4
-2024.07.27
+MVP demo ver 0.0.8
+2024.08.02
 participants/serializers.py
 
 역할:
 Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬화(Deserialization)를 처리하는 역할로
-이벤트(Event) 모델에 대한 직렬화(Serialization) 로직을 정의
+참가자(Participant) 모델에 대한 직렬화(Serialization) 로직을 정의
 기능:
 - Participant를 JSON 형식으로 변환
-- Participant 생성 / 조회 Serializer 구현
+- Participant 생성 / 수정 / 상세 / 자동 매칭 Serializer 구현
 '''
 from django.db.models import Sum
 from rest_framework import serializers

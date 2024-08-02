@@ -1,3 +1,11 @@
+'''
+MVP demo ver 0.0.8
+2024.08.02
+events/utils.py
+
+역할: events view의 공통 유틸 클래스
+기능: queryset이나 validate 처리 등
+'''
 from datetime import datetime
 
 from utils.error_handlers import handle_400_bad_request

@@ -1,3 +1,11 @@
+'''
+MVP demo ver 0.0.8
+2024.08.02
+participants/views.py
+
+역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
+- 참가자 : 자신의 참가 상태를 변경
+'''
 from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import IsAuthenticated

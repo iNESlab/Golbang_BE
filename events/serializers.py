@@ -8,7 +8,7 @@ Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬�
 이벤트(Event) 모델에 대한 직렬화(Serialization) 로직을 정의
 기능:
 - 이벤트를 JSON 형식으로 변환
-- 모임 생성 / 조회 Serializer 구현
+- 이벤트 생성/수정/상세 Serializer 구현
 '''
 
 # events/serializers.py
