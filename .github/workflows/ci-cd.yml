@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+
 jobs:
   build:
 
@@ -101,7 +105,7 @@ jobs:
       run: |
         docker-compose run web python manage.py makemigrations
 
-    - name: Showmigrations
+    - name: Show migrations
       run: |
         docker-compose run web python manage.py showmigrations
 
