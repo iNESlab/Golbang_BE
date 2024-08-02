@@ -1,4 +1,11 @@
-# events/views.py
+'''
+MVP demo ver 0.0.8
+2024.08.02
+events/views/views.py
+
+역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
+- 모임 관리자 : 멤버 핸디캡 자동 매칭 기능(팀전/개인전)
+'''
 from datetime import date, datetime
 
 from rest_framework.decorators import permission_classes
@@ -38,7 +45,6 @@ class EventViewSet(viewsets.ModelViewSet):
 
     # 이벤트 생성 메서드
     def create(self, request, *args, **kwargs):
-        # TODO: 참가자 중복 검사 추가. 근데, 개발중에는 빠른 확인을 위해 중복 허용하겠습니다!
         """
         Post 요청 시 이벤트(Event) 생성
         요청 데이터: Event 정보 ('club_id', 'member_id', 'participants', 'event_title', 'location',
@@ -52,6 +58,9 @@ class EventViewSet(viewsets.ModelViewSet):
             self.check_object_permissions(request, club)
         except Club.DoesNotExist:
             return handle_404_not_found('club', club_id)
+
+        if EventUtils.is_duplicated_participants(request.data.get('participants', [])):
+            return handle_400_bad_request('Duplicate member_id found in participants.')
 
         data = request.data.copy()
         data['club_id'] = club.id
@@ -67,7 +76,6 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        # TODO: 참가자 중복 검사 추가. 근데, 개발중에는 빠른 확인을 위해 중복 허용하겠습니다!
         event_id = self.kwargs.get('pk')
 
         try:
@@ -75,6 +83,9 @@ class EventViewSet(viewsets.ModelViewSet):
             self.check_object_permissions(request, event.club)
         except Event.DoesNotExist:
             return handle_404_not_found('event', event_id)
+
+        if EventUtils.is_duplicated_participants(request.data.get('participants',[])):
+            return handle_400_bad_request('Duplicate member_id found in participants.')
 
         serializer = self.get_serializer(event, data=request.data, partial=True)  # 여기서 partial=True
         serializer.is_valid(raise_exception=True)
