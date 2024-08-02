@@ -104,11 +104,7 @@ jobs:
     - name: Make migrations
       run: |
         docker-compose run web python manage.py makemigrations
-    
-    - name: Show migrations
-      run: |
-        docker-compose run web python manage.py showmigrations
-
+  
     - name: Run migrations
       run: |
         docker-compose run web python manage.py migrate
