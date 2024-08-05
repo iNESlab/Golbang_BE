@@ -50,7 +50,7 @@ class User(AbstractBaseUser):
     phone_number    = models.CharField("전화번호", max_length=20, default='000-000-0000')
     address         = models.CharField("주소", max_length=255, null=True, blank=True)
     date_of_birth   = models.DateField("생일", null=True, blank=True)
-    handicap        = models.CharField("핸디캡", max_length=20, default='0')
+    handicap        = models.IntegerField("핸디캡", default='0',)
     student_id      = models.CharField("학번", max_length=50, null=True, blank=True)
     
     # auto

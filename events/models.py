@@ -1,3 +1,13 @@
+'''
+MVP demo ver 0.0.3
+2024.08.02
+events/models.py
+
+역할: 이벤트(Event)과 관련된 데이터베이스 모델을 정의
+기능:
+- 이베트 정보 저장 (제목, 장소, 시작-끝 시간, 반복, 게임 모드, 알람 시간, 생성일, 수정일)
+- club 과 1: n 관계로 정의
+'''
 from datetime import datetime
 from django.db import models
 

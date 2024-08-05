@@ -5,6 +5,12 @@ on:
   push:
     branches:
       - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
 jobs:
   build:
 
@@ -32,7 +38,7 @@ jobs:
 
     - name: Add swap space
       run: |
-        sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
+        sudo dd if=/dev/zero of=/swapfile bs=1M count=4096
         sudo mkswap /swapfile
         sudo swapon /swapfile
         sudo swapon --show
@@ -43,11 +49,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        
     - name: Create .env file
       run: |
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
@@ -92,18 +93,9 @@ jobs:
         find . -path "*/migrations/*.py" -not -name "__init__.py" -delete
         find . -path "*/migrations/*.pyc" -delete
 
-    - name: Clear Django migration history
-      run: |
-        docker-compose exec -T db mariadb -u${{ secrets.MYSQL_DB_USER }} -p${{ secrets.MYSQL_DB_PASSWORD }} -e "USE \`${{ secrets.MYSQL_DB_NAME }}\`; DROP TABLE IF EXISTS django_migrations;"
-
-  
     - name: Make migrations
       run: |
         docker-compose run web python manage.py makemigrations
-
-    - name: Showmigrations
-      run: |
-        docker-compose run web python manage.py showmigrations
 
     - name: Run migrations
       run: |

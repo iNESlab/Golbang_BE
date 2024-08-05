@@ -1,5 +1,14 @@
+'''
+MVP demo ver 0.0.8
+2024.08.02
+events/utils.py
+
+역할: events view의 공통 유틸 클래스
+기능: queryset이나 validate 처리 등
+'''
 from datetime import datetime
 
+from utils.error_handlers import handle_400_bad_request
 from .models import Event
 
 
@@ -23,3 +32,10 @@ class EventUtils:
             return events
 
         return events.filter(participant__status_type__in=['ACCEPT', 'PARTY'])
+
+    @staticmethod
+    def is_duplicated_participants(participants):
+        member_ids = [participant['member_id'] for participant in participants]
+        if len(member_ids) != len(set(member_ids)):
+            return True
+        return False

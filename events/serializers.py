@@ -8,7 +8,7 @@ Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬�
 이벤트(Event) 모델에 대한 직렬화(Serialization) 로직을 정의
 기능:
 - 이벤트를 JSON 형식으로 변환
-- 모임 생성 / 조회 Serializer 구현
+- 이벤트 생성/수정/상세 Serializer 구현
 '''
 
 # events/serializers.py
@@ -16,14 +16,14 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework import serializers
 
-from clubs.models import ClubMember, Club
+from clubs.models import Club
 from .models import Event
-from participants.serializers import ParticipantCreateSerializer, ParticipantDetailSerializer
+from participants.serializers import ParticipantCreateUpdateSerializer, ParticipantDetailSerializer
 
 
 class EventCreateUpdateSerializer(serializers.ModelSerializer):
     event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
-    participants = ParticipantCreateSerializer(source='participant_set', many=True)
+    participants = ParticipantCreateUpdateSerializer(source='participant_set', many=True)
     club_id = serializers.PrimaryKeyRelatedField(
         queryset=Club.objects.all(),
         write_only=True,
@@ -47,7 +47,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
             for participant in participant_data:
                 participant['event_id']  = event.pk
                 participant['member_id'] = participant['club_member'].pk  # 객체에서 다시 pk로 변경
-                participant_serializer   = ParticipantCreateSerializer(data=participant)
+                participant_serializer   = ParticipantCreateUpdateSerializer(data=participant)
                 if participant_serializer.is_valid(raise_exception=True):
                     participant_serializer.save()
             return event
@@ -65,7 +65,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
             for participant in participant_data:
                 participant['event_id'] = instance.id
                 participant['member_id'] = participant['club_member'].pk
-                participant_serializer = ParticipantCreateSerializer(data=participant)
+                participant_serializer = ParticipantCreateUpdateSerializer(data=participant)
                 if participant_serializer.is_valid(raise_exception=True):
                     participant_serializer.save()
             return instance
