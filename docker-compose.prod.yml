@@ -1,0 +1,28 @@
+# docker-compose.prod.yml (prod)
+version: '3'
+services:
+
+  web:
+    container_name: web
+    build:
+      context: ./
+      dockerfile: Dockerfile.prod
+    command: gunicorn golbang.wsgi:application --bind 0.0.0.0:8000 -t 120
+    environment:
+      DJANGO_SETTINGS_MODULE: golbang.settings.prod
+      DJANGO_ENV: production
+    env_file:
+      - .env.prod
+    expose:
+      - 8000
+    entrypoint:
+      - sh
+      - config/docker/entrypoint.prod.sh
+
+  nginx:
+      container_name: nginx
+      build: ./config/nginx
+      ports:
+        - "80:80"
+      depends_on:
+        - web

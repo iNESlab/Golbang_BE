@@ -1,6 +1,5 @@
-# docker-compose.yml(로컬용)
-
-version: '3.8'  # 버전 지정
+# docker-compose.yml (local)
+version: '3'  # 버전 지정
 services:     # 컨테이너 지정
 
   db:
@@ -21,10 +20,13 @@ services:     # 컨테이너 지정
 
   web:
     container_name: web
-    build: .  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
+    build:
+      context: ./
+      dockerfile: Dockerfile
     command: sh -c "/wait-for-it.sh db:3306 -- python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000" # 최종 런서버 - 브라우저에서 확인 가능
     environment:
-      DJANGO_SETTINGS_MODULE: golbang.settings
+      DJANGO_SETTINGS_MODULE: golbang.settings.dev
+      DJANGO_ENV: development
     restart: always
     volumes:  # 파일 시스템 정의
       - .:/app

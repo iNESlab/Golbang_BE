@@ -1,4 +1,4 @@
-# Dockerfile(로컬용)
+# Dockerfile (local)
 
 # 베이스 이미지 설정
 FROM python:3.12.4-slim
