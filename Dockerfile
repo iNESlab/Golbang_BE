@@ -27,8 +27,8 @@ COPY . .
 # 환경 변수 설정
 ENV DJANGO_SETTINGS_MODULE=golbang.settings
 
-# 포트 설정
-EXPOSE 8000
-
-# 명령어 설정
-CMD ["/wait-for-it.sh", "db:3306", "--", "sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+## 포트 설정
+#EXPOSE 8000
+#
+## 명령어 설정
+#CMD ["/wait-for-it.sh", "db:3306", "--", "sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
