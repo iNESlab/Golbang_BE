@@ -4,6 +4,9 @@ from datetime import timedelta
 import os
 import environ
 from pathlib import Path
+from django.core.management.utils import get_random_secret_key
+
+
 # 로컬로 실행이 안 될 시, 아래 두 줄 주석 해제 (단, 깃허브에 올릴 때는 무조건 주석 처리)
 # import pymysql
 # pymysql.install_as_MySQLdb()
@@ -18,7 +21,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env.prod"))
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY")  # 환경변수를 사용할 파일
+SECRET_KEY = env('SECRET_KEY', get_random_secret_key())
 REFRESH_TOKEN_SECRET = env("REFRESH_TOKEN_SECRET")
 
 # SECURITY WARNING: don't run with debug turned on in production!
