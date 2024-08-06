@@ -75,7 +75,6 @@ jobs:
 
     - name: Run tests
       run: |
-        python manage.py migrate --settings=golbang.settings.prod
         python manage.py test --settings=golbang.settings.prod
 
     - name: Set up Docker Buildx
