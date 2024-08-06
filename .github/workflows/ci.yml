@@ -78,6 +78,8 @@ jobs:
         echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env.prod
         echo "AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}" >> .env.prod
         echo "AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}" >> .env.prod
+        echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME}}" >> .env.prod
+        echo "DOCKERHUB_ACCESS_TOKEN=${{ secrets.DOCKERHUB_ACCESS_TOKEN}}" >> .env.prod
 
     - name: Run tests
       run: |
@@ -86,11 +88,14 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
+    - name: Debug Secrets
+      run: |
+        echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}"
+        echo "DOCKERHUB_ACCESS_TOKEN=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}"
+
     - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+      run: |
+        echo ${{ secrets.DOCKERHUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
     - name: Build and push Docker images with Compose
       run: |
