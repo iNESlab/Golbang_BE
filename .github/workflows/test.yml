@@ -31,6 +31,10 @@ jobs:
       run: |
         echo "Docker Hub Token Length: ${#${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}}"
 
+    - name: Print Test Username
+      run: |
+        echo "Test Username: ${{ secrets.DOCKER_HUB_USERNAME_TEST }}"
+
     - name: Log in to Docker Hub
       run: |
         echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
