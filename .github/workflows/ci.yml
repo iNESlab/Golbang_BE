@@ -99,20 +99,6 @@ jobs:
       run: |
         docker login -u "$DOCKER_HUB_USERNAME" -p "$DOCKER_HUB_ACCESS_TOKEN"
 
-    - name: Enable Debugging
-      run: |
-        echo "::set-env name=ACTIONS_RUNNER_DEBUG::true"
-
-      #    - name: Log in to Docker Hub
-#      run: |
-#        echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-
-      #    - name: Log in to Docker Hub
-#      uses: docker/login-action@master
-#      with:
-#        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-#        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
     - name: Build and push Docker images with Compose
       run: |
         docker-compose -f $COMPOSE_FILE build
