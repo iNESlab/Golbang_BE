@@ -92,12 +92,12 @@ jobs:
 
     - name: Debug Secrets
       run: |
-        echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}"
-        echo "DOCKERHUB_ACCESS_TOKEN=${{ secrets.DOCKERHUB_ACCESS_TOKEN }}"
+        echo "DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}"
+        echo "DOCKERHUB_ACCESS_TOKEN=${{ env.DOCKERHUB_ACCESS_TOKEN }}"
 
     - name: Log in to Docker Hub
       run: |
-        echo ${{ secrets.DOCKERHUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        echo ${{ env.DOCKERHUB_ACCESS_TOKEN }} | docker login -u ${{ env.DOCKERHUB_USERNAME }} --password-stdin
 
     - name: Build and push Docker images with Compose
       run: |
