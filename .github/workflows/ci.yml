@@ -17,7 +17,6 @@ env:
   DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-
 jobs:
   build:
 
@@ -98,10 +97,13 @@ jobs:
 
     - name: Log in to Docker Hub
       run: |
-        echo "Attempting to login to Docker Hub with username: ${{ secrets.DOCKER_HUB_USERNAME }}"
-        echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+        docker login -u "$DOCKER_HUB_USERNAME" -p "$DOCKER_HUB_ACCESS_TOKEN"
 
-#    - name: Log in to Docker Hub
+    - name: Enable Debugging
+      run: |
+        echo "::set-env name=ACTIONS_RUNNER_DEBUG::true"
+
+      #    - name: Log in to Docker Hub
 #      run: |
 #        echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
