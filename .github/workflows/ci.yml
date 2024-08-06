@@ -14,6 +14,9 @@ on:
 
 env:
   COMPOSE_FILE: docker-compose.prod.yml
+  DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+  DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
 
 jobs:
   build:
