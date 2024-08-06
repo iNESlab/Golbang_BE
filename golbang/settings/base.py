@@ -6,8 +6,8 @@ import os
 import environ
 from pathlib import Path
 # 로컬로 실행이 안 될 시, 아래 두 줄 주석 해제 (단, 깃허브에 올릴 때는 무조건 주석 처리)
-import pymysql
-pymysql.install_as_MySQLdb()
+# import pymysql
+# pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
