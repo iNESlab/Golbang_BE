@@ -6,7 +6,6 @@ import environ
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 
-
 # 로컬로 실행이 안 될 시, 아래 두 줄 주석 해제 (단, 깃허브에 올릴 때는 무조건 주석 처리)
 # import pymysql
 # pymysql.install_as_MySQLdb()
@@ -17,12 +16,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, ".env.prod"))
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', get_random_secret_key())
+# SECRET_KEY 설정
+SECRET_KEY = env('SECRET_KEY', default=None)
+if SECRET_KEY is None:
+    SECRET_KEY = get_random_secret_key()
 REFRESH_TOKEN_SECRET = env("REFRESH_TOKEN_SECRET")
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # 프로덕션 환경에서는 False로 해야 함
