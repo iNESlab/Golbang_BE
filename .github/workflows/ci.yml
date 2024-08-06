@@ -75,7 +75,7 @@ jobs:
 
     - name: Run tests
       run: |
-        python manage.py test --settings=golbang.settings.prod
+        python manage.py test
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
