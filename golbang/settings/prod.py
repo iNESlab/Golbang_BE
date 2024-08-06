@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 환경변수 설정
 env = environ.Env(DEBUG=(bool, False))
-environ.Env.read_env(os.path.join(BASE_DIR, "../.env.prod"))
+environ.Env.read_env(os.path.join(BASE_DIR, ".env.prod"))
 
 # Database
 DATABASES = {

@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 환경변수 설정
 # Take environment variables from .env file
 env = environ.Env(DEBUG=(bool, False))
-environ.Env.read_env(os.path.join(BASE_DIR, "../.env"))
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # Database
 DATABASES = {
@@ -22,6 +22,6 @@ DATABASES = {
 }
 
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = []
 
 CORS_ORIGIN_ALLOW_ALL = True  # 개발 중 모든 도메인 허용
