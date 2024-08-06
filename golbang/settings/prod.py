@@ -20,10 +20,21 @@ DATABASES = {
 }
 
 DEBUG = False
-ALLOWED_HOSTS = [env("MAIN_DOMAIN")]
+ALLOWED_HOSTS = [
+    env("MAIN_DOMAIN"),
+    "43.202.23.152",
+    # "web",  # Docker Compose 서비스 이름
+    # "localhost",
+    # "127.0.0.1"
+]
 
 CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = [env("MAIN_DOMAIN")]  # 프로덕션 도메인만 허용
+CORS_ORIGIN_WHITELIST = [
+    "http://" + env("MAIN_DOMAIN"),
+    "http://43.202.23.152",
+    "http://localhost:8000",  # Docker 내부에서 접근할 수 있는 도메인
+    "http://127.0.0.1:8000",
+]  # 프로덕션 도메인만 허용
 
 SECURE_SSL_REDIRECT = True  # SSL 사용 시 리디렉션
 SECURE_HSTS_SECONDS = 31536000  # HTTP Strict Transport Security (HSTS)

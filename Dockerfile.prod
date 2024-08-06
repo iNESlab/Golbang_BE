@@ -4,17 +4,22 @@
 ###########
 
 # pull official base image
-FROM python:3.12.4-slim as builder
+FROM python:3.12.4 as builder
 
 # set work directory
 WORKDIR /usr/src/app
 
+# clear apt cache
+RUN rm -rf /var/lib/apt/lists/*
+
 # install psycopg2 dependencies
-RUN apt-get update && apt-get install -y  \
-    python3-dev  \
-    mariadb-dev  \
+RUN apt-get update && apt-get install -y \
+    python3-dev \
     libmariadb-dev \
-    build-essential && pip3 install mysqlclient
+    build-essential \
+    gcc \
+    mariadb-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # install dependencies
 COPY requirements.txt .
@@ -40,17 +45,17 @@ RUN mkdir $APP_HOME
 WORKDIR $APP_HOME
 
 # install dependencies
-RUN apt-get update && apt-get install -y  \
-    libmariadb-dev  \
+RUN apt-get update && apt-get install -y \
+    libmariadb-dev \
     build-essential \
     gcc \
     python3-dev \
-    mariadb-client
+    mariadb-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
-RUN pip install mysqlclient
 RUN pip install --no-cache /wheels/*
-RUN apt-get autoremove -y && apt-get clean
 
 # copy entrypoint-prod.sh script
 COPY ./config/docker/entrypoint.prod.sh $APP_HOME
