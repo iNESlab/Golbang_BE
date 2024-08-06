@@ -2,7 +2,7 @@
 
 from .base import *
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # 환경변수 설정
 # Take environment variables from .env file
