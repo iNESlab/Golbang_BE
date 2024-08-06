@@ -93,11 +93,25 @@ jobs:
         install: true
         use: true
 
+    - name: Check Secrets Length(DEBUG)
+      run: |
+        echo "Username Length: ${#${{ secrets.DOCKER_HUB_USERNAME }}"
+        echo "Token Length: ${#${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}"
+
     - name: Log in to Docker Hub
-      uses: docker/login-action@master
-      with:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      run: |
+        echo "Attempting to login to Docker Hub with username: ${{ secrets.DOCKER_HUB_USERNAME }}"
+        echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
+#    - name: Log in to Docker Hub
+#      run: |
+#        echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+
+      #    - name: Log in to Docker Hub
+#      uses: docker/login-action@master
+#      with:
+#        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+#        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
     - name: Build and push Docker images with Compose
       run: |
