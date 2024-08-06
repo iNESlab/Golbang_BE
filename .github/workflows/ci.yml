@@ -94,11 +94,8 @@ jobs:
         use: true
 
     - name: Log in to Docker Hub
-      env:
-        DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       run: |
-        echo ${ DOCKERHUB_ACCESS_TOKEN } | docker login -u ${ DOCKERHUB_USERNAME } --password-stdin
+        echo ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }} | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
     - name: Build and push Docker images with Compose
       run: |
