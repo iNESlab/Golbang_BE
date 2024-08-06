@@ -1,0 +1,31 @@
+# .github/workflows/cd.yml
+# CI에서 빌드된 production 이미지를 pull하여 배포
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - test
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Deploy with Docker Compose
+      run: |
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.REMOTE_SSH_KEY }} ubuntu@${{ secrets.REMOTE_IP }} "
+          cd /home/ubuntu/srv/ubuntu &&
+          docker-compose -f docker-compose.prod.yml pull &&
+          docker-compose -f docker-compose.prod.yml up -d --build"
