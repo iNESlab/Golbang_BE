@@ -1,6 +1,5 @@
 # golbang/settings/base.py
 
-
 from datetime import timedelta
 import os
 import environ
