@@ -21,8 +21,6 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = env("SECRET_KEY")  # 환경변수를 사용할 파일
 REFRESH_TOKEN_SECRET = env("REFRESH_TOKEN_SECRET")
 
-MAIN_DOMAIN = env("MAIN_DOMAIN")
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True  # 프로덕션 환경에서는 False로 해야 함
 
