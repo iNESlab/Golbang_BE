@@ -49,6 +49,7 @@ jobs:
     - name: Create .env.prod file
       run: |
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env.prod
+        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
         echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.prod
         echo "MYSQL_DB_NAME=${{ secrets.MYSQL_DB_NAME }}" >> .env
         echo "MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }}" >> .env
