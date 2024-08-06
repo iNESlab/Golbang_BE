@@ -18,8 +18,8 @@ services:
     entrypoint:
       - sh
       - config/docker/entrypoint.prod.sh
-    networks:
-      - webnet
+#    networks:
+#      - webnet
 
   nginx:
       container_name: nginx
@@ -28,9 +28,9 @@ services:
         - "80:80"
       depends_on:
         - web
-      networks:
-        - webnet
-
-networks:
-  webnet:
-    driver: bridge
+#      networks:
+#        - webnet
+#
+#networks:
+#  webnet:
+#    driver: bridge

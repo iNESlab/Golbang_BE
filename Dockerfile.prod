@@ -4,7 +4,7 @@
 ###########
 
 # pull official base image
-FROM python:3.12.4 as builder
+FROM python:3.12.4-slim as builder
 
 # set work directory
 WORKDIR /usr/src/app
@@ -55,7 +55,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
+RUN pip install mysqlclient
 RUN pip install --no-cache /wheels/*
+RUN apt-get del build-deps
 
 # copy entrypoint-prod.sh script
 COPY ./config/docker/entrypoint.prod.sh $APP_HOME
