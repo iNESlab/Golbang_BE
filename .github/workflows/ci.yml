@@ -93,11 +93,6 @@ jobs:
         install: true
         use: true
 
-    - name: Check Secrets Length(DEBUG)
-      run: |
-        echo "Username Length: ${#${{ secrets.DOCKER_HUB_USERNAME }}"
-        echo "Token Length: ${#${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}"
-
     - name: Log in to Docker Hub
       run: |
         echo "Attempting to login to Docker Hub with username: ${{ secrets.DOCKER_HUB_USERNAME }}"
