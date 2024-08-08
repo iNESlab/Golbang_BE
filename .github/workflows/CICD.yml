@@ -1,5 +1,4 @@
 # .github/workflows/CICD.yml
-# 코드를 테스트하고, Docker 이미지를 빌드하고, 이를 Docker 레지스트리에 푸시
 name: CI/CD Pipeline
 
 on:
@@ -85,6 +84,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    environment: prod
     needs: build  # build job이 성공적으로 완료된 후에 실행
 
     steps:
@@ -97,7 +97,9 @@ jobs:
           host: ${{ secrets.REMOTE_IP }}
           username: ubuntu
           key: ${{ secrets.REMOTE_SSH_KEY }}
-          script: mkdir -p /home/ubuntu/srv/ubuntu
+          script: |
+            whoami
+            mkdir -p /home/ubuntu/srv/ubuntu
 
       - name: copy source via ssh key
         uses: burnett01/rsync-deployments@master
@@ -115,4 +117,5 @@ jobs:
           username: ubuntu
           key: ${{ secrets.REMOTE_SSH_KEY }}
           script: |
+            whoami
             sh /home/ubuntu/srv/ubuntu/config/scripts/deploy.sh
