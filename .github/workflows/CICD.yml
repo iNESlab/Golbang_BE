@@ -91,13 +91,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Set environment variable for SSH key
+        run: echo "REMOTE_SSH_KEY=${{ secrets.REMOTE_SSH_KEY }}" >> $GITHUB_ENV
+
       - name: Create remote directory
         uses: appleboy/ssh-action@master
         with:
           host: 43.200.41.240
           port: 22
           username: ubuntu
-          key: ${{ secrets.REMOTE_SSH_KEY }}
+          key: ${{ env.REMOTE_SSH_KEY }}
           script: |
             whoami
             mkdir -p /home/ubuntu/srv/ubuntu
