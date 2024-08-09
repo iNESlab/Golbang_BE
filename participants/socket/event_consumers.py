@@ -67,7 +67,17 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             await self.close(code=4005)
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
-        await self.send_ranks()
+        try:
+            text_data_json = json.loads(text_data)
+            sort = text_data_json['sort']
+            if sort is 'sum_score':
+                await self.send_ranks()
+            else:
+                await self.send_ranks(sort)
+
+        except Exception as e:
+            logger.error(f'error in receive: {e}')
+            await self.send_json({'status': 400, 'message': str(e)})
 
     async def disconnect(self, close_code):
         try:
@@ -107,7 +117,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
         participant = Participant.objects.get(id=participant_id)
         return participant.club_member.user
 
-    async def send_ranks(self):
+    async def send_ranks(self, sort='sum_score'):
         try:
             # 모든 참가자와 관련된 정보를 한 번의 쿼리로 가져옴
             participants = await sync_to_async(list)(
@@ -119,7 +129,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             ])
 
             # sum_score 기준으로 정렬
-            ranks_sorted = sorted(ranks, key=lambda x: x['sum_score'], reverse=False)
+            ranks_sorted = sorted(ranks, key=lambda x: x[sort], reverse=False)
 
             await self.send_json(ranks_sorted)
         except Exception as e:
@@ -127,7 +137,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
 
     async def process_participant(self, participant):
         participant_id = participant.id
-        hole_number, sum_score = await self.get_event_rank_from_redis(participant_id)
+        hole_number, sum_score, score_difference = await self.get_event_rank_from_redis(participant_id)
         user = participant.club_member.user
 
         return {
@@ -138,6 +148,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             'participant_id': participant_id,
             'hole_number': hole_number,
             'sum_score': sum_score,
+            'score_difference':score_difference,
             'handicap_score': sum_score + user.handicap
             # 등수는 프론트에서... sum_score냐 handicap_score냐에 따라 정렬 방법과 순위가 달라짐
         }
@@ -150,6 +161,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
 
         last_hole_number = 0
         total_score = 0
+        previous_total_score = 0
 
         for key in keys:
             logger.debug(f'Processing key: {key}')
@@ -157,11 +169,17 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             score = int(await sync_to_async(redis_client.get)(key))
             logger.debug(f'Hole number: {hole_number}, score: {score}')
 
-            total_score += score
             if hole_number > last_hole_number:
                 last_hole_number = hole_number
+                previous_total_score = total_score  # 이전 총합을 저장
 
-        return last_hole_number, total_score
+            total_score += score  # 현재 홀 점수를 총합에 추가
+
+        # 현재 총합에서 이전 총합을 뺀 차이 계산
+        difference = total_score - previous_total_score
+
+        return last_hole_number, total_score, difference
+
 
     async def send_ranks_periodically(self):
         logger.info('send_scores_periodically started')
