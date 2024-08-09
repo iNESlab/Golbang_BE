@@ -1,5 +1,3 @@
-# Dockerfile(로컬용)
-
 # 베이스 이미지 설정
 FROM python:3.12.4-slim
 LABEL authors="minjeong"
@@ -11,7 +9,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
-    libmariadb-dev
+    libmariadb-dev \
+    qt5-qmake \
+    qtbase5-dev \
+    && apt-get clean
 
 # 필요 패키지 복사 및 설치
 COPY requirements.txt .
@@ -20,6 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # wait-for-it.sh 스크립트 복사
 COPY wait-for-it.sh /wait-for-it.sh
+
+# wait-for-it.sh 실행 권한 부여
+RUN chmod +x /wait-for-it.sh
 
 # 프로젝트 파일 복사
 COPY . .
@@ -31,4 +35,4 @@ ENV DJANGO_SETTINGS_MODULE=golbang.settings
 EXPOSE 8000
 
 # 명령어 설정
-CMD ["/wait-for-it.sh", "db:3306", "--", "sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+CMD ["/wait-for-it.sh", "db:3306", "--", "/wait-for-it.sh", "redis:6379", "--", "sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]

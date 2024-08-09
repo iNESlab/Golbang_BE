@@ -7,6 +7,8 @@ golbang/settings.py
 from datetime import timedelta
 import os
 import environ
+import redis
+import urllib.parse as urlparse
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -61,6 +63,12 @@ DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Application definition
 INSTALLED_APPS = [
+    # ==========
+    # 비동기 통신
+    # ==========
+    'channels',
+    'daphne',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -99,6 +107,17 @@ INSTALLED_APPS = [
     'drf_yasg',     # Swagger
     'storages',     # Amazon S3 (django-storages)
 ]
+# 웹 소켓을 위한 비동기 애플리케이션
+ASGI_APPLICATION = 'golbang.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [(os.environ.get('REDIS_HOST', 'localhost'), 6379)],
+        },
+    },
+}
 
 AUTH_USER_MODEL = 'accounts.User' # Custom User Model
 
@@ -282,6 +301,23 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Logging
+# DEBUG 레벨 이상의 메시지를 콘솔에 출력
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
 
 
 # Internationalization
