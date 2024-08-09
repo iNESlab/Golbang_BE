@@ -21,19 +21,27 @@ logger.addHandler(handler)
 
 
 class GroupParticipantConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.participant_id = None
+        self.group_type = None
+        self.event_id = None
+        self.group_name = None
+
     async def connect(self):
         try:
+            user = self.scope['user']
             self.participant_id = self.scope['url_route']['kwargs']['participant_id']
-            participant = await self.get_participant(self.participant_id)
+            participant = await self.get_and_check_participant(self.participant_id, user)
+
             if participant is None:
-                await self.close_with_status(404, 'Participant not found')
+                logger.info('participant not found or not match with user token')
+                await self.close(code = 400)
                 return
 
             self.group_type = participant.group_type
+
             self.event_id = await self.get_event_id(participant)
-            if not await self.check_event_exists(self.event_id):
-                await self.close_with_status(404, 'Event not found')
-                return
 
             self.group_name = self.get_group_name(self.event_id)
 
@@ -54,9 +62,13 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             pass
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None, **kwargs):
         try:
             text_data_json = json.loads(text_data)
+
+            if text_data_json['action'] == 'get':
+                await self.send_scores()
+                return
 
             self.participant_id = text_data_json['participant_id']
             hole_number = text_data_json['hole_number']
@@ -136,25 +148,43 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer):
 
         await asyncio.gather(*(update_or_create_hole_score(key) for key in keys))
 
-    async def send_scores(self, participant_id_list):
+    async def send_scores(self):
         try:
-            all_scores = []
-            logger.info('send_Scores')
-            for participant_id in participant_id_list:
-                hole_scores = await self.get_all_hole_scores_from_redis(participant_id)
-                logger.info('hole_scores: %s', hole_scores)
-                all_scores.append({
-                    'participant_id': participant_id,
-                    'scores': hole_scores
-                })
+            # 그룹에 속한 모든 참가자 ID를 한 번의 쿼리로 가져옴
+            participants = await self.get_group_participants(self.event_id, self.group_type)
+            participant_id_list = await sync_to_async(list)(participants.values_list('id', flat=True))
+
+            # 각 참가자의 홀 스코어를 비동기로 병렬 처리
+            all_scores = await asyncio.gather(*[
+                self.get_participant_scores(participant_id) for participant_id in participant_id_list
+            ])
+
             await self.send_json(all_scores)
         except Exception as e:
             await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
 
+    async def get_participant_scores(self, participant_id):
+        hole_scores = await self.get_all_hole_scores_from_redis(participant_id)
+        logger.info('hole_scores: %s', hole_scores)
+        return {
+            'participant_id': participant_id,
+            'scores': hole_scores
+        }
+
+    @database_sync_to_async
+    def get_and_check_participant(self, participant_id, user):
+        try:
+            participant = Participant.objects.select_related('club_member__user').get(id=participant_id)
+            if participant.club_member.user != user:
+                return None
+            return participant
+        except Participant.DoesNotExist:
+            return None
+
     @database_sync_to_async
     def get_participant(self, participant_id):
         try:
-            return Participant.objects.get(id=participant_id)
+            return Participant.objects.select_related('club_member__user').get(id=participant_id)
         except Participant.DoesNotExist:
             return None
 
@@ -175,14 +205,11 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def update_or_create_hole_score_in_db(self, participant_id, hole_number, score):
-        existing_score = HoleScore.objects.filter(participant_id=participant_id, hole_number=hole_number).first()
-        if not (existing_score and existing_score.score == score):
-            # 동일한 score가 존재하지 않거나 새로운 score로 업데이트
-            return HoleScore.objects.update_or_create(
-                participant_id=participant_id,
-                hole_number=hole_number,
-                defaults={'score': score}
-            )
+        return HoleScore.objects.update_or_create(
+            participant_id=participant_id,
+            hole_number=hole_number,
+            defaults={'score': score}
+        )
 
     @database_sync_to_async
     def get_group_participants(self, event_id, group_type=None):
@@ -208,15 +235,17 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer):
         return participant.event.id
 
     async def send_json(self, content):
-        await self.send(text_data=json.dumps(content))
+        try:
+            logger.debug(f'Sending JSON: {content}')
+            await self.send(text_data=json.dumps(content, ensure_ascii=False))
+            logger.debug('JSON sent successfully')
+        except Exception as e:
+            logger.error(f'Error in send_json: {e}')
 
     async def send_scores_periodically(self):
         while True:
             try:
-                participants = await self.get_group_participants(self.event_id, self.group_type)
-                participants_list = await sync_to_async(list)(participants.values_list('id', flat=True))
-                await self.send_scores(participants_list)
-                # 왜인지 모르겠지만, participants를 넘기면 동작 안함
+                await self.send_scores()
             except Exception as e:
                 await self.send_json({'status': 500, 'message': str(e)})
             await asyncio.sleep(300)  # 5분마다 주기적으로 스코어 전송

@@ -22,14 +22,30 @@ logger.addHandler(handler)
 
 
 class EventParticipantConsumer(AsyncWebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+        self.participant_id = None
+        self.group_name = None
+        self.event_id = None
+
     async def connect(self):
         try:
+            user = self.scope.get('user', None)
+
+            if user is None or user.is_anonymous:
+                # await self.send_json({'error': "Authentication required"})
+                # accept 전까지는 send_json을 사용하지 못함 => 이는 구체적인 에러 메시지를 못만듬
+                await self.close(code=4001)
+                return
+
             self.participant_id = self.scope['url_route']['kwargs']['participant_id']
             logger.debug(f'Participant ID: {self.participant_id}')
 
             participant = await self.get_participant(self.participant_id)
             if participant is None:
-                raise ValueError('참가자가 존재하지 않습니다.')
+                logging.info('No participant')
+                await self.close(code=4004)
+                return
 
             self.event_id = await self.get_event_id(self.participant_id)
             logger.debug(f'Event ID: {self.event_id}')
@@ -42,18 +58,24 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             logger.info('WebSocket connection accepted')
 
             # 주기적으로 스코어를 전송하는 태스크를 설정
-            self.send_task = asyncio.create_task(self.send_scores_periodically())
+            self.send_task = asyncio.create_task(self.send_ranks_periodically())
             logger.debug('Started send_scores_periodically task')
 
         except Exception as e:
             logger.error(f'Error in connect: {e}')
             await self.send_json({'error': str(e)})
-            await self.close()
+            await self.close(code=4005)
+
+    async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        await self.send_ranks()
 
     async def disconnect(self, close_code):
         try:
             logger.info('Disconnecting WebSocket')
-            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+            if self.group_name:  # group_name이 None이 아닌지 확인
+                await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
             if hasattr(self, 'send_task'):
                 self.send_task.cancel()  # 주기적인 태스크 취소
                 logger.debug('Cancelled send_scores_periodically task')
@@ -80,47 +102,82 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
     def get_all_participants(self, event_id):
         return Participant.objects.filter(event_id=event_id)
 
-    async def send_scores(self, participant_id_list):
+    @database_sync_to_async
+    def get_user_from_participant(self, participant_id):
+        participant = Participant.objects.get(id=participant_id)
+        return participant.club_member.user
+
+    async def send_ranks(self):
         try:
-            all_scores = []
-            for participant_id in participant_id_list:
-                hole_scores = await self.get_all_hole_scores_from_redis(participant_id)
-                all_scores.append({
-                    'participant_id': participant_id,
-                    'scores': hole_scores
-                })
-            await self.send_json(all_scores)
+            # 모든 참가자와 관련된 정보를 한 번의 쿼리로 가져옴
+            participants = await sync_to_async(list)(
+                Participant.objects.filter(event_id=self.event_id).select_related('club_member__user')
+            )
+
+            ranks = await asyncio.gather(*[
+                self.process_participant(participant) for participant in participants
+            ])
+
+            # sum_score 기준으로 정렬
+            ranks_sorted = sorted(ranks, key=lambda x: x['sum_score'], reverse=True)
+
+            await self.send_json(ranks_sorted)
         except Exception as e:
             await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
 
-    async def send_scores_periodically(self):
-        logger.info('send_scores_periodically started')
-        while True:
-            try:
-                logger.info('Fetching participants...')
-                participants = await self.get_all_participants(self.event_id)
-                participants_list = await sync_to_async(list)(participants.values_list('id', flat=True))
-                logger.info('participants_list', participants_list)
-                await self.send_scores(participants_list)
-            except Exception as e:
-                logger.error(f'Error in send_scores_periodically: {e}')
-                await self.send_json({'error': '주기적인 스코어 전송 실패', 'details': str(e)})
-            await asyncio.sleep(10)  # 10초마다 주기적으로 스코어 전송
+    async def process_participant(self, participant):
+        participant_id = participant.id
+        hole_number, sum_score = await self.get_event_rank_from_redis(participant_id)
+        user = participant.club_member.user
 
-    async def get_all_hole_scores_from_redis(self, participant_id):
+        return {
+            'user': {
+                'name': user.name
+                # TODO 'image' : 유저 프로필 사진 추가
+            },
+            'participant_id': participant_id,
+            'hole_number': hole_number,
+            'sum_score': sum_score,
+            'handicap_score': sum_score + user.handicap
+            # 등수는 프론트에서... sum_score냐 handicap_score냐에 따라 정렬 방법과 순위가 달라짐
+        }
+
+    async def get_event_rank_from_redis(self, participant_id):
         logger.info('Fetching hole scores from Redis')
         keys_pattern = f'participant:{participant_id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
         logger.debug(f'Keys: {keys}')
-        hole_scores = []
+
+        last_hole_number = 0
+        total_score = 0
+
         for key in keys:
             logger.debug(f'Processing key: {key}')
             hole_number = int(key.decode('utf-8').split(':')[-1])
             score = int(await sync_to_async(redis_client.get)(key))
             logger.debug(f'Hole number: {hole_number}, score: {score}')
-            hole_scores.append({'hole_number': hole_number, 'score': score})
-        return hole_scores
+
+            total_score += score
+            if hole_number > last_hole_number:
+                last_hole_number = hole_number
+
+        return last_hole_number, total_score
+
+    async def send_ranks_periodically(self):
+        logger.info('send_scores_periodically started')
+        while True:
+            try:
+                await self.send_ranks()
+
+            except Exception as e:
+                logger.error(f'Error in send_scores_periodically: {e}')
+                await self.send_json({'error': '주기적인 스코어 전송 실패', 'details': str(e)})
+            await asyncio.sleep(300)  # 5분마다 주기적으로 스코어 전송
 
     async def send_json(self, content):
-        logger.debug(f'Sending JSON: {content}')
-        await self.send(text_data=json.dumps(content))
+        try:
+            logger.debug(f'Sending JSON: {content}')
+            await self.send(text_data=json.dumps(content, ensure_ascii=False))
+            logger.debug('JSON sent successfully')
+        except Exception as e:
+            logger.error(f'Error in send_json: {e}')
