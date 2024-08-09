@@ -119,7 +119,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             ])
 
             # sum_score 기준으로 정렬
-            ranks_sorted = sorted(ranks, key=lambda x: x['sum_score'], reverse=True)
+            ranks_sorted = sorted(ranks, key=lambda x: x['sum_score'], reverse=False)
 
             await self.send_json(ranks_sorted)
         except Exception as e:
