@@ -302,6 +302,23 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Logging
+# DEBUG 레벨 이상의 메시지를 콘솔에 출력
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
