@@ -152,24 +152,26 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer):
         try:
             # 그룹에 속한 모든 참가자 ID를 한 번의 쿼리로 가져옴
             participants = await self.get_group_participants(self.event_id, self.group_type)
-            participant_id_list = await sync_to_async(list)(participants.values_list('id', flat=True))
 
             # 각 참가자의 홀 스코어를 비동기로 병렬 처리
-            all_scores = await asyncio.gather(*[
-                self.get_participant_scores(participant_id) for participant_id in participant_id_list
+            group_scores = await asyncio.gather(*[
+                self.process_participant(participant) for participant in participants
             ])
 
-            await self.send_json(all_scores)
+            await self.send_json(group_scores)
         except Exception as e:
             await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
 
-    async def get_participant_scores(self, participant_id):
+    async def process_participant(self, participant):
+        participant_id = participant.id
         hole_scores = await self.get_all_hole_scores_from_redis(participant_id)
-        logger.info('hole_scores: %s', hole_scores)
+
         return {
+            'user_name': participant.club_member.user.name,
             'participant_id': participant_id,
             'scores': hole_scores
         }
+
 
     @database_sync_to_async
     def get_and_check_participant(self, participant_id, user):
@@ -215,7 +217,9 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer):
     def get_group_participants(self, event_id, group_type=None):
         if group_type is None:
             raise ValueError("Group type is missing")
-        return Participant.objects.filter(event_id=event_id, group_type=group_type)
+        return list(Participant.objects
+                    .filter(event_id=event_id, group_type=group_type)
+                    .select_related('club_member__user'))
 
     async def get_all_hole_scores_from_redis(self, participant_id):
         logger.info('participant_id: %s', participant_id)
