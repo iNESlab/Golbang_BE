@@ -41,7 +41,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             self.participant_id = self.scope['url_route']['kwargs']['participant_id']
             logger.debug(f'Participant ID: {self.participant_id}')
 
-            participant = await self.get_participant(self.participant_id)
+            participant = await self.get_and_check_participant(self.participant_id, user)
             if participant is None:
                 logging.info('No participant')
                 await self.close(code=4004)
@@ -91,6 +91,16 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
                 logger.debug('Cancelled send_scores_periodically task')
         except Exception as e:
             logger.error(f'Error in disconnect: {e}')
+
+    @database_sync_to_async
+    def get_and_check_participant(self, participant_id, user):
+        try:
+            participant = Participant.objects.select_related('club_member__user').get(id=participant_id)
+            if participant.club_member.user != user:
+                return None
+            return participant
+        except Participant.DoesNotExist:
+            return None
 
     @database_sync_to_async
     def get_participant(self, participant_id):
