@@ -149,7 +149,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer):
             'hole_number': hole_number,
             'sum_score': sum_score,
             'score_difference':score_difference,
-            'handicap_score': sum_score + user.handicap
+            'handicap_score': sum_score - user.handicap if sum_score - user.handicap > 0 else 0
             # 등수는 프론트에서... sum_score냐 handicap_score냐에 따라 정렬 방법과 순위가 달라짐
         }
 
