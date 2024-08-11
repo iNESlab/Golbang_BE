@@ -84,7 +84,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: prod
+    environment: stage
     needs: build  # build job이 성공적으로 완료된 후에 실행
 
     steps:
@@ -94,10 +94,9 @@ jobs:
       - name: Create remote directory
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 43.200.41.240
+          host: ${{ secrets.REMOTE_IP }}
           username: ubuntu
           key: ${{ secrets.REMOTE_SSH_KEY }}
-          port: 22
           script: |
             whoami
             mkdir -p /home/ubuntu/srv/ubuntu
