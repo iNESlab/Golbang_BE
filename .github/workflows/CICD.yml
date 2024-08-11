@@ -84,7 +84,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: stage
+    environment: jungbeom
     needs: build  # build job이 성공적으로 완료된 후에 실행
 
     steps:
