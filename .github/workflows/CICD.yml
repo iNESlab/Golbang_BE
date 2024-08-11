@@ -46,11 +46,11 @@ jobs:
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env.prod
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
         echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.prod
-        echo "MYSQL_DB_NAME=${{ secrets.MYSQL_DB_NAME }}" >> .env.prod
-        echo "MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }}" >> .env.prod
-        echo "MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }}" >> .env.prod
-        echo "MYSQL_DB_USER=${{ secrets.MYSQL_DB_USER }}" >> .env.prod
-        echo "MYSQL_DB_PASSWORD=${{ secrets.MYSQL_DB_PASSWORD }}" >> .env.prod
+        echo "MYSQL_DB_NAME=${{ secrets.MYSQL_DB_NAME }}" >> .env
+        echo "MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }}" >> .env
+        echo "MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }}" >> .env
+        echo "MYSQL_DB_USER=${{ secrets.MYSQL_DB_USER }}" >> .env
+        echo "MYSQL_DB_PASSWORD=${{ secrets.MYSQL_DB_PASSWORD }}" >> .env
         echo "RDS_MYSQL_DB_NAME=${{ secrets.RDS_MYSQL_DB_NAME }}" >> .env.prod
         echo "RDS_MYSQL_DB_HOST=${{ secrets.RDS_MYSQL_DB_HOST }}" >> .env.prod
         echo "RDS_MYSQL_DB_PORT=${{ secrets.RDS_MYSQL_DB_PORT }}" >> .env.prod
@@ -77,7 +77,7 @@ jobs:
         echo "DOCKERHUB_ACCESS_TOKEN=${{ secrets.DOCKERHUB_ACCESS_TOKEN}}" >> .env.prod
     - name: Run tests
       run: |
-        python manage.py test --settings=golbang.settings
+        python manage.py test --settings=golbang.settings.dev
 
   deploy:
     name: Deploy
