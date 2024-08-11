@@ -17,10 +17,10 @@ env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, ".env.prod"))
 
 # SECRET_KEY 설정
-SECRET_KEY = env('SECRET_KEY')
-# SECRET_KEY = env('SECRET_KEY', default=None)
-# if SECRET_KEY is None:
-#     SECRET_KEY = get_random_secret_key()
+# SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env('SECRET_KEY', default=None)
+if SECRET_KEY is None:
+    SECRET_KEY = get_random_secret_key()
 REFRESH_TOKEN_SECRET = env("REFRESH_TOKEN_SECRET")
 
 

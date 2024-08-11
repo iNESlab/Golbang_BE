@@ -42,30 +42,8 @@ jobs:
         pip install -r requirements.txt
     - name: Create .env file
       run: |
-        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env.prod
-        echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.prod
-        echo "MYSQL_DB_NAME=${{ secrets.MYSQL_DB_NAME }}" >> .env
-        echo "MYSQL_DB_HOST=${{ secrets.MYSQL_DB_HOST }}" >> .env
-        echo "MYSQL_DB_PORT=${{ secrets.MYSQL_DB_PORT }}" >> .env
-        echo "MYSQL_DB_USER=${{ secrets.MYSQL_DB_USER }}" >> .env
-        echo "MYSQL_DB_PASSWORD=${{ secrets.MYSQL_DB_PASSWORD }}" >> .env
-        echo "MAIN_DOMAIN=${{ secrets.MAIN_DOMAIN }}" >> .env.prod
-        echo "SOCIAL_AUTH_GOOGLE_CLIENT_ID=${{ secrets.SOCIAL_AUTH_GOOGLE_CLIENT_ID }}" >> .env.prod
-        echo "SOCIAL_AUTH_GOOGLE_SECRET=${{ secrets.SOCIAL_AUTH_GOOGLE_SECRET }}" >> .env.prod
-        echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> .env.prod
-        echo "STATE=${{ secrets.STATE }}" >> .env.prod
-        echo "SOCIAL_AUTH_NAVER_CLIENT_ID=${{ secrets.SOCIAL_AUTH_NAVER_CLIENT_ID }}" >> .env.prod
-        echo "SOCIAL_AUTH_NAVER_SECRET=${{ secrets.SOCIAL_AUTH_NAVER_SECRET }}" >> .env.prod
-        echo "NAVER_CALLBACK_URL=${{ secrets.NAVER_CALLBACK_URL }}" >> .env.prod
-        echo "SOCIAL_AUTH_KAKAO_CLIENT_ID=${{ secrets.SOCIAL_AUTH_KAKAO_CLIENT_ID }}" >> .env.prod
-        echo "SOCIAL_AUTH_KAKAO_SECRET=${{ secrets.SOCIAL_AUTH_KAKAO_SECRET }}" >> .env.prod
-        echo "KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }}" >> .env.prod
-        echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env.prod
-        echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env.prod
-        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env.prod
-        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env.prod
-        echo "AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}" >> .env.prod
-        echo "AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}" >> .env.prod
+        echo ${{ secrets.LOCAL_ENV }}" >> .env
+        echo ${{ secrets.STAGE_ENV }}" >> .env.prod
 
     - name: Run tests
       run: |
@@ -83,30 +61,8 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env.prod
-          echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env.prod
-          echo "RDS_MYSQL_DB_NAME=${{ secrets.RDS_MYSQL_DB_NAME }}" >> .env.prod
-          echo "RDS_MYSQL_DB_HOST=${{ secrets.RDS_MYSQL_DB_HOST }}" >> .env.prod
-          echo "RDS_MYSQL_DB_PORT=${{ secrets.RDS_MYSQL_DB_PORT }}" >> .env.prod
-          echo "RDS_MYSQL_DB_USER=${{ secrets.RDS_MYSQL_DB_USER }}" >> .env.prod
-          echo "RDS_MYSQL_DB_PASSWORD=${{ secrets.RDS_MYSQL_DB_PASSWORD }}" >> .env.prod
-          echo "MAIN_DOMAIN=${{ secrets.MAIN_DOMAIN }}" >> .env.prod
-          echo "SOCIAL_AUTH_GOOGLE_CLIENT_ID=${{ secrets.SOCIAL_AUTH_GOOGLE_CLIENT_ID }}" >> .env.prod
-          echo "SOCIAL_AUTH_GOOGLE_SECRET=${{ secrets.SOCIAL_AUTH_GOOGLE_SECRET }}" >> .env.prod
-          echo "GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}" >> .env.prod
-          echo "STATE=${{ secrets.STATE }}" >> .env.prod
-          echo "SOCIAL_AUTH_NAVER_CLIENT_ID=${{ secrets.SOCIAL_AUTH_NAVER_CLIENT_ID }}" >> .env.prod
-          echo "SOCIAL_AUTH_NAVER_SECRET=${{ secrets.SOCIAL_AUTH_NAVER_SECRET }}" >> .env.prod
-          echo "NAVER_CALLBACK_URL=${{ secrets.NAVER_CALLBACK_URL }}" >> .env.prod
-          echo "SOCIAL_AUTH_KAKAO_CLIENT_ID=${{ secrets.SOCIAL_AUTH_KAKAO_CLIENT_ID }}" >> .env.prod
-          echo "SOCIAL_AUTH_KAKAO_SECRET=${{ secrets.SOCIAL_AUTH_KAKAO_SECRET }}" >> .env.prod
-          echo "KAKAO_CALLBACK_URL=${{ secrets.KAKAO_CALLBACK_URL }}" >> .env.prod
-          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env.prod
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env.prod
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env.prod
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env.prod
-          echo "AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}" >> .env.prod
-          echo "AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}" >> .env.prod
+          echo ${{ secrets.STAGE_ENV }}" >> .env.prod
+         
 
       - name: List files in root directory (Check that the env file was created successfully)
         run: |
