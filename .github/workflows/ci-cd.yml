@@ -93,7 +93,7 @@ jobs:
         with:
           host: 43.200.41.240
           username: ubuntu
-          key: 
+          key: ${{ secrets.REMOTE_SSH_KEY }}
           port: 22
           script: |
             whoami
