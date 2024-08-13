@@ -122,6 +122,11 @@ jobs:
         run: |
           ls -la
 
+      - name: Debug secret values
+        run: |
+          echo "REMOTE_IP=${{ secrets.REMOTE_IP }}"
+          echo "REMOTE_SSH_KEY=${{ secrets.REMOTE_SSH_KEY }}"
+
       - name: Create remote directory
         uses: appleboy/ssh-action@master
         with:
