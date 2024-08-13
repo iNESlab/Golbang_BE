@@ -79,17 +79,17 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: stage
+#    environment: stage
     needs: build  # build job이 성공적으로 완료된 후에 실행
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-#      - name: Create .env file
-#        run: |
-#          echo ${{ secrets.STAGE_ENV }}" >> .env.prod
-#
+      - name: Create .env2 file
+        run: |
+          echo ${{ secrets.STAGE_ENV }}" >> .env.prod2
+
 
       - name: Crete .env file
         run: |
