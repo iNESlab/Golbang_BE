@@ -85,11 +85,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Create .env2 file
-        run: |
-          echo ${{ secrets.STAGE_ENV }}" >> .env.prod2
-
+#      - name: Create .env2 file
+#        run: |
+#          echo ${{ secrets.STAGE_ENV }}" >> .env.prod2
 
       - name: Crete .env file
         run: |
