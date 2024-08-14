@@ -88,3 +88,13 @@ class ParticipantAutoMatchSerializer(serializers.ModelSerializer):
         elif isinstance(obj, Participant):
             return obj.club_member.user.handicap
         return None
+
+class HoleScoreSerializer(serializers.ModelSerializer):
+    participant_id = serializers.PrimaryKeyRelatedField(
+        queryset   = Participant.objects.all(),
+        source     = 'participant'
+    )
+    action = serializers.CharField(write_only=True)
+    class Meta:
+        model  = HoleScore
+        fields = ['action', 'participant_id', 'hole_number', 'score']
