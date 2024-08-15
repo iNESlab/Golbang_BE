@@ -41,7 +41,7 @@ class Event(models.Model):
     game_mode       = models.CharField("게임 모드", max_length=3, choices=GameMode.choices, default=GameMode.STROKE_PLAY)
     alert_date_time = models.DateTimeField("알람 일자", null=True, blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)
-    updated_at      = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     # 이벤트 최종 승리 팀
     group_win_team          = models.CharField("승리 팀 by 조", max_length=4,

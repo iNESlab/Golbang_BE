@@ -117,18 +117,14 @@ class UserResultSerializer(serializers.ModelSerializer):
         fields = ['user_id', 'name', 'stroke', 'rank']
 
     def get_stroke(self, obj):
-        # 현재 이벤트 및 사용자 정보를 바탕으로 참가자를 조회
-        event_id = self.context.get('event_id')
+        # GET 요청의 파라미터를 통해 sort_type이 'handicap'인 경우, 핸디캡 점수를 반환
         sort_type = self.context.get('sort_type', 'sum_score')
+        event_id = self.context.get('event_id')
         participant = Participant.objects.filter(event_id=event_id, club_member__user=obj).first()
-
-        if participant:
-            if sort_type == 'handicap_score':
-                return participant.handicap_score
-            else:
-                return participant.sum_score
-
-        return 0  # 참가자가 없을 경우 기본값 반환
+        if sort_type == 'handicap_score':
+            return participant.handicap_score if participant else 0
+        else:
+            return participant.sum_score if participant else 0
 
     def get_rank(self, obj):
         # 특정 이벤트에서 사용자의 순위를 반환
@@ -173,19 +169,17 @@ class EventResultSerializer(serializers.ModelSerializer):
         previous_score = None
         rank = 1
         tied_rank = 1  # 동점자의 랭크를 별도로 관리
-
         for idx, participant in enumerate(participants):
             current_score = getattr(participant, sort_type)
 
             if current_score == previous_score:
                 participant.rank = f"T{tied_rank}"  # 이전 참가자와 동일한 점수라면 T로 표기
-                participants[idx - 1].rank = f"T{tied_rank}"  # 이전 참가자의 랭크도 T로 업데이트
             else:
-                participant.rank = str(rank)  # 새로운 점수일 경우 일반 순위
-                tied_rank = rank  # 새로운 점수에서 동점 시작 지점을 설정
+                tied_rank = idx + 1
+                participant.rank = tied_rank
+                rank = tied_rank
 
             previous_score = current_score
-            rank += 1  # 다음 순위로 이동
 
     def get_user(self, obj):
         # 요청된 사용자 정보를 반환
