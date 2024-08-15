@@ -169,17 +169,19 @@ class EventResultSerializer(serializers.ModelSerializer):
         previous_score = None
         rank = 1
         tied_rank = 1  # 동점자의 랭크를 별도로 관리
+
         for idx, participant in enumerate(participants):
             current_score = getattr(participant, sort_type)
 
             if current_score == previous_score:
                 participant.rank = f"T{tied_rank}"  # 이전 참가자와 동일한 점수라면 T로 표기
+                participants[idx - 1].rank = f"T{tied_rank}"  # 이전 참가자의 랭크도 T로 업데이트
             else:
-                tied_rank = idx + 1
-                participant.rank = tied_rank
-                rank = tied_rank
+                participant.rank = str(rank)  # 새로운 점수일 경우 일반 순위
+                tied_rank = rank  # 새로운 점수에서 동점 시작 지점을 설정
 
             previous_score = current_score
+            rank += 1  # 다음 순위로 이동
 
     def get_user(self, obj):
         # 요청된 사용자 정보를 반환
