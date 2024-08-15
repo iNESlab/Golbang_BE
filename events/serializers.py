@@ -117,14 +117,18 @@ class UserResultSerializer(serializers.ModelSerializer):
         fields = ['user_id', 'name', 'stroke', 'rank']
 
     def get_stroke(self, obj):
-        # GET 요청의 파라미터를 통해 sort_type이 'handicap'인 경우, 핸디캡 점수를 반환
-        sort_type = self.context.get('sort_type', 'sum_score')
+        # 현재 이벤트 및 사용자 정보를 바탕으로 참가자를 조회
         event_id = self.context.get('event_id')
+        sort_type = self.context.get('sort_type', 'sum_score')
         participant = Participant.objects.filter(event_id=event_id, club_member__user=obj).first()
-        if sort_type == 'handicap_score':
-            return participant.handicap_score if participant else 0
-        else:
-            return participant.sum_score if participant else 0
+
+        if participant:
+            if sort_type == 'handicap_score':
+                return participant.handicap_score
+            else:
+                return participant.sum_score
+
+        return 0  # 참가자가 없을 경우 기본값 반환
 
     def get_rank(self, obj):
         # 특정 이벤트에서 사용자의 순위를 반환
