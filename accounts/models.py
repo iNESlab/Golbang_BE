@@ -52,7 +52,8 @@ class User(AbstractBaseUser):
     date_of_birth   = models.DateField("생일", null=True, blank=True)
     handicap        = models.IntegerField("핸디캡", default='0',)
     student_id      = models.CharField("학번", max_length=50, null=True, blank=True)
-    
+    profile_image   = models.ImageField("프로필 사진", upload_to='accounts/', null=True, blank=True)
+
     # auto
     created_at = models.DateTimeField("가입일", auto_now_add=True)
     updated_at = models.DateTimeField("계정 수정일", auto_now=True)
