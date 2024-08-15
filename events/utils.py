@@ -7,8 +7,9 @@ events/utils.py
 기능: queryset이나 validate 처리 등
 '''
 from datetime import datetime
+from django.db.models import Sum
 
-from utils.error_handlers import handle_400_bad_request
+from participants.models import HoleScore
 from .models import Event
 
 
@@ -39,3 +40,16 @@ class EventUtils:
         if len(member_ids) != len(set(member_ids)):
             return True
         return False
+
+    @staticmethod
+    def calculate_sum_score(participant):
+        return HoleScore.objects.filter(participant=participant).aggregate(total=Sum('score'))['total']
+
+    @staticmethod
+    def calculate_handicap_score(participant):
+        return int(participant.sum_score) - int(participant.club_member.user.handicap)
+
+    @staticmethod
+    def get_rank(participant):
+        # EventResultSerializer에서 이미 rank가 계산되었으므로, 여기서는 그 값을 반환
+        return participant.rank if participant.rank else None

@@ -8,7 +8,7 @@ events/views/views.py
 '''
 from datetime import date, datetime
 
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,7 +18,7 @@ from clubs.models import ClubMember, Club
 from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
 from participants.models import Participant
 from events.models import Event
-from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer
+from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer
 from events.utils import EventUtils
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 
@@ -168,7 +168,7 @@ class EventViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-# 이벤트 삭제 메서드 (DELETE)
+    # 이벤트 삭제 메서드 (DELETE)
     def destroy(self, request, *args, **kwargs):
         user = request.user
         event_id = self.kwargs.get('pk')
@@ -186,3 +186,40 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.delete()
+
+    # 이벤트 결과 조회 (GET)
+    @action(detail=True, methods=['get'], url_path='ranks')
+    def retrieve_ranks(self, request, pk=None):
+        """
+        GET 요청 시 특정 이벤트(Event)의 결과, 즉 전체 순위를 반환한다.
+        요청 데이터: 이벤트 ID
+        응답 데이터: 참가자들의 순위 리스트 (sum_score 기준 오름차순 정렬)
+        """
+        user = request.user
+        event_id = pk
+
+        if not event_id:  # 이벤트 id가 없을 경우, 400 반환
+            return handle_400_bad_request("event id is required")
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('event', event_id)
+
+        # 쿼리 파라미터에서 sort_type을 가져옴 (없으면 기본값으로 sum_score)
+        sort_type = request.query_params.get('sort_type', 'sum_score')
+
+        # 이벤트에 참여한 참가자들을 가져옴
+        participants = Participant.objects.filter(event=event, club_member__user=user)
+
+        # 시리얼라이저에 sort_type과 user를 컨텍스트로 넘김
+        serializer = EventResultSerializer(event, context={'sort_type': sort_type, 'user': user})
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved ranks results',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+

@@ -36,4 +36,3 @@ class Event(models.Model):
     alert_date_time = models.DateTimeField("알람 일자", null=True, blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
-
