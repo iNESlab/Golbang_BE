@@ -7,9 +7,16 @@ golbang/settings.py
 from datetime import timedelta
 import os
 import environ
+import pymysql
 import redis
 import urllib.parse as urlparse
+
+# 로컬에서 테스트를 원할 시, 아래 두 줄의 주석을 해제하면 됨 (깃허브에 올릴 떄는 주석처리 하기!)
 from pathlib import Path
+pymysql.install_as_MySQLdb()
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
