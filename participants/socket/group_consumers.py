@@ -1,11 +1,21 @@
 import json
 import logging
 import asyncio
+from dataclasses import dataclass, asdict
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
 from participants.socket.mysql_interface import MySQLInterface
 from participants.socket.redis_interface import RedisInterface, redis_client
+
+
+@dataclass
+class ResponseData:
+    participant_id: int
+    hole_number: int
+    score: int
+    sum_score: int
+    handicap_score: int
 
 
 class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInterface):
@@ -23,7 +33,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             participant = await self.get_and_check_participant(self.participant_id, user)
 
             if participant is None:
-                logger.info('participant not found or not match with user token')
+                logging.info('participant not found or not match with user token')
                 await self.close(code=400)
                 return
 
@@ -75,13 +85,25 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             await self.update_hole_score_in_redis(self.participant_id, hole_number, score)
             await self.update_participant_sum_and_handicap_score_in_redis(participant)
 
+            # Retrieve the updated sum_score and handicap_score from Redis
+            redis_key = f'participant:{self.participant_id}'
+            sum_score = await sync_to_async(redis_client.hget)(redis_key, "sum_score")
+            handicap_score = await sync_to_async(redis_client.hget)(redis_key, "handicap_score")
+
+            sum_score = int(sum_score) if sum_score else 0
+            handicap_score = int(handicap_score) if handicap_score else 0
+
+            response_data = ResponseData(
+                participant_id=self.participant_id,
+                hole_number=hole_number,
+                score=score,
+                sum_score=sum_score,
+                handicap_score=handicap_score
+            )
+
             await self.channel_layer.group_send(self.group_name, {
                 'type': 'input_score',
-                'participant_id': self.participant_id,
-                'hole_number': hole_number,
-                'score': score,
-                'sum_score': participant.sum_score,
-                'handicap_score': participant.handicap_score
+                **asdict(response_data)  # Send all response data
             })
         except ValueError as e:
             await self.send_json({'status': 400, 'message': str(e)})
@@ -102,14 +124,15 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
     async def input_score(self, event):
         try:
-            participant_id = event['participant_id']
-            hole_number = event['hole_number']
-            score = event['score']
-            sum_score = event['sum_score']
-            handicap_score = event['handicap_score']
+            response_data = ResponseData(
+                participant_id=event['participant_id'],
+                hole_number=event['hole_number'],
+                score=event['score'],
+                sum_score=event['sum_score'],
+                handicap_score=event['handicap_score']
+            )
 
-            await self.send_json({'participant_id': participant_id, 'hole_number': hole_number, 'score': score,
-                                  'sum_score': sum_score, 'handicap_score': handicap_score})
+            await self.send_json(asdict(response_data))
         except Exception as e:
             await self.send_json({'error': '메시지 전송 실패'})
 
@@ -170,39 +193,6 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             'participant_id': participant_id,
             'scores': hole_scores
         }
-
-    def assign_ranks(self, participants, rank_type):
-        """
-        participants 리스트를 정렬된 순서로 받아, 해당 기준으로 순위를 할당.
-        rank_type에 따라 일반 rank 또는 handicap_rank를 설정.
-        """
-        previous_score = None
-        rank = 1
-        tied_rank = 1  # 동점자의 랭크를 별도로 관리
-        logging.info(f'===={rank_type}====')
-        for idx, participant in enumerate(participants):
-            logging.info(f'participant{idx}: {participant}')
-            current_score = getattr(participant, rank_type.replace('rank', 'score'))
-            logging.info(f'previous_score: {previous_score}, current_score: {current_score}')
-            # 순위 할당
-            if current_score == previous_score:
-                setattr(participant, rank_type, f"T{tied_rank}")  # 이전 참가자와 동일한 점수라면 T로 표기
-                logging.info(f'current P: rank: {participant.rank}, handicap_rank: {participant.handicap_rank}')
-                setattr(participants[idx - 1], rank_type, f"T{tied_rank}")  # 이전 참가자의 랭크도 T로 업데이트
-                logging.info(
-                    f'previous P: rank: {participants[idx - 1].rank}, handicap_rank: {participants[idx - 1].handicap_rank}')
-
-            else:
-                if 'sum_rank' == rank_type:
-                    setattr(participant, 'rank', str(rank))
-                else:
-                    setattr(participant, rank_type, str(rank))  # 새로운 점수일 경우 일반 순위
-
-                logging.info(f'current P: rank: {participant.rank}, handicap_rank: {participant.handicap_rank}')
-                tied_rank = rank  # 새로운 점수에서 동점 시작 지점을 설정
-
-            previous_score = current_score
-            rank += 1  # 다음 순위로 이동
 
     async def get_all_hole_scores_from_redis(self, participant_id):
         logging.info('participant_id: %s', participant_id)
