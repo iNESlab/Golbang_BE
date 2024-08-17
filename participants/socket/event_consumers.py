@@ -1,12 +1,23 @@
 import json
 import logging
 import asyncio
+from dataclasses import dataclass, asdict
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from participants.socket.mysql_interface import MySQLInterface
 from participants.socket.redis_interface import redis_client
+
+@dataclass
+class RankData:
+    participant_id: int
+    last_hole_number: int
+    last_score: int
+    rank: str
+    handicap_rank: str
+    sum_score: int
+    handicap_score: int
 
 
 class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
@@ -104,7 +115,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
 
     async def process_participant(self, participant):
         participant_id = participant.id
-        hole_number, sum_score, score_difference = await self.get_event_rank_from_redis(participant_id)
+        rank_data = await self.get_event_rank_from_redis(participant_id)
         user = participant.club_member.user
 
         return {
@@ -112,40 +123,44 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
                 'name': user.name
                 # TODO 'image' : 유저 프로필 사진 추가
             },
-            'participant_id': participant_id,
-            'hole_number': hole_number,
-            'sum_score': sum_score,
-            'score_difference':score_difference,
-            'handicap_score': sum_score - user.handicap if sum_score - user.handicap > 0 else 0
-            # 등수는 프론트에서... sum_score냐 handicap_score냐에 따라 정렬 방법과 순위가 달라짐
+            **asdict(rank_data)  # RankData 객체를 딕셔너리로 변환 후 펼침
         }
 
     async def get_event_rank_from_redis(self, participant_id):
         logging.info('Fetching hole scores from Redis')
+        redis_key = f'participant:{participant_id}'
+
+        rank = await sync_to_async(redis_client.hget)(redis_key, "rank")
+        handicap_rank = await sync_to_async(redis_client.hget)(redis_key, "handicap_rank")
+        sum_score = await sync_to_async(redis_client.hget)(redis_key, "sum_score")
+        handicap_score = await sync_to_async(redis_client.hget)(redis_key, "handicap_score")
+
+        # 홀 번호와 점수를 저장하기 위한 초기 변수 설정
+        last_hole_number = 0
+        last_score = 0
+
+        # 홀 점수를 가져오기 위해 Redis에서 모든 홀 데이터를 가져옴
         keys_pattern = f'participant:{participant_id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
-        logging.debug(f'Keys: {keys}')
 
-        last_hole_number = 0
-        total_score = 0
-        previous_total_score = 0
+        if keys:
+            # keys를 내림차순으로 정렬
+            keys.sort(reverse=True, key=lambda k: int(k.decode('utf-8').split(':')[-1]))
 
-        for key in keys:
-            logging.debug(f'Processing key: {key}')
-            hole_number = int(key.decode('utf-8').split(':')[-1])
-            score = int(await sync_to_async(redis_client.get)(key))
-            logging.debug(f'Hole number: {hole_number}, score: {score}')
+            # 가장 큰 hole_number와 그에 해당하는 score를 가져옴
+            last_key = keys[0]
+            last_hole_number = int(last_key.decode('utf-8').split(':')[-1])
+            last_score = int(await sync_to_async(redis_client.get)(last_key))
 
-            if hole_number > last_hole_number:
-                last_hole_number = hole_number
-                previous_total_score = total_score  # 이전 총합을 저장
-
-            total_score += score  # 현재 홀 점수를 총합에 추가
-
-        # 현재 총합에서 이전 총합을 뺀 차이 계산
-        difference = total_score - previous_total_score
-
-        return last_hole_number, total_score, difference
+        return RankData(
+            participant_id=participant_id,
+            last_hole_number=last_hole_number,
+            last_score=last_score,
+            rank=rank.decode('utf-8') if rank else None,
+            handicap_rank=handicap_rank.decode('utf-8') if handicap_rank else None,
+            sum_score=int(sum_score) if sum_score else 0,
+            handicap_score=int(handicap_score) if handicap_score else 0
+        )
 
 
     async def send_ranks_periodically(self):
