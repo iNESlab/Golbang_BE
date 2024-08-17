@@ -37,20 +37,22 @@ class Participant(models.Model):
         GROUP8 = 8, "8조"
 
     class StatusType(models.TextChoices):
-        PARTY        = "PARTY", "수락 및 회식"
-        ACCEPT       = "ACCEPT", "수락"
-        DENY         = "DENY", "거절"
-        PENDING      = "PENDING", "대기"
+        PARTY      = "PARTY", "수락 및 회식"
+        ACCEPT     = "ACCEPT", "수락"
+        DENY       = "DENY", "거절"
+        PENDING    = "PENDING", "대기"
 
-    club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
-    event       = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
-    team_type   = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
-    group_type  = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
-    status_type = models.CharField("상태", max_length=7, choices=StatusType.choices, default=StatusType.PENDING)
-    sum_score   = models.IntegerField("총 점수", default=0) #TODO: 웹소켓으로 점수 입력할 때마다 갱신이 어려우면 제거.
-    rank        = models.IntegerField("랭킹",default=0) #TODO: 정렬 방법(sum_score or handicap_Score)에 따라 바뀌므로 없어도 될거 같음
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    club_member   = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
+    event         = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
+    team_type     = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
+    group_type    = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
+    status_type   = models.CharField("상태", max_length=7, choices=StatusType.choices, default=StatusType.PENDING)
+    sum_score     = models.IntegerField("총 점수", default=0)
+    handicap_score = models.IntegerField("핸디캡 총 점수", default=0)
+    rank          = models.CharField("랭킹", max_length=5, default='0')
+    handicap_rank = models.CharField("핸디캡 랭킹",max_length=5, default='0')
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
 
 class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
