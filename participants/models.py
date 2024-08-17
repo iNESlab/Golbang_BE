@@ -37,11 +37,12 @@ class Participant(models.Model):
         GROUP8 = 8, "8조"
 
     class StatusType(models.TextChoices):
-        PARTY        = "PARTY", "수락 및 회식"
-        ACCEPT       = "ACCEPT", "수락"
-        DENY         = "DENY", "거절"
-        PENDING      = "PENDING", "대기"
+        PARTY      = "PARTY", "수락 및 회식"
+        ACCEPT     = "ACCEPT", "수락"
+        DENY       = "DENY", "거절"
+        PENDING    = "PENDING", "대기"
 
+<<<<<<< HEAD
     club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
     event       = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
     team_type   = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
@@ -52,6 +53,19 @@ class Participant(models.Model):
     rank        = models.CharField("랭킹", max_length=10, default="0", null=True, blank=True) #TODO: 정렬 방법(sum_score or handicap_Score)에 따라 바뀌므로 없어도 될거 같음
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+=======
+    club_member   = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
+    event         = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
+    team_type     = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
+    group_type    = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
+    status_type   = models.CharField("상태", max_length=7, choices=StatusType.choices, default=StatusType.PENDING)
+    sum_score     = models.IntegerField("총 점수", default=0)
+    handicap_score = models.IntegerField("핸디캡 총 점수", default=0)
+    rank          = models.CharField("랭킹", max_length=5, default='0')
+    handicap_rank = models.CharField("핸디캡 랭킹",max_length=5, default='0')
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+>>>>>>> f11e9674 (Feat: 레디스에 sum_score, handicap_score, rank, handicap_rank 필드를 추가하고 통신 종료시 mysql로 전송)
 
 class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
