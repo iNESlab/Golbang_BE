@@ -32,8 +32,6 @@ class RedisInterface:
         await sync_to_async(redis_client.hset)(redis_key, "group_type", participant.group_type)
         await sync_to_async(redis_client.hset)(redis_key, "team_type", participant.team_type)
 
-        await self.update_rankings_in_redis(event_id)
-
     async def update_rankings_in_redis(self, event_id):
         participants = await self.get_participants_from_redis(event_id)
 
@@ -56,6 +54,8 @@ class RedisInterface:
         previous_score = None
         rank = 1
         tied_rank = 1  # 동점자의 랭크를 별도로 관리
+        rank_field = 'rank' if rank_type == 'sum_rank' else 'handicap_rank'
+
         logging.info(f'===={rank_type}====')
         for idx, participant in enumerate(participants):
             logging.info(f'participant{idx}: {participant}')
@@ -63,18 +63,14 @@ class RedisInterface:
             logging.info(f'previous_score: {previous_score}, current_score: {current_score}')
             # 순위 할당
             if current_score == previous_score:
-                setattr(participant, rank_type, f"T{tied_rank}")  # 이전 참가자와 동일한 점수라면 T로 표기
+                setattr(participant, rank_field, f"T{tied_rank}")  # 이전 참가자와 동일한 점수라면 T로 표기
                 logging.info(f'current P: rank: {participant.rank}, handicap_rank: {participant.handicap_rank}')
-                setattr(participants[idx - 1], rank_type, f"T{tied_rank}")  # 이전 참가자의 랭크도 T로 업데이트
+                setattr(participants[idx - 1], rank_field, f"T{tied_rank}")  # 이전 참가자의 랭크도 T로 업데이트
                 logging.info(
                     f'previous P: rank: {participants[idx - 1].rank}, handicap_rank: {participants[idx - 1].handicap_rank}')
 
             else:
-                if 'sum_rank' == rank_type:
-                    setattr(participant, 'rank', str(rank))
-                else:
-                    setattr(participant, rank_type, str(rank))  # 새로운 점수일 경우 일반 순위
-
+                setattr(participant, rank_field, str(rank))  # 새로운 점수일 경우 일반 순위
                 logging.info(f'current P: rank: {participant.rank}, handicap_rank: {participant.handicap_rank}')
                 tied_rank = rank  # 새로운 점수에서 동점 시작 지점을 설정
 
