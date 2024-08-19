@@ -6,7 +6,7 @@ from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 
 from participants.models import Participant, HoleScore
-from participants.team_socket.redis_interface import redis_client
+from participants.stroke.redis_interface import redis_client
 
 
 @dataclass
