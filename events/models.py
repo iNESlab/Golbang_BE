@@ -26,6 +26,12 @@ class Event(models.Model):
         MATCH_PLAY  = 'MP', 'Match Play'
         STROKE_PLAY = 'SP', 'Stroke Play'
 
+    class WinningTeamType(models.TextChoices):
+        NONE = "NONE", "결과 없음"
+        TEAM1 = "A", "Team A"
+        TEAM2 = "B", "Team B"
+        DRAW = "DRAW", "무승부"
+
     club            = models.ForeignKey(Club, on_delete=models.CASCADE)
     event_title     = models.CharField("이벤트 제목", max_length=100, default='unknown_event')
     location        = models.CharField("장소", max_length=255, default='unknown_location')
@@ -36,3 +42,13 @@ class Event(models.Model):
     alert_date_time = models.DateTimeField("알람 일자", null=True, blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
+
+    # 이벤트 최종 승리 팀
+    group_win_team          = models.CharField("승리 팀 by 조", max_length=4,
+                                       choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+    total_win_team          = models.CharField("승리 팀 by 합계", max_length=4,
+                                       choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+    group_win_team_handicap = models.CharField("승리 팀 by 핸디캡 조", max_length=4,
+                                               choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+    total_win_team_handicap = models.CharField("승리 팀 by 핸디캡 합계", max_length=4,
+                                               choices=WinningTeamType.choices, default=WinningTeamType.NONE)

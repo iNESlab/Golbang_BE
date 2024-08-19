@@ -6,8 +6,9 @@ from dataclasses import dataclass, asdict
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from participants.socket.mysql_interface import MySQLInterface
-from participants.socket.redis_interface import redis_client
+from participants.team_socket.mysql_interface import MySQLInterface
+from participants.team_socket.redis_interface import redis_client, RedisInterface
+
 
 @dataclass
 class RankData:
@@ -20,7 +21,8 @@ class RankData:
     handicap_score: int
 
 
-class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
+# TODO: 유저 랭킹 변동 표시
+class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
         self.participant_id = None
@@ -65,19 +67,6 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
             await self.send_json({'error': str(e)})
             await self.close(code=4005)
 
-    async def receive(self, text_data=None, bytes_data=None, **kwargs):
-        try:
-            text_data_json = json.loads(text_data)
-            sort = text_data_json['sort']
-            if sort is 'sum_score':
-                await self.send_ranks()
-            else:
-                await self.send_ranks(sort)
-
-        except Exception as e:
-            logging.error(f'error in receive: {e}')
-            await self.send_json({'status': 400, 'message': str(e)})
-
     async def disconnect(self, close_code):
         try:
             logging.info('Disconnecting WebSocket')
@@ -91,12 +80,26 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
         except Exception as e:
             logging.error(f'Error in disconnect: {e}')
 
+    async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        try:
+            text_data_json = json.loads(text_data)
+            sort = text_data_json['sort']
+            if sort == 'sum_score':
+                await self.send_ranks()
+            else:
+                await self.send_ranks(sort)
+
+        except Exception as e:
+            logging.error(f'error in receive: {e}')
+            await self.send_json({'status': 400, 'message': str(e)})
+
     @staticmethod
     def get_event_group_name(event_id):
         return f"event_{event_id}_group_all"
 
     async def send_ranks(self, sort='sum_score'):
         try:
+            event_data = await self.get_event_data_from_redis(self.event_id)
             # 모든 참가자와 관련된 정보를 한 번의 쿼리로 가져옴
             participants = await self.get_event_participants(self.event_id)
             logging.info('participants: {}'.format(participants))
@@ -109,7 +112,13 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
             ranks_sorted = sorted(ranks, key=lambda x: x[sort], reverse=False)
             logging.info(f'ranks_sorted: {ranks_sorted}')
 
-            await self.send_json(ranks_sorted)
+            # 최종 JSON 구조 생성
+            response_data = {
+                'event': event_data,  # 상단에 Event 정보를 포함
+                'rankings': ranks_sorted  # 그 아래에 랭킹 정보 표시
+            }
+
+            await self.send_json(response_data)
         except Exception as e:
             await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
 
@@ -161,7 +170,6 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
             sum_score=int(sum_score) if sum_score else 0,
             handicap_score=int(handicap_score) if handicap_score else 0
         )
-
 
     async def send_ranks_periodically(self):
         logging.info('send_scores_periodically started')

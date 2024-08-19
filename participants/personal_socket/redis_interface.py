@@ -8,6 +8,7 @@ from participants.models import Participant
 # Redis 클라이언트 설정
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
 
+
 class RedisInterface:
     async def get_participant_ids_from_redis(self):
         keys = await sync_to_async(redis_client.keys)('participant:*')
