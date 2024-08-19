@@ -6,8 +6,9 @@ from dataclasses import dataclass, asdict
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from participants.personal_socket.mysql_interface import MySQLInterface
-from participants.personal_socket.redis_interface import redis_client
+from participants.stroke.mysql_interface import MySQLInterface
+from participants.stroke.redis_interface import redis_client, RedisInterface
+
 
 @dataclass
 class RankData:
@@ -21,7 +22,7 @@ class RankData:
 
 
 # TODO: 유저 랭킹 변동 표시
-class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
+class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
         self.participant_id = None
@@ -98,6 +99,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
 
     async def send_ranks(self, sort='sum_score'):
         try:
+            event_data = await self.get_event_data_from_redis(self.event_id)
             # 모든 참가자와 관련된 정보를 한 번의 쿼리로 가져옴
             participants = await self.get_event_participants(self.event_id)
             logging.info('participants: {}'.format(participants))
@@ -110,13 +112,19 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
             ranks_sorted = sorted(ranks, key=lambda x: x[sort], reverse=False)
             logging.info(f'ranks_sorted: {ranks_sorted}')
 
-            await self.send_json(ranks_sorted)
+            # 최종 JSON 구조 생성
+            response_data = {
+                'event': event_data,  # 상단에 Event 정보를 포함
+                'rankings': ranks_sorted  # 그 아래에 랭킹 정보 표시
+            }
+
+            await self.send_json(response_data)
         except Exception as e:
             await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
 
     async def process_participant(self, participant):
         participant_id = participant.id
-        rank_data = await self.get_event_rank_from_redis(participant_id)
+        rank_data = await self.get_event_rank_from_redis(participant.event_id,participant_id)
         user = participant.club_member.user
 
         return {
@@ -127,9 +135,9 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface):
             **asdict(rank_data)  # RankData 객체를 딕셔너리로 변환 후 펼침
         }
 
-    async def get_event_rank_from_redis(self, participant_id):
+    async def get_event_rank_from_redis(self, event_id, participant_id):
         logging.info('Fetching hole scores from Redis')
-        redis_key = f'participant:{participant_id}'
+        redis_key = f'event:{event_id}:participant:{participant_id}'
 
         rank = await sync_to_async(redis_client.hget)(redis_key, "rank")
         handicap_rank = await sync_to_async(redis_client.hget)(redis_key, "handicap_rank")

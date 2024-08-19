@@ -4,25 +4,31 @@ import asyncio
 from dataclasses import dataclass, asdict
 
 from channels.generic.websocket import AsyncWebsocketConsumer
-from asgiref.sync import sync_to_async
-from participants.personal_socket.mysql_interface import MySQLInterface
-from participants.personal_socket.redis_interface import RedisInterface, redis_client
+
+from participants.models import Participant
+from participants.stroke.mysql_interface import MySQLInterface
+from participants.stroke.redis_interface import RedisInterface
 
 
 @dataclass
 class ResponseData:
     participant_id: int
+    group_type: chr
+    team_type: chr
+    is_group_win: bool
+    is_group_win_handicap: bool
     hole_number: int
     score: int
     sum_score: int
     handicap_score: int
 
-#TODO: 유저 랭킹 변동 표시
+
 class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInterface):
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
         self.participant_id = None
         self.group_type = None
+        self.team_type = None
         self.event_id = None
         self.group_name = None
 
@@ -38,9 +44,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 return
 
             self.group_type = participant.group_type
-
             self.event_id = participant.event_id
-
             self.group_name = self.get_group_name(self.event_id, self.group_type)
 
             await self.channel_layer.group_add(self.group_name, self.channel_name)
@@ -56,7 +60,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
         try:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
             # Redis에서 데이터를 가져와 MySQL로 전송
-            await self.transfer_scores_and_ranks_to_mysql()
+            await self.transfer_game_data_to_db()
             self.send_task.cancel()  # 주기적인 태스크 취소
         except Exception as e:
             pass
@@ -69,34 +73,42 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 await self.send_scores()
                 return
 
-            self.participant_id = text_data_json['participant_id']
+            participant_id = text_data_json['participant_id'] # request body로 받는 참가자id
             hole_number = text_data_json['hole_number']
             score = text_data_json['score']
 
-            participant = await self.get_participant(self.participant_id)
+            participant = await self.get_participant(participant_id)
             if not participant:
-                await self.send_json(self.handle_404_not_found('Participant', self.participant_id))
+                await self.send_json(self.handle_404_not_found('Participant', participant_id))
                 return
 
             if hole_number is None or score is None:
                 await self.send_json({'status': 400, 'message': "Both hole number and score are required."})
                 return
 
-            await self.update_hole_score_in_redis(self.participant_id, hole_number, score)
+            await self.update_hole_score_in_redis(participant_id, hole_number, score)
             await self.update_participant_sum_and_handicap_score_in_redis(participant)
+            await self.update_rankings_in_redis(self.event_id)
 
-            # Retrieve the updated sum_score and handicap_score from Redis
-            redis_key = f'participant:{self.participant_id}'
-            sum_score = await sync_to_async(redis_client.hget)(redis_key, "sum_score")
-            handicap_score = await sync_to_async(redis_client.hget)(redis_key, "handicap_score")
+            logging.info(f'isTeam? {participant.team_type != Participant.TeamType.NONE}')
+            if participant.team_type != Participant.TeamType.NONE:
+                logging.info(f'참가자는 팀에 있습니다.')
+                # 조별 승리 여부 갱신
+                await self.update_is_group_win_in_redis(participant)
+                # 전체 이벤트 승리 팀 갱신
+                await self.update_event_win_team_in_redis(participant.event_id)
 
-            sum_score = int(sum_score) if sum_score else 0
-            handicap_score = int(handicap_score) if handicap_score else 0
+            # Redis에서 갱신된 sum_score와 handicap_score, is_group_win, is_group_win_handicap을 가져오기
+            sum_score, handicap_score, is_group_win, is_group_win_handicap = await self.get_scores_from_redis(participant)
 
             response_data = ResponseData(
-                participant_id=self.participant_id,
-                hole_number=hole_number,
-                score=score,
+                participant_id=participant_id,
+                hole_number=hole_number,           # 사용자 입력
+                group_type=participant.group_type, # mysql에서 가져옴
+                team_type=participant.team_type,   # mysql에서 가져옴
+                is_group_win=is_group_win,
+                is_group_win_handicap=is_group_win_handicap,
+                score=score,                       # 사용자 입력
                 sum_score=sum_score,
                 handicap_score=handicap_score
             )
@@ -127,6 +139,10 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             response_data = ResponseData(
                 participant_id=event['participant_id'],
                 hole_number=event['hole_number'],
+                group_type=event['group_type'],
+                team_type=event['team_type'],
+                is_group_win=event['is_group_win'],
+                is_group_win_handicap=event['is_group_win_handicap'],
                 score=event['score'],
                 sum_score=event['sum_score'],
                 handicap_score=event['handicap_score']
@@ -136,49 +152,16 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
         except Exception as e:
             await self.send_json({'error': '메시지 전송 실패'})
 
-    async def transfer_scores_and_ranks_to_mysql(self):
-        participants = await self.get_event_participants(self.event_id)
-        for participant in participants:
-            # 전체 참가자들의 랭킹 정보를 업데이트
-            redis_key = f'participant:{participant.id}'
-            logging.info('redis_key: %s', redis_key)
-            rank = await sync_to_async(redis_client.hget)(redis_key, "rank")
-            handicap_rank = await sync_to_async(redis_client.hget)(redis_key, "handicap_rank")
-            sum_score = await sync_to_async(redis_client.hget)(redis_key, "sum_score")
-            handicap_score = await sync_to_async(redis_client.hget)(redis_key, "handicap_score")
-
-            # 가져온 데이터를 문자열로 변환
-            rank = rank.decode('utf-8') if rank else None
-            handicap_rank = handicap_rank.decode('utf-8') if handicap_rank else None
-            sum_score = sum_score.decode('utf-8') if sum_score else None
-            handicap_score = handicap_score.decode('utf-8') if handicap_score else None
-
-            if rank is not None and handicap_rank is not None:
-                # MySQL에 rank와 handicap_rank 업데이트
-                await self.update_participant_rank_in_db(participant.id, rank, handicap_rank, sum_score, handicap_score)
-
-            # hole scores를 가져오기 위해 별도의 패턴으로 검색
-            score_keys_pattern = f'participant:{participant.id}:hole:*'
-            score_keys = await sync_to_async(redis_client.keys)(score_keys_pattern)
-            logging.info('score_keys: %s', score_keys)
-
-            # 각 홀에 대한 점수를 비동기로 병렬 처리하여 DB에 저장
-            async def update_or_create_hole_score(key):
-                hole_number = int(key.decode('utf-8').split(':')[-1])
-                score = int(await sync_to_async(redis_client.get)(key))
-                await self.update_or_create_hole_score_in_db(participant.id, hole_number, score)
-
-            await asyncio.gather(*(update_or_create_hole_score(key) for key in score_keys))
-
     async def send_scores(self):
         try:
-            # 그룹에 속한 모든 참가자 ID를 한 번의 쿼리로 가져옴
-            participants = await self.get_group_participants(self.event_id, self.group_type)
-
+            # 그룹에 속한 모든 참가자를 한 번의 쿼리로 가져옴
+            participants = await self.get_participants_from_redis(self.event_id,self.group_type)
+            logging.info(f'participants: {participants}')
             # 각 참가자의 홀 스코어를 비동기로 병렬 처리
             group_scores = await asyncio.gather(*[
                 self.process_participant(participant) for participant in participants
             ])
+            logging.info(f'group_scores: {group_scores}')
 
             await self.send_json(group_scores)
         except Exception as e:
@@ -187,25 +170,17 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
     async def process_participant(self, participant):
         participant_id = participant.id
         hole_scores = await self.get_all_hole_scores_from_redis(participant_id)
-
+        logging.info(f'hole_scores:{hole_scores}')
         return {
-            'user_name': participant.club_member.user.name,
             'participant_id': participant_id,
-            'scores': hole_scores
+            'group_type': participant.group_type,
+            'team_type': participant.team_type,
+            'is_group_win': participant.is_group_win,
+            'is_group_win_handicap': participant.is_group_win_handicap,
+            'sum_score':participant.sum_score,
+            'handicap_score': participant.handicap_score,
+            'scores': hole_scores,
         }
-
-    async def get_all_hole_scores_from_redis(self, participant_id):
-        logging.info('participant_id: %s', participant_id)
-        keys_pattern = f'participant:{participant_id}:hole:*'
-        keys = await sync_to_async(redis_client.keys)(keys_pattern)
-        hole_scores = []
-        for key in keys:
-            logging.info('hole_scores: %s', hole_scores)
-            hole_number = int(key.decode('utf-8').split(':')[-1])
-            score = int(await sync_to_async(redis_client.get)(key))
-            logging.info('score: %s', score)
-            hole_scores.append({'hole_number': hole_number, 'score': score})
-        return hole_scores
 
     async def send_json(self, content):
         try:
