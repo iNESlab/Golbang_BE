@@ -173,9 +173,11 @@ class RedisInterface:
 
         # 그룹별 승리팀 결정
         a_team_wins = len([p for p in participants if p.team_type == Participant.TeamType.TEAM1 and p.is_group_win])
+        logging.info(f'a_team_wins: {a_team_wins}')
         b_team_wins = len([p for p in participants if p.team_type == Participant.TeamType.TEAM2 and p.is_group_win])
+        logging.info(f'b_team_wins: {b_team_wins}')
 
-        group_win_team = 'A' if a_team_wins < b_team_wins else 'B' if b_team_wins < a_team_wins else 'DRAW'
+        group_win_team = 'A' if a_team_wins > b_team_wins else 'B' if b_team_wins > a_team_wins else 'DRAW'
         await sync_to_async(redis_client.hset)(event_key, "group_win_team", group_win_team)
 
         # 그룹별 핸디캡 승리팀 결정
@@ -184,7 +186,7 @@ class RedisInterface:
         b_team_wins_handicap = len(
             [p for p in participants if p.team_type == Participant.TeamType.TEAM2 and p.is_group_win_handicap])
 
-        group_win_team_handicap = 'A' if a_team_wins_handicap < b_team_wins_handicap else 'B' if b_team_wins_handicap < a_team_wins_handicap else 'DRAW'
+        group_win_team_handicap = 'A' if a_team_wins_handicap > b_team_wins_handicap else 'B' if b_team_wins_handicap > a_team_wins_handicap else 'DRAW'
         await sync_to_async(redis_client.hset)(event_key, "group_win_team_handicap", group_win_team_handicap)
 
         # 전체 승리팀 결정

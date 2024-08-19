@@ -124,7 +124,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
     async def process_participant(self, participant):
         participant_id = participant.id
-        rank_data = await self.get_event_rank_from_redis(participant_id)
+        rank_data = await self.get_event_rank_from_redis(participant.event_id,participant_id)
         user = participant.club_member.user
 
         return {
@@ -135,9 +135,9 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             **asdict(rank_data)  # RankData 객체를 딕셔너리로 변환 후 펼침
         }
 
-    async def get_event_rank_from_redis(self, participant_id):
+    async def get_event_rank_from_redis(self, event_id, participant_id):
         logging.info('Fetching hole scores from Redis')
-        redis_key = f'participant:{participant_id}'
+        redis_key = f'event:{event_id}:participant:{participant_id}'
 
         rank = await sync_to_async(redis_client.hget)(redis_key, "rank")
         handicap_rank = await sync_to_async(redis_client.hget)(redis_key, "handicap_rank")
