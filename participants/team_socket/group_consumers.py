@@ -88,6 +88,8 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             await self.update_hole_score_in_redis(participant_id, hole_number, score)
             await self.update_participant_sum_and_handicap_score_in_redis(participant)
+            await self.update_rankings_in_redis(self.event_id)
+
             logging.info(f'isTeam? {participant.team_type != Participant.TeamType.NONE}')
             if participant.team_type != Participant.TeamType.NONE:
                 logging.info(f'참가자는 팀에 있습니다.')
