@@ -37,24 +37,28 @@ class Participant(models.Model):
         GROUP8 = 8, "8조"
 
     class StatusType(models.TextChoices):
-        PARTY      = "PARTY", "수락 및 회식"
-        ACCEPT     = "ACCEPT", "수락"
-        DENY       = "DENY", "거절"
-        PENDING    = "PENDING", "대기"
+        PARTY = "PARTY", "수락 및 회식"
+        ACCEPT = "ACCEPT", "수락"
+        DENY = "DENY", "거절"
+        PENDING = "PENDING", "대기"
 
-    club_member   = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
-    event         = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
-    team_type     = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
-    group_type    = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
-    status_type   = models.CharField("상태", max_length=7, choices=StatusType.choices, default=StatusType.PENDING)
-    sum_score     = models.IntegerField("총 점수", default=0)
+    club_member = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
+    team_type = models.CharField("팀 타입", max_length=6, choices=TeamType.choices, default=TeamType.NONE)
+    group_type = models.IntegerField("조 타입", choices=GroupType.choices, null=False, blank=False)
+    status_type = models.CharField("상태", max_length=7, choices=StatusType.choices, default=StatusType.PENDING)
+    sum_score = models.IntegerField("총 점수", default=0)
     handicap_score = models.IntegerField("핸디캡 총 점수", default=0)
-    rank          = models.CharField("랭킹", max_length=5, default='0')
-    handicap_rank = models.CharField("핸디캡 랭킹",max_length=5, default='0')
-    created_at    = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
+    rank = models.CharField("랭킹", max_length=5, default='0')
+    handicap_rank = models.CharField("핸디캡 랭킹", max_length=5, default='0')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # TODO: 향후, event랑 participant 중간에 group 테이블을 만들어서 각 조별 승리를 관리하는게 나을지도...
+    is_group_win = models.BooleanField("속한 조에서 승리 여부", default=False)
+    is_group_win_handicap = models.BooleanField("속한 조에서 핸디캡 승리 여부", default=False)
 
 class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
     hole_number = models.IntegerField("홀 번호", default=1)
-    score       = models.IntegerField("홀 점수", default=0)
+    score = models.IntegerField("홀 점수", default=0)
