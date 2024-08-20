@@ -15,7 +15,7 @@ class RedisInterface:
     async def update_hole_score_in_redis(self, participant_id, hole_number, score):
         key = f'participant:{participant_id}:hole:{hole_number}'
         await sync_to_async(redis_client.set)(key, score)
-        await sync_to_async(redis_client.expire)(key, 259200)
+        await sync_to_async(redis_client.expire)(key, 172800)
 
     async def update_participant_sum_and_handicap_score_in_redis(self, participant):
         keys_pattern = f'participant:{participant.id}:hole:*'
@@ -32,6 +32,7 @@ class RedisInterface:
         await sync_to_async(redis_client.hset)(redis_key, "handicap_score", handicap_score)
         await sync_to_async(redis_client.hset)(redis_key, "group_type", participant.group_type)
         await sync_to_async(redis_client.hset)(redis_key, "team_type", participant.team_type)
+        await sync_to_async(redis_client.expire)(redis_key, 172800)
 
     async def update_rankings_in_redis(self, event_id):
         participants = await self.get_participants_from_redis(event_id)
@@ -46,6 +47,7 @@ class RedisInterface:
             redis_key = f'event:{event_id}:participant:{participant.id}'
             await sync_to_async(redis_client.hset)(redis_key, "rank", participant.rank)
             await sync_to_async(redis_client.hset)(redis_key, "handicap_rank", participant.handicap_rank)
+            await sync_to_async(redis_client.expire)(redis_key, 172800)
 
     def assign_ranks(self, participants, rank_type):
         """
@@ -166,6 +168,7 @@ class RedisInterface:
                                                     if p.team_type == Participant.TeamType.TEAM1 else is_team_b_winner)
             await sync_to_async(redis_client.hset)(redis_key, "is_group_win_handicap",is_handicap_a_winner
                                                     if p.team_type == Participant.TeamType.TEAM1 else is_handicap_b_winner)
+            await sync_to_async(redis_client.expire)(redis_key, 172800)
 
     async def update_event_win_team_in_redis(self, event_id):
         # 이벤트 전체의 승리 팀을 결정하여 Redis에 저장하는 로직
@@ -205,6 +208,8 @@ class RedisInterface:
 
         total_win_team_handicap = 'A' if a_team_total_handicap_score < b_team_total_handicap_score else 'B' if b_team_total_handicap_score < a_team_total_handicap_score else 'DRAW'
         await sync_to_async(redis_client.hset)(event_key, "total_win_team_handicap", total_win_team_handicap)
+
+        await sync_to_async(redis_client.expire)(event_key, 172800)
 
     async def get_all_hole_scores_from_redis(self, participant_id):
         logging.info('participant_id: %s', participant_id)
