@@ -1,0 +1,78 @@
+# Dockerfile.prod (prod)
+###########
+# BUILDER #
+###########
+
+# pull official base image
+FROM python:3.12.4-slim as builder
+
+# set work directory
+WORKDIR /usr/src/app
+
+# clear apt cache
+RUN rm -rf /var/lib/apt/lists/*
+
+# install psycopg2 dependencies
+RUN apt-get update && apt-get install -y \
+    python3-dev \
+    libmariadb-dev \
+    build-essential \
+    gcc \
+    mariadb-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# install dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+
+#########
+# FINAL #
+#########
+# pull official base image
+FROM python:3.12.4-slim
+
+# create directory for the app user
+RUN mkdir -p /home/app
+
+# create the app user
+RUN addgroup --system app && adduser --system --group app
+
+# create the appropriate directories
+ENV HOME=/home/app
+ENV APP_HOME=/home/app/web
+RUN mkdir $APP_HOME
+WORKDIR $APP_HOME
+
+# install dependencies
+RUN apt-get update && apt-get install -y \
+    libmariadb-dev \
+    build-essential \
+    gcc \
+    python3-dev \
+    mariadb-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/src/app/wheels /wheels
+COPY --from=builder /usr/src/app/requirements.txt .
+RUN pip install mysqlclient
+RUN pip install --no-cache /wheels/*
+RUN apt-get del build-deps
+
+# copy entrypoint-prod.sh script
+COPY ./config/docker/entrypoint.prod.sh $APP_HOME
+
+# copy wait-for-it.sh script
+COPY wait-for-it.sh /wait-for-it.sh
+
+# copy project files
+COPY . $APP_HOME
+
+# change owner of all the files to the app user
+RUN chown -R app:app $APP_HOME
+
+# switch to the app user
+USER app
+
+# basic command
+CMD ["gunicorn", "golbang.wsgi:application", "--bind", "0.0.0.0:8000"]
