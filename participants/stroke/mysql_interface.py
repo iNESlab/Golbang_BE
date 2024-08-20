@@ -1,23 +1,14 @@
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict
 
 from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 
+from events.models import Event
 from participants.models import Participant, HoleScore
+from participants.stroke.data_class import ParticipantUpdateData, EventData
 from participants.stroke.redis_interface import redis_client
-
-
-@dataclass
-class ParticipantData:
-    participant_id: int
-    rank: str
-    handicap_rank: str
-    sum_score: int
-    handicap_score: int
-    is_group_win: bool
-    is_group_win_handicap: bool
 
 
 class MySQLInterface:
@@ -32,10 +23,7 @@ class MySQLInterface:
 
     @database_sync_to_async
     def update_participant_rank_in_db(self, participant_data):
-        Participant.objects.filter(id=participant_data.participant_id).update(rank=participant_data.rank,
-                                                                              handicap_rank=participant_data.handicap_rank,
-                                                                              sum_score=participant_data.sum_score,
-                                                                              handicap_score=participant_data.handicap_score)
+        Participant.objects.filter(id=participant_data.participant_id).update(**asdict(participant_data))
 
     @database_sync_to_async
     def get_group_participants(self, event_id, group_type=None):
@@ -62,7 +50,7 @@ class MySQLInterface:
     @database_sync_to_async
     def get_participant(self, participant_id):
         try:
-            return Participant.objects.select_related('club_member__user','event').get(id=participant_id)
+            return Participant.objects.select_related('club_member__user', 'event').get(id=participant_id)
         except Participant.DoesNotExist:
             return None
 
@@ -87,43 +75,54 @@ class MySQLInterface:
         await sync_to_async(participant.save)()
         await sync_to_async(event.save)()
 
-    async def transfer_game_data_to_db(self):
-        participants = await self.get_event_participants(self.event_id)
+    @database_sync_to_async
+    def update_event_data_in_db(self, event_id, event_data):
+        Event.objects.filter(id=event_id).update(**asdict(event_data))
+
+    async def transfer_participant_data_to_db(self, participants):
         for participant in participants:
-            # 전체 참가자들의 랭킹 정보를 업데이트
             redis_key = f'participant:{participant.id}'
             logging.info('redis_key: %s', redis_key)
-            rank = await sync_to_async(redis_client.hget)(redis_key, "rank")
-            handicap_rank = await sync_to_async(redis_client.hget)(redis_key, "handicap_rank")
-            sum_score = await sync_to_async(redis_client.hget)(redis_key, "sum_score")
-            handicap_score = await sync_to_async(redis_client.hget)(redis_key, "handicap_score")
-            is_group_win = await sync_to_async(redis_client.hget)(redis_key, "is_group_win")
-            is_group_win_handicap = await sync_to_async(redis_client.hget)(redis_key, "is_group_win_handicap")
 
-            # 가져온 데이터를 문자열로 변환
-            participant_data = ParticipantData(
+            participant_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)
+
+            # ParticipantUpdateData 객체 생성
+            participant_data = ParticipantUpdateData(
                 participant_id=participant.id,
-                rank=rank.decode('utf-8') if rank else None,
-                handicap_rank=handicap_rank.decode('utf-8') if handicap_rank else None,
-                sum_score=sum_score.decode('utf-8') if sum_score else None,
-                handicap_score=handicap_score.decode('utf-8') if handicap_score else None,
-                is_group_win=is_group_win.decode('utf-8') if is_group_win else None,
-                is_group_win_handicap=is_group_win_handicap.decode('utf-8') if is_group_win_handicap else None
+                rank=participant_data_dict.get(b"rank"),
+                handicap_rank=participant_data_dict.get(b"handicap_rank"),
+                sum_score=participant_data_dict.get(b"sum_score"),
+                handicap_score=participant_data_dict.get(b"handicap_score"),
+                is_group_win=participant_data_dict.get(b"is_group_win"),
+                is_group_win_handicap=participant_data_dict.get(b"is_group_win_handicap")
             )
 
-            if rank is not None and handicap_rank is not None:
-                # MySQL에 rank와 handicap_rank 업데이트
+            if participant_data.rank is not None and participant_data.handicap_rank is not None:
                 await self.update_participant_rank_in_db(participant_data)
 
-            # hole scores를 가져오기 위해 별도의 패턴으로 검색
+    async def transfer_hole_scores_to_db(self, participants):
+        for participant in participants:
             score_keys_pattern = f'participant:{participant.id}:hole:*'
             score_keys = await sync_to_async(redis_client.keys)(score_keys_pattern)
             logging.info('score_keys: %s', score_keys)
 
-            # 각 홀에 대한 점수를 비동기로 병렬 처리하여 DB에 저장
             async def update_or_create_hole_score(key):
                 hole_number = int(key.decode('utf-8').split(':')[-1])
                 score = int(await sync_to_async(redis_client.get)(key))
                 await self.update_or_create_hole_score_in_db(participant.id, hole_number, score)
 
             await asyncio.gather(*(update_or_create_hole_score(key) for key in score_keys))
+
+    async def transfer_event_data_to_db(self, event_id):
+        event_key = f'event:{event_id}'
+        event_data_dict = await sync_to_async(redis_client.hgetall)(event_key)
+
+        # EventData 객체 생성
+        event_data = EventData(
+            group_win_team=event_data_dict.get(b"group_win_team"),
+            group_win_team_handicap=event_data_dict.get(b"group_win_team_handicap"),
+            total_win_team=event_data_dict.get(b"total_win_team"),
+            total_win_team_handicap=event_data_dict.get(b"total_win_team_handicap")
+        )
+
+        await self.update_event_data_in_db(event_id, event_data)

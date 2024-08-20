@@ -6,19 +6,9 @@ from dataclasses import dataclass, asdict
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from participants.stroke.data_class import RankResponseData
 from participants.stroke.mysql_interface import MySQLInterface
 from participants.stroke.redis_interface import redis_client, RedisInterface
-
-
-@dataclass
-class RankData:
-    participant_id: int
-    last_hole_number: int
-    last_score: int
-    rank: str
-    handicap_rank: str
-    sum_score: int
-    handicap_score: int
 
 
 # TODO: 유저 랭킹 변동 표시
@@ -114,7 +104,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
             # 최종 JSON 구조 생성
             response_data = {
-                'event': event_data,  # 상단에 Event 정보를 포함
+                'event': {**asdict(event_data)},  # 상단에 Event 정보를 포함
                 'rankings': ranks_sorted  # 그 아래에 랭킹 정보 표시
             }
 
@@ -124,7 +114,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
     async def process_participant(self, participant):
         participant_id = participant.id
-        rank_data = await self.get_event_rank_from_redis(participant.event_id,participant_id)
+        rank_data = await self.get_event_rank_from_redis(participant.event_id, participant_id)
         user = participant.club_member.user
 
         return {
@@ -161,7 +151,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             last_hole_number = int(last_key.decode('utf-8').split(':')[-1])
             last_score = int(await sync_to_async(redis_client.get)(last_key))
 
-        return RankData(
+        return RankResponseData(
             participant_id=participant_id,
             last_hole_number=last_hole_number,
             last_score=last_score,

@@ -6,22 +6,9 @@ from dataclasses import dataclass, asdict
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from participants.models import Participant
+from participants.stroke.data_class import ParticipantResponseData
 from participants.stroke.mysql_interface import MySQLInterface
 from participants.stroke.redis_interface import RedisInterface
-
-
-@dataclass
-class ResponseData:
-    participant_id: int
-    group_type: chr
-    team_type: chr
-    is_group_win: bool
-    is_group_win_handicap: bool
-    hole_number: int
-    score: int
-    sum_score: int
-    handicap_score: int
-
 
 class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInterface):
     def __init__(self, *args, **kwargs):
@@ -59,8 +46,13 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
     async def disconnect(self, close_code):
         try:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
             # Redis에서 데이터를 가져와 MySQL로 전송
-            await self.transfer_game_data_to_db()
+            participants = await self.get_event_participants(self.event_id)
+            await self.transfer_participant_data_to_db(participants)
+            await self.transfer_hole_scores_to_db(participants)
+            await self.transfer_event_data_to_db(self.event_id)
+
             self.send_task.cancel()  # 주기적인 태스크 취소
         except Exception as e:
             pass
@@ -101,7 +93,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             # Redis에서 갱신된 sum_score와 handicap_score, is_group_win, is_group_win_handicap을 가져오기
             sum_score, handicap_score, is_group_win, is_group_win_handicap = await self.get_scores_from_redis(participant)
 
-            response_data = ResponseData(
+            response_data = ParticipantResponseData(
                 participant_id=participant_id,
                 hole_number=hole_number,           # 사용자 입력
                 group_type=participant.group_type, # mysql에서 가져옴
@@ -136,7 +128,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
     async def input_score(self, event):
         try:
-            response_data = ResponseData(
+            response_data = ParticipantResponseData(
                 participant_id=event['participant_id'],
                 hole_number=event['hole_number'],
                 group_type=event['group_type'],

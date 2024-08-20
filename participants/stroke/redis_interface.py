@@ -4,6 +4,7 @@ from asgiref.sync import sync_to_async
 import redis
 
 from participants.models import Participant
+from participants.stroke.data_class import EventData
 
 # Redis 클라이언트 설정
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
@@ -97,18 +98,22 @@ class RedisInterface:
         keys = await sync_to_async(redis_client.keys)(f'{base_key}*')
         logging.info(f'keys:{keys}')
         participants = []
+
         for key in keys:
             participant_id = key.decode('utf-8').split(':')[-1]
             logging.info(f'====participant_id:{participant_id}====')
             participant_key = f'{base_key}{participant_id}'
 
-            sum_score = await sync_to_async(redis_client.hget)(participant_key, 'sum_score')
-            handicap_score = await sync_to_async(redis_client.hget)(participant_key, 'handicap_score')
-            team_type = await sync_to_async(redis_client.hget)(participant_key, 'team_type')
-            group_type = await sync_to_async(redis_client.hget)(participant_key, 'group_type')
-            is_group_win = await sync_to_async(redis_client.hget)(participant_key, 'is_group_win')
-            is_group_win_handicap = await sync_to_async(redis_client.hget)(participant_key, 'is_group_win_handicap')
+            # hgetall로 모든 데이터를 한 번에 가져옴
+            participant_data = await sync_to_async(redis_client.hgetall)(participant_key)
 
+            # 각 필드를 가져와 변환
+            sum_score = participant_data.get(b'sum_score', 0)
+            handicap_score = participant_data.get(b'handicap_score', 0)
+            team_type = participant_data.get(b'team_type', b'')
+            group_type = participant_data.get(b'group_type', 0)
+            is_group_win = participant_data.get(b'is_group_win', b'0')
+            is_group_win_handicap = participant_data.get(b'is_group_win_handicap', b'0')
 
             logging.info(f'group_type:{int(group_type)}, group_type_filter:{group_type_filter}')
             # 그룹 필터링: group_type이 전달되었고, 가져온 group_type이 동일한지 확인
@@ -216,25 +221,12 @@ class RedisInterface:
 
     async def get_event_data_from_redis(self, event_id):
         redis_key = f'event:{event_id}'
-        group_win_team = await sync_to_async(redis_client.hget)(redis_key, "group_win_team")
-        logging.info('group_win_team: %s', group_win_team)
-        group_win_team_handicap = await sync_to_async(redis_client.hget)(redis_key, "group_win_team_handicap")
-        logging.info('group_win_team_handicap: %s', group_win_team_handicap)
-        total_win_team = await sync_to_async(redis_client.hget)(redis_key, "total_win_team")
-        logging.info('total_win_team: %s', total_win_team)
-        total_win_team_handicap = await sync_to_async(redis_client.hget)(redis_key, "total_win_team_handicap")
-        logging.info('total_win_team_handicap: %s', total_win_team_handicap)
+        event_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)
 
-        # None이 반환될 경우 기본값 설정 (여기서는 None으로 둠)
-        group_win_team = group_win_team.decode('utf-8') if group_win_team else None
-        group_win_team_handicap = group_win_team_handicap.decode('utf-8') if group_win_team_handicap else None
-        total_win_team = total_win_team.decode('utf-8') if total_win_team else None
-        total_win_team_handicap = total_win_team_handicap.decode('utf-8') if total_win_team_handicap else None
-
-        return {
-            'event_id': event_id,
-            'group_win_team': group_win_team,
-            'group_win_team_handicap': group_win_team_handicap,
-            'total_win_team': total_win_team,
-            'total_win_team_handicap': total_win_team_handicap
-        }
+        # EventData 클래스에 필드를 전달할 때 기본값을 설정하지 않으면 Optional 처리해주고, 디코딩은 __post_init__에서 처리
+        return EventData(
+            group_win_team=event_data_dict.get(b"group_win_team"),
+            group_win_team_handicap=event_data_dict.get(b"group_win_team_handicap"),
+            total_win_team=event_data_dict.get(b"total_win_team"),
+            total_win_team_handicap=event_data_dict.get(b"total_win_team_handicap")
+        )
