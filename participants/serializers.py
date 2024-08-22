@@ -57,7 +57,6 @@ class ParticipantDetailSerializer(serializers.ModelSerializer):
     sum_score = serializers.SerializerMethodField(read_only=True)
     handicap_score = serializers.SerializerMethodField(read_only=True)
     hole_number = serializers.SerializerMethodField(read_only=True) # 마지막 홀 번호 반환하는 메서드 필드
-    rank = serializers.CharField(read_only=True) # 참가자 순위
 
     class Meta:
         model = Participant

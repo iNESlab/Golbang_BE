@@ -73,6 +73,11 @@ class RedisInterface:
         logging.info(f'===={rank_type}====')
         for idx, participant in enumerate(participants):
             logging.info(f'participant{idx}: {participant}')
+            # 동적으로 rank와 handicap_rank 속성을 추가
+            if not hasattr(participant, 'rank'):
+                participant.rank = None
+            if not hasattr(participant, 'handicap_rank'):
+                participant.handicap_rank = None
             current_score = getattr(participant, rank_type.replace('rank', 'score'))
             logging.info(f'previous_score: {previous_score}, current_score: {current_score}')
             # 순위 할당
