@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.4
-2024.07.27
+MVP demo ver 0.0.5
+2024.08.23
 events/serializers.py
 
 역할:
@@ -40,13 +40,10 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
         # club_id: param으로 받는 값도 추가해야한다. param -> view (request data에 param 데이터 추가) -> serial
 
     def create(self, validated_data):
-        '''
-        이벤트 생성
-        '''
-        with transaction.atomic(): # 트랜잭션으로 데이터베이스 작업을 묶음
-            participant_data = validated_data.pop('participant_set', []) # 참가자 데이터 분리
+        with transaction.atomic():
+            participant_data = validated_data.pop('participant_set', [])
             # id로 받은 값들을 객체로 반환함.
-            event = Event.objects.create(**validated_data) # 이벤트 객체 생성
+            event = Event.objects.create(**validated_data)
 
             # 이벤트 ID를 이용해 각 참가자의 이벤트 필드를 설정
             for participant in participant_data:
@@ -58,9 +55,6 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
             return event
 
     def update(self, instance, validated_data):
-        '''
-        이벤트 수정
-        '''
         with transaction.atomic():
             participant_data = validated_data.pop('participant_set', [])
             # Event 필드를 업데이트
@@ -80,13 +74,10 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 class EventDetailSerializer(serializers.ModelSerializer):
-    '''
-    이벤트 상세 정보
-    '''
     participants = ParticipantDetailSerializer(source='participant_set', many=True, read_only=True)
     event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     participants_count = serializers.SerializerMethodField(read_only=True)
-    party_count = serializers.SerializerMethodField(read_only=True) # 회식+참가
+    party_count = serializers.SerializerMethodField(read_only=True)
     accept_count = serializers.SerializerMethodField(read_only=True)
     deny_count = serializers.SerializerMethodField(read_only=True)
     pending_count = serializers.SerializerMethodField(read_only=True)
@@ -113,13 +104,11 @@ class EventDetailSerializer(serializers.ModelSerializer):
         return obj.participant_set.filter(status_type="DENY").count()
     def get_pending_count(self, obj):
         return obj.participant_set.filter(status_type="PENDING").count()
-    def get_member_group(self, obj): # 멤버 그룹 정보 반환
+    def get_member_group(self, obj):
         return self.context.get('group_type')
 
 class UserResultSerializer(serializers.ModelSerializer):
-    '''
-    사용자의 스트로크와 순위를 계산하여 반환하는 시리얼라이저
-    '''
+    # 사용자의 스트로크와 순위를 계산하여 반환하는 시리얼라이저
     stroke = serializers.SerializerMethodField()    # 동적으로 스트로크값 계산
     rank = serializers.SerializerMethodField()      # 사용자 순위를 계산하기 위한 메서드 필드
 
@@ -128,6 +117,18 @@ class UserResultSerializer(serializers.ModelSerializer):
         fields = ['user_id', 'name', 'stroke', 'rank']
 
     def get_stroke(self, obj):
+        # 현재 이벤트 및 사용자 정보를 바탕으로 참가자를 조회
+        event_id = self.context.get('event_id')
+        sort_type = self.context.get('sort_type', 'sum_score')
+        participant = Participant.objects.filter(event_id=event_id, club_member__user=obj).first()
+
+        if participant:
+            if sort_type == 'handicap_score':
+                return participant.handicap_score
+            else:
+                return participant.sum_score
+
+        return 0  # 참가자가 없을 경우 기본값 반환
         # GET 요청의 파라미터를 통해 sort_type이 'handicap'인 경우, 핸디캡 점수를 반환
         sort_type = self.context.get('sort_type', 'sum_score')
         event_id = self.context.get('event_id')
@@ -144,28 +145,27 @@ class UserResultSerializer(serializers.ModelSerializer):
         return participant.rank if participant else None
 
 class EventResultSerializer(serializers.ModelSerializer):
-    '''
+    """
     이벤트 결과를 반환하는 시리얼라이저
-    '''
-    participants = serializers.SerializerMethodField() # 참가자 리스트를 정렬하여 반환
-    event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
-    user = serializers.SerializerMethodField() # 사용자의 정보를 반환
+    """
+    participants = serializers.SerializerMethodField()  # 참가자 리스트를 반환
+    user = serializers.SerializerMethodField()  # 현재 사용자 정보를 반환
 
     class Meta:
         model = Event
         fields = ['user', 'event_id', 'event_title', 'location', 'start_date_time', 'end_date_time', 'game_mode', 'participants']
 
     def get_participants(self, obj):
+        # 컨텍스트에서 참가자 리스트를 가져와 정렬
         participants = self.context.get('participants')
         sort_type = self.context.get('sort_type', 'sum_score')
 
-        # sort_type에 따라 정렬
         if sort_type == 'handicap_score':
             participants = sorted(participants, key=lambda p: p.handicap_score)
         else:
             participants = sorted(participants, key=lambda p: p.sum_score)
 
-        return ParticipantDetailSerializer(participants, many=True, read_only=True).data
+        return ParticipantDetailSerializer(participants, many=True).data
 
     def get_user(self, obj):
         user = self.context['request'].user
