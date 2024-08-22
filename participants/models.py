@@ -52,6 +52,10 @@ class Participant(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # TODO: 향후, event랑 participant 중간에 group 테이블을 만들어서 각 조별 승리를 관리하는게 나을지도...
+    is_group_win = models.BooleanField("속한 조에서 승리 여부", default=False)
+    is_group_win_handicap = models.BooleanField("속한 조에서 핸디캡 승리 여부", default=False)
+
 class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
     hole_number = models.IntegerField("홀 번호", default=1)
