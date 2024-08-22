@@ -1,22 +1,26 @@
 '''
-MVP demo ver 0.0.4
-2024.07.27
+MVP demo ver 0.0.5
+2024.08.23
 accounts/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리
 현재 기능:
 - 일반 회원가입
 - 소셜 회원가입 & 로그인, 로그인 성공
+- 회원정보 조회, 수정
 '''
 
 from django.conf import settings
 from django.urls import reverse
 import requests
-from rest_framework import status                                   # HTTP 응답 상태 코드를 제공하는 모듈
-from rest_framework.decorators import api_view, permission_classes  # 함수기반 API 뷰, 뷰에 대한 접근 권한
-from rest_framework.permissions import AllowAny  # 권한 클래스
-from rest_framework.response import Response                        # API 응답 생성 
-from accounts.serializers import UserSerializer
+from rest_framework import status, viewsets  # HTTP 응답 상태 코드를 제공하는 모듈
+from rest_framework.decorators import api_view, permission_classes, action  # 함수기반 API 뷰, 뷰에 대한 접근 권한
+from rest_framework.permissions import AllowAny, IsAuthenticated  # 권한 클래스
+from rest_framework.response import Response                        # API 응답 생성
+from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.views import APIView
+
+from accounts.serializers import UserSerializer, UserInfoSerializer
 from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
@@ -103,3 +107,40 @@ def login_success(request):
     user = User.objects.get(email=user_email)
     print("로그인 성공: ", user)
     return render(request, 'login_success.html', {'user': user})
+
+'''
+회원정보
+'''
+class UserInfoView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # 필요 시 이 메서드를 사용해 특정 사용자의 정보를 반환할 수 있음
+        instance = request.user
+        serializer = UserInfoSerializer(instance)
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Successfully retrieved user info",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def patch(self, request, *args, **kwargs):
+        # 회원정보 수정
+        instance = request.user
+        serializer = UserInfoSerializer(instance, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'messages': 'Invalid data',
+                'error': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+        read_serializer = UserInfoSerializer(user)
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully updated user info',
+            'data': read_serializer.data
+        }, status=status.HTTP_200_OK)

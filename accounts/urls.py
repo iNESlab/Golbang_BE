@@ -9,12 +9,15 @@ accounts/urls.py
 - 소셜 로그인(구글, 카카오, 네이버)
 '''
 
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
 from accounts.social_login import google_callback, google_login, kakao_callback, kakao_login, naver_callback, naver_login
-from .views import signup_first_step, signup_second_step, social_login, login_success
-from auth.api import LoginApi, RefreshJWTToken, LogoutApi, UserInfoView
+from .views import signup_first_step, signup_second_step, social_login, login_success, UserInfoView
+from auth.api import LoginApi, RefreshJWTToken, LogoutApi
 
 # end point: api/user
+
 urlpatterns = [
     # TODO: URL 패턴 분리 필요 (계정 / 소셜 로그인 / 회원정보)
     path('signup/step-1/', signup_first_step, name='signup_first_step'),      # 회원가입 - 1 엔드포인트
@@ -36,6 +39,7 @@ urlpatterns = [
     # 소셜 로그인 성공 엔드포인트
     path('login-success/', login_success, name='login_success'),
 
-    # 회원정보 조회
-    path('info/', UserInfoView.as_view(), name='user_info'),
-]   
+    # 회원정보
+    path('info/', UserInfoView.as_view(), name='user-info'),
+
+]
