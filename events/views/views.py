@@ -18,7 +18,8 @@ from clubs.models import ClubMember, Club
 from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
 from participants.models import Participant
 from events.models import Event
-from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer
+from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer, \
+    ScoreCardSerializer
 from events.utils import EventUtils
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 
@@ -222,4 +223,27 @@ class EventViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
+    # 스코어 카드 조회
+    @action(detail=True, methods=['get'], url_path='scores')
+    def retrieve_scores(self, request, pk=None):
+        user = request.user
+        event_id = pk
 
+        if not event_id:  # 이벤트 id가 없을 경우, 400 반환
+            return handle_400_bad_request("event id is required")
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('event', event_id)
+
+        try:
+            participant = Participant.objects.get(event=event, club_member__user=user)
+        except Participant.DoesNotExist:
+            return handle_404_not_found('partipant', user)
+
+        group_type = participant.group_type
+        participants = Participant.objects.filter(event=event, group_type=group_type)
+
+        serializer = ScoreCardSerializer(participants, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

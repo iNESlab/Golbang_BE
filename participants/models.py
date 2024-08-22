@@ -49,7 +49,7 @@ class Participant(models.Model):
     sum_score       = models.IntegerField("총 점수", default=0) #TODO: 웹소켓으로 점수 입력할 때마다 갱신이 어려우면 제거.
     handicap_score  = models.IntegerField("핸디캡 점수", default=0) #TODO: 웹소켓으로 점수 입력할 때마다 갱신이 어려우면 제거.
     rank            = models.CharField("랭킹", max_length=10, default="0", null=True, blank=True) #TODO: 정렬 방법(sum_score or handicap_Score)에 따라 바뀌므로 없어도 될거 같음
-    handicap_rank   = models.CharField("핸디캡 랭킹", max_length=10, default="0", null=True, blank=True) 
+    handicap_rank   = models.CharField("핸디캡 랭킹", max_length=10, default="0", null=True, blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
 
@@ -58,7 +58,7 @@ class Participant(models.Model):
     is_group_win_handicap = models.BooleanField("속한 조에서 핸디캡 승리 여부", default=False)
 
     def get_scorecard(self):
-        # MySQL의 participants_holescore 테이블에서 유저의 스코어카드를 가져오는 로직
+        # MySQL의 participants_holescore 테이블에서 유저의 스코어카드를 가져오는 로직 (재사용성을 위해 모델에 정의함)
         hole_scores = HoleScore.objects.filter(participant=self).order_by('hole_number')
         return [hole.score for hole in hole_scores]
 
