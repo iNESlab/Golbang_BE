@@ -24,3 +24,12 @@ class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model   = get_user_model()
         fields  = ('user_id', 'email', 'name')
+
+# 사용자 정보 조회 시리얼라이저
+class UserInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            'profile_image', 'name', 'email', 'phone_number',
+            'handicap', 'address', 'date_of_birth', 'student_id'
+        )
