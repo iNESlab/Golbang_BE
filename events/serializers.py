@@ -111,10 +111,11 @@ class UserResultSerializer(serializers.ModelSerializer):
     # 사용자의 스트로크와 순위를 계산하여 반환하는 시리얼라이저
     stroke = serializers.SerializerMethodField()    # 동적으로 스트로크값 계산
     rank = serializers.SerializerMethodField()      # 사용자 순위를 계산하기 위한 메서드 필드
+    scorecard = serializers.SerializerMethodField() # 스코어카드 데이터 반환
 
     class Meta:
         model = User
-        fields = ['user_id', 'name', 'stroke', 'rank']
+        fields = ['user_id', 'profile_image', 'name', 'stroke', 'rank', 'scorecard']
 
     def get_stroke(self, obj):
         # 현재 이벤트 및 사용자 정보를 바탕으로 참가자를 조회
@@ -143,6 +144,14 @@ class UserResultSerializer(serializers.ModelSerializer):
         event_id = self.context.get('event_id')
         participant = Participant.objects.filter(event_id=event_id, club_member__user=obj).first()
         return participant.rank if participant else None
+
+    def get_scorecard(self, obj):
+        event_id = self.context.get('event_id')
+        participant = Participant.objects.filter(event_id=event_id, club_member__user=obj).first()
+
+        if participant:
+            scorecard = participant.get_scorecard()
+            return scorecard if scorecard else []
 
 class EventResultSerializer(serializers.ModelSerializer):
     """

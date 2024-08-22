@@ -56,6 +56,11 @@ class Participant(models.Model):
     is_group_win = models.BooleanField("속한 조에서 승리 여부", default=False)
     is_group_win_handicap = models.BooleanField("속한 조에서 핸디캡 승리 여부", default=False)
 
+    def get_scorecard(self):
+        # MySQL의 participants_holescore 테이블에서 유저의 스코어카드를 가져오는 로직
+        hole_scores = HoleScore.objects.filter(participant=self).order_by('hole_number')
+        return [hole.score for hole in hole_scores]
+
 class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
     hole_number = models.IntegerField("홀 번호", default=1)
