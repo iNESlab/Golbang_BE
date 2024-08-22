@@ -40,7 +40,7 @@ class ParticipantCreateUpdateSerializer(serializers.ModelSerializer):
         managed = True  # True면 장고는 해당 모델에 대해 DB 테이블과 동기화되도록 유지한다. Default True
         model = Participant
         fields = ['participant_id', 'member_id', 'event_id',
-                  'team_type', 'group_type', 'sum_score', 'rank', 'status_type']
+                  'team_type', 'group_type', 'sum_score', 'rank', 'handicap_rank', 'status_type']
 
 
     def get_sum_score(self, obj):
@@ -61,7 +61,7 @@ class ParticipantDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
         fields = ['participant_id', 'member', 'status_type', 'team_type', 'hole_number',
-                  'group_type', 'sum_score', 'rank', 'handicap_score']
+                  'group_type', 'sum_score', 'rank', 'handicap_rank', 'handicap_score']
     def get_hole_number(self, obj):
         # 마지막 홀 넘버 반환
         hole_score = HoleScore.objects.filter(participant=obj).order_by('-hole_number').first()
