@@ -149,7 +149,8 @@ class EventResultSerializer(serializers.ModelSerializer):
     이벤트 결과를 반환하는 시리얼라이저
     """
     participants = serializers.SerializerMethodField()  # 참가자 리스트를 반환
-    user = serializers.SerializerMethodField()  # 현재 사용자 정보를 반환
+    event_id = serializers.IntegerField(source='id', read_only=True)  # 여기서 'id' 필드를 'event_id'로 매핑
+    user = serializers.SerializerMethodField()  # 사용자의 정보를 반환
 
     class Meta:
         model = Event

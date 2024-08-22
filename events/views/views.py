@@ -195,7 +195,7 @@ class EventViewSet(viewsets.ModelViewSet):
         요청 데이터: 이벤트 ID
         응답 데이터: 참가자들의 순위 리스트 (sum_score 또는 handicap_score 기준 오름차순 정렬)
         """
-        user = request.user
+        # user = request.user
         event_id = pk
 
         if not event_id:  # 이벤트 id가 없을 경우, 400 반환
@@ -210,10 +210,10 @@ class EventViewSet(viewsets.ModelViewSet):
         sort_type = request.query_params.get('sort_type', 'sum_score')
 
         # 이벤트에 참여한 참가자들을 가져옴
-        participants = Participant.objects.filter(event=event, club_member__user=user)
+        participants = Participant.objects.filter(event=event)
 
         # 시리얼라이저에 sort_type과 user를 컨텍스트로 넘김
-        serializer = EventResultSerializer(event, context={'participants': participants, 'sort_type': sort_type})
+        serializer = EventResultSerializer(event, context={'participants': participants, 'sort_type': sort_type, 'request': request})
 
         response_data = {
             'status': status.HTTP_200_OK,
