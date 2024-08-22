@@ -1,9 +1,17 @@
-import asyncio
+'''
+MVP demo ver 0.0.3
+2024.08.23
+participa/stroke/mysql_interface.py
+
+- MySQL 데이터베이스와 상호작용하는 클래스
+- 참가자와 이벤트의 데이터를 관리함
+'''
+import asyncio # 비동기 작업
 import logging
 from dataclasses import asdict
 
-from asgiref.sync import sync_to_async
-from channels.db import database_sync_to_async
+from asgiref.sync import sync_to_async # 비동기 작업을 동기 함수로 전환하기 위한 함수
+from channels.db import database_sync_to_async # 데이터베이스 작업을 비동기 함수로 전환하기 위한 함수
 
 from events.models import Event
 from participants.models import Participant, HoleScore
@@ -27,6 +35,7 @@ class MySQLInterface:
 
     @database_sync_to_async
     def get_group_participants(self, event_id, group_type=None):
+        # 특정 이벤트와 그룹 타입에 해당하는 참가자들을 반환
         if group_type is None:
             raise ValueError("Group type is missing")
         return list(Participant.objects
@@ -35,10 +44,12 @@ class MySQLInterface:
 
     @database_sync_to_async
     def get_event_participants(self, event_id):
+        # 특정 이벤트에 참여한 모든 참가자를 반환
         return list(Participant.objects.filter(event_id=event_id).select_related('club_member__user'))
 
     @database_sync_to_async
     def get_and_check_participant(self, participant_id, user):
+        # 주어진 참가자 ID와 일치하는 참가자 정보를 가져오고, 해당 사용자인지 확인
         try:
             participant = Participant.objects.select_related('club_member__user', 'event').get(id=participant_id)
             if participant.club_member.user != user:
@@ -56,6 +67,7 @@ class MySQLInterface:
 
     # 원래는 redis를 그대로 저장하면 되는데, 너무 길어져서 그냥 event 모델의 method 이용
     async def determine_and_update_win_status(self, participant, event):
+        # 한 참가자를 기준으로 조별 및 전체 승리 팀을 결정하고 업데이트
         # participant: 한 조의 한 참가자를 의미 (한명 바꿔도 같은 조의 모든 인원이 갱신되기 때문)
         if not participant:
             logging.warning('No participants found for event_id: %s', event.id)
@@ -77,9 +89,11 @@ class MySQLInterface:
 
     @database_sync_to_async
     def update_event_data_in_db(self, event_id, event_data):
+        # 이벤트 데이터 업데이트
         Event.objects.filter(id=event_id).update(**asdict(event_data))
 
     async def transfer_participant_data_to_db(self, participants):
+        # Redis에서 참가자 데이터를 가져와서 MySQL로 전달
         for participant in participants:
             redis_key = f'participant:{participant.id}'
             logging.info('redis_key: %s', redis_key)
@@ -101,6 +115,7 @@ class MySQLInterface:
                 await self.update_participant_rank_in_db(participant_data)
 
     async def transfer_hole_scores_to_db(self, participants):
+        # Redis에서 홀 점수를 가져와서 MySQL로 전달
         for participant in participants:
             score_keys_pattern = f'participant:{participant.id}:hole:*'
             score_keys = await sync_to_async(redis_client.keys)(score_keys_pattern)
@@ -114,6 +129,7 @@ class MySQLInterface:
             await asyncio.gather(*(update_or_create_hole_score(key) for key in score_keys))
 
     async def transfer_event_data_to_db(self, event_id):
+        # Redis에서 이벤트 데이터를 가져와서 MySQL로 전달
         event_key = f'event:{event_id}'
         event_data_dict = await sync_to_async(redis_client.hgetall)(event_key)
 

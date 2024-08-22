@@ -31,11 +31,11 @@ class ParticipantViewSet(viewsets.ModelViewSet):
 
             participant = Participant.objects.get(pk=kwargs['pk'])
 
-            find_user=participant.club_member.user
+            find_user=participant.club_member.user # 참가자에 대한 사용자 정보
             if not find_user == user:
                 return handle_401_unauthorized(f'해당 참가자({find_user.name})가 아닙니다.')
 
-            participant.status_type = status_type
+            participant.status_type = status_type   # 상태 타입 업데이트
             participant.save()
 
             serializer = ParticipantCreateUpdateSerializer(participant)
@@ -46,7 +46,7 @@ class ParticipantViewSet(viewsets.ModelViewSet):
                 'data': serializer.data
             }
             return Response(response_data, status=status.HTTP_200_OK)
-        except Participant.DoesNotExist:
+        except Participant.DoesNotExist: # 참가자가 존재하지 않을 경우
             return handle_404_not_found('participant', kwargs['pk'])
-        except Exception as e:
+        except Exception as e: # 기타 예외 처리
             return handle_400_bad_request({'error': str(e)})

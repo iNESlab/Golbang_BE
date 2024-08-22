@@ -1,7 +1,7 @@
 '''
 MVP demo ver 0.0.3
 2024.08.02
-events/models.py
+participants/models.py
 
 역할: 참가자(Participant)과 관련된 데이터베이스 모델을 정의
 기능:
@@ -19,10 +19,9 @@ from clubs.models import ClubMember
 from events.models import Event
 
 
-# Create your models here.
 class Participant(models.Model):
     class TeamType(models.TextChoices):
-        NONE = "NONE", "None"
+        NONE = "NONE", "None" # 개인전인 경우 None
         TEAM1 = "A", "Team A"
         TEAM2 = "B", "Team B"
 
