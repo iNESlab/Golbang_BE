@@ -189,11 +189,11 @@ class EventViewSet(viewsets.ModelViewSet):
 
     # 이벤트 결과 조회 (GET)
     @action(detail=True, methods=['get'], url_path='ranks')
-    def retrieve_ranks(self, request, pk=None):
+    def retrieve_event_ranks(self, request, pk=None):
         """
         GET 요청 시 특정 이벤트(Event)의 결과, 즉 전체 순위를 반환한다.
         요청 데이터: 이벤트 ID
-        응답 데이터: 참가자들의 순위 리스트 (sum_score 기준 오름차순 정렬)
+        응답 데이터: 참가자들의 순위 리스트 (sum_score 또는 handicap_score 기준 오름차순 정렬)
         """
         user = request.user
         event_id = pk
@@ -213,11 +213,11 @@ class EventViewSet(viewsets.ModelViewSet):
         participants = Participant.objects.filter(event=event, club_member__user=user)
 
         # 시리얼라이저에 sort_type과 user를 컨텍스트로 넘김
-        serializer = EventResultSerializer(event, context={'sort_type': sort_type, 'user': user})
+        serializer = EventResultSerializer(event, context={'participants': participants, 'sort_type': sort_type})
 
         response_data = {
             'status': status.HTTP_200_OK,
-            'message': 'Successfully retrieved ranks results',
+            'message': 'Successfully retrieved ranks',
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_200_OK)

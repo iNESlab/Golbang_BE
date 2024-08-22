@@ -156,13 +156,8 @@ class EventResultSerializer(serializers.ModelSerializer):
         fields = ['user', 'event_id', 'event_title', 'location', 'start_date_time', 'end_date_time', 'game_mode', 'participants']
 
     def get_participants(self, obj):
+        participants = self.context.get('participants')
         sort_type = self.context.get('sort_type', 'sum_score')
-        participants = list(obj.participant_set.all())  # QuerySet을 리스트로 변환
-
-        # 점수를 동적으로 계산
-        for participant in participants:
-            participant.handicap_score = EventUtils.calculate_handicap_score(participant)
-            participant.sum_score = EventUtils.calculate_sum_score(participant)
 
         # sort_type에 따라 정렬
         if sort_type == 'handicap_score':
@@ -170,36 +165,8 @@ class EventResultSerializer(serializers.ModelSerializer):
         else:
             participants = sorted(participants, key=lambda p: p.sum_score)
 
-        # 순위를 계산하여 할당
-        self.assign_ranks(participants, sort_type)
-
         return ParticipantDetailSerializer(participants, many=True, read_only=True).data
 
-    def assign_ranks(self, participants, sort_type):
-        '''
-        참가자에게 순위를 할당하는 메소드
-        sort_type에 따라 참가자들을 정렬하고, 동점자를 고려한 순위를 계산하여 반환
-        동점자인 경우, 앞에 "T"를 붙여 순위에 표시
-        '''
-        previous_score = None
-        rank = 1
-        tied_rank = 1  # 동점자의 랭크를 별도로 관리
-
-        for idx, participant in enumerate(participants):
-            current_score = getattr(participant, sort_type)
-
-            if current_score == previous_score:
-                participant.rank = f"T{tied_rank}"  # 이전 참가자와 동일한 점수라면 T로 표기
-                participants[idx - 1].rank = f"T{tied_rank}"  # 이전 참가자의 랭크도 T로 업데이트
-            else:
-                participant.rank = str(rank)  # 새로운 점수일 경우 일반 순위
-                tied_rank = rank  # 새로운 점수에서 동점 시작 지점을 설정
-
-            previous_score = current_score
-            rank += 1  # 다음 순위로 이동
-
     def get_user(self, obj):
-        # 요청된 사용자 정보를 반환
-        user = self.context.get('user')
-        sort_type = self.context.get('sort_type', 'sum_score')
-        return UserResultSerializer(user, context={'event_id': obj.id, 'sort_type': sort_type}).data
+        user = self.context['request'].user
+        return UserResultSerializer(user, context={'event_id': obj.id}).data
