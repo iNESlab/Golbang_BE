@@ -144,3 +144,56 @@ class UserInfoView(APIView):
             'message': 'Successfully updated user info',
             'data': read_serializer.data
         }, status=status.HTTP_200_OK)
+
+
+class PasswordManagementView(APIView):
+    '''
+    비밀번호 변경
+    '''
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        action = kwargs.get('action')
+
+        if action == 'verify':
+            return self.verify_password(request)
+        elif action == 'change':
+            return self.change_password(request)
+        else:
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "Invalid action"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    def verify_password(self, request):
+        current_password = request.data.get('current_password')
+        user = request.user
+
+        if not user.check_password(current_password):
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "Current password is incorrect"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Password verified successfully"
+        }, status=status.HTTP_200_OK)
+
+    def change_password(self, request):
+        new_password = request.data.get('new_password')
+        user = request.user
+
+        if not new_password:
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "New password is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Password updated successfully"
+        }, status=status.HTTP_200_OK)

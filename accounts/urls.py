@@ -13,7 +13,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from accounts.social_login import google_callback, google_login, kakao_callback, kakao_login, naver_callback, naver_login
-from .views import signup_first_step, signup_second_step, social_login, login_success, UserInfoView
+from .views import signup_first_step, signup_second_step, social_login, login_success, UserInfoView, PasswordManagementView
 from auth.api import LoginApi, RefreshJWTToken, LogoutApi
 
 # end point: api/user
@@ -30,7 +30,7 @@ urlpatterns = [
     ## 구글
     path('google-login/', google_login, name='google_login'),
     path('google-callback/', google_callback, name='google_callback'),
-    ## 네이버 
+    ## 네이버
     path('naver-login/', naver_login, name='naver_login'),
     path('naver-callback/', naver_callback, name='naver_callback'),
     ## 카카오
@@ -41,5 +41,9 @@ urlpatterns = [
 
     # 회원정보
     path('info/', UserInfoView.as_view(), name='user-info'),
+    # 비밀번호 인증
+    path('info/password/verify/', PasswordManagementView.as_view(), {'action': 'verify'}, name='password-verify'),
 
+    # 비밀번호 수정
+    path('info/password/change/', PasswordManagementView.as_view(), {'action': 'change'}, name='password-change'),
 ]
