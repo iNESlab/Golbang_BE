@@ -14,6 +14,7 @@ participants/models.py
 - participant와 1:n관계
 '''
 from django.db import models
+from django.db.models import Sum
 
 from clubs.models import ClubMember
 from events.models import Event
@@ -61,6 +62,20 @@ class Participant(models.Model):
         # MySQL의 participants_holescore 테이블에서 유저의 스코어카드를 가져오는 로직 (재사용성을 위해 모델에 정의함)
         hole_scores = HoleScore.objects.filter(participant=self).order_by('hole_number')
         return [hole.score for hole in hole_scores]
+
+    def get_front_nine_score(self): # 전반전 점수
+        return HoleScore.objects.filter(participant=self, hole_number__lte=9).aggregate(total=Sum('score'))[
+            'total'] or 0
+
+    def get_back_nine_score(self): # 후반전 점수
+        return HoleScore.objects.filter(participant=self, hole_number__gte=10).aggregate(total=Sum('score'))[
+            'total'] or 0
+
+    def get_total_score(self):
+        return HoleScore.objects.filter(participant=self).aggregate(total=Sum('score'))['total'] or 0
+
+    def get_handicap_score(self):
+        return self.get_total_score() - self.club_member.user.handicap
 
 class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)

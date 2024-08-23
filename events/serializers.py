@@ -188,23 +188,23 @@ class ScoreCardSerializer(serializers.ModelSerializer):
     스코어카드 결과(그룹별 스코어 결과)를 반환하는 시리얼라이저
     """
     participant_name = serializers.CharField(source='club_member.user.name', read_only=True)
-    first_half_score = serializers.SerializerMethodField()  # 전반전 점수 (1~9홀)
-    second_half_score = serializers.SerializerMethodField() # 후반전 점수 (10~18홀)
+    front_nine_score = serializers.SerializerMethodField()  # 전반전 점수 (1~9홀)
+    back_nine_score = serializers.SerializerMethodField() # 후반전 점수 (10~18홀)
     total_score = serializers.SerializerMethodField()
     handicap_score = serializers.SerializerMethodField()
     scorecard = serializers.SerializerMethodField()         # 모델의 get_scorecard 메서드를 활용
 
     class Meta:
         model = Participant
-        fields = ['participant_name', 'first_half_score', 'second_half_score', 'total_score', 'handicap_score', 'scorecard']
+        fields = ['participant_name', 'front_nine_score', 'back_nine_score', 'total_score', 'handicap_score', 'scorecard']
 
-    def get_first_half_score(self, participant):
-        first_half_score = HoleScore.objects.filter(participant=participant, hole_number__lte=9).aggregate(total=Sum('score'))['total']
-        return first_half_score or 0
+    def get_front_nine_score(self, participant):
+        front_nine_score = HoleScore.objects.filter(participant=participant, hole_number__lte=9).aggregate(total=Sum('score'))['total']
+        return front_nine_score or 0
 
-    def get_second_half_score(self, participant):
-        second_half_score = HoleScore.objects.filter(participant=participant, hole_number__gte=10).aggregate(total=Sum('score'))['total']
-        return second_half_score or 0
+    def get_back_nine_score(self, participant):
+        back_nine_score = HoleScore.objects.filter(participant=participant, hole_number__gte=10).aggregate(total=Sum('score'))['total']
+        return back_nine_score or 0
 
     def get_total_score(self, participant):
         total_score = HoleScore.objects.filter(participant=participant).aggregate(total=Sum('score'))['total']
@@ -217,3 +217,22 @@ class ScoreCardSerializer(serializers.ModelSerializer):
 
     def get_scorecard(self, participant):
         return participant.get_scorecard() or []
+    #
+    # def get_team_scores(self, event, group_type, team_type):
+    #     team_participants = Participant.objects.filter(event=event, group_type=group_type, team_type=team_type)
+    #     front_nine_score = sum([p.get_first_half_score() for p in team_participants])
+    #     back_nine_score = sum([p.get_second_half_score() for p in team_participants])
+    #     total_score = sum([p.get_total_score() for p in team_participants])
+    #     handicap_score = sum([p.get_handicap_score() for p in team_participants])
+    #     return {
+    #         'front_nine_score': front_nine_score,
+    #         'back_nine_score': back_nine_score,
+    #         'total_score': total_score,
+    #         'handicap_score': handicap_score
+    #     }
+    #
+    # def get_team_a_scores(self, participant):
+    #     return self.get_team_scores(participant.event, participant.group_type, Participant.TeamType.TEAM1)
+    #
+    # def get_team_b_scores(self, participant):
+    #     return self.get_team_scores(participant.event, participant.group_type, Participant.TeamType.TEAM2)

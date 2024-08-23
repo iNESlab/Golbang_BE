@@ -245,5 +245,36 @@ class EventViewSet(viewsets.ModelViewSet):
         group_type = participant.group_type
         participants = Participant.objects.filter(event=event, group_type=group_type)
 
+        # 팀 스코어를 저장할 변수들
+        team_a_scores = None
+        team_b_scores = None
+
+        # 팀 타입이 NONE이 아닌 경우에만 팀 스코어 계산
+        if any(p.team_type != Participant.TeamType.NONE for p in participants):
+            team_a_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM1)
+            team_b_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM2)
+
         serializer = ScoreCardSerializer(participants, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved score cards',
+            'data': {
+                'participants': serializer.data,
+                'team_a_scores': team_a_scores,
+                'team_b_scores': team_b_scores
+            }
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    def calculate_team_scores(self, participants, team_type):
+        team_participants = participants.filter(team_type=team_type)
+        front_nine_score = sum([p.get_first_half_score() for p in team_participants])
+        back_nine_score = sum([p.get_second_half_score() for p in team_participants])
+        total_score = sum([p.get_total_score() for p in team_participants])
+        handicap_score = sum([p.get_handicap_score() for p in team_participants])
+        return {
+            "front_nine_score": front_nine_score,
+            "back_nine_score": back_nine_score,
+            "total_score": total_score,
+            "handicap_score": handicap_score
+        }
