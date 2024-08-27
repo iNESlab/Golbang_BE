@@ -13,8 +13,6 @@ from django.db import models
 from django.db.models import Sum
 
 from clubs.models import Club, ClubMember
-from participants.models import Participant
-
 
 # Create your models here.
 class Event(models.Model):
@@ -73,6 +71,7 @@ class Event(models.Model):
                                        choices=WinningTeamType.choices, default=WinningTeamType.NONE)
 
     def calculate_group_scores(self):
+        from participants.models import Participant  # 지연 import
         """
         각 조별로 팀 A와 팀 B의 점수를 합산하여 전체 조별 점수를 계산한다.
         """
@@ -113,6 +112,7 @@ class Event(models.Model):
         self.save() # 변경된 데이터를 데이터베이스에 저장
 
     def calculate_total_scores(self):
+        from participants.models import Participant  # 지연 import
         """
         모든 조의 점수를 합산하여 팀 A와 팀 B의 전체 점수를 계산한다.
         """
@@ -123,11 +123,11 @@ class Event(models.Model):
         self.team_b_total_score = \
         participants.filter(team_type=Participant.TeamType.TEAM2).aggregate(total=Sum('sum_score'))['total'] or 0
 
-        # 전체 점수를 비교하여 더 높은 점수를 가진 팀을 승리 팀으로 설정한다.
+        # 전체 점수를 비교하여 더 낮은 점수를 가진 팀을 승리 팀으로 설정한다.
         if self.team_a_total_score < self.team_b_total_score:
-            self.total_win_team = self.WinningTeamType.TEAM2
-        elif self.team_b_total_score < self.team_a_total_score:
             self.total_win_team = self.WinningTeamType.TEAM1
+        elif self.team_b_total_score < self.team_a_total_score:
+            self.total_win_team = self.WinningTeamType.TEAM2
         else:
             self.total_win_team = self.WinningTeamType.DRAW
 

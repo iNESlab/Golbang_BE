@@ -190,8 +190,8 @@ class EventViewSet(viewsets.ModelViewSet):
         instance.delete()
 
     # 이벤트 결과 조회 (GET)
-    @action(detail=True, methods=['get'], url_path='ranks')
-    def retrieve_event_ranks(self, request, pk=None):
+    @action(detail=True, methods=['get'], url_path='individual-results')
+    def retrieve_individual_ranks(self, request, pk=None):
         """
         GET 요청 시 특정 이벤트(Event)의 결과, 즉 전체 순위를 반환한다.
         요청 데이터: 이벤트 ID
@@ -215,7 +215,13 @@ class EventViewSet(viewsets.ModelViewSet):
         participants = Participant.objects.filter(event=event)
 
         # 시리얼라이저에 sort_type과 user를 컨텍스트로 넘김
-        serializer = EventResultSerializer(event, context={'participants': participants, 'sort_type': sort_type, 'request': request})
+        serializer = EventResultSerializer(
+            event,
+            context={
+                'participants': participants,
+                'sort_type': sort_type,
+                'request': request
+            })
 
         response_data = {
             'status': status.HTTP_200_OK,
@@ -225,44 +231,58 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 팀전 결과 조회 (GET)
-    @action(detail=True, methods=['get'], url_path='team-ranks')
-    def retrieve_team_ranks(self, request, pk=None):
+    @action(detail=True, methods=['get'], url_path='team-results')
+    def retrieve_team_results(self, request, pk=None):
         """
-        GET 요청 시 특정 이벤트(Event)의 팀전 결과를 반환한다.
+        GET 요청 시 특정 이벤트(Event)의 팀전 결과를 반환합니다.
         요청 데이터: 이벤트 ID
-        응답 데이터: 각 팀의 점수와 최종 승리 팀
+        응답 데이터: 조별 승리 팀 개수와 전체 점수에서 승리한 팀, 그리고 참가자 관련 데이터 포함
         """
         event_id = pk
 
-        if not event_id:  # 이벤트 id가 없을 경우, 400 반환
+        if not event_id:
             return handle_400_bad_request("event id is required")
 
         try:
             event = Event.objects.get(pk=event_id)
-        except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
+        except Event.DoesNotExist:
             return handle_404_not_found('event', event_id)
 
-        # 팀별 점수를 계산
-        team_a_score = Participant.objects.filter(event=event, team_type=Participant.TeamType.TEAM1).aggregate(
-            total_score=Sum('sum_score'))['total_score'] or 0
-        team_b_score = Participant.objects.filter(event=event, team_type=Participant.TeamType.TEAM2).aggregate(
-            total_score=Sum('sum_score'))['total_score'] or 0
+        # 쿼리 파라미터에서 sort_type을 가져옴 (없으면 기본값으로 sum_score)
+        sort_type = request.query_params.get('sort_type', 'sum_score')
 
-        # 최종 승리 팀 결정
-        if team_a_score > team_b_score:
-            winning_team = "Team A"
-        elif team_b_score > team_a_score:
-            winning_team = "Team B"
-        else:
-            winning_team = "Draw"
+        # 조별 점수 및 승리 팀 계산
+        event.calculate_group_scores()
+        event.calculate_total_scores()
+
+        # 추가적으로 participants 정보를 포함하기 위해 컨텍스트에 전달
+        participants = Participant.objects.filter(event=event)
+
+        # 시리얼라이저에 데이터를 넘겨서 JSON 응답으로 변환
+        serializer = EventResultSerializer(
+            event,
+            context={
+                'participants': participants,
+                'sort_type': sort_type,
+                'request': request
+            }
+        )
 
         response_data = {
             'status': status.HTTP_200_OK,
-            'message': 'Successfully retrieved team ranks',
+            'message': 'Successfully retrieved team results',
             'data': {
-                'team_a_score': team_a_score,
-                'team_b_score': team_b_score,
-                'winning_team': winning_team
+                'group_scores': {
+                    'team_a_group_wins': event.team_a_group_wins,
+                    'team_b_group_wins': event.team_b_group_wins,
+                    'group_win_team': event.group_win_team,
+                },
+                'total_scores': {
+                    'team_a_total_score': event.team_a_total_score,
+                    'team_b_total_score': event.team_b_total_score,
+                    'total_win_team': event.total_win_team,
+                },
+                'ranks': serializer.data  # 시리얼라이저를 통해 생성된 데이터 포함
             }
         }
         return Response(response_data, status=status.HTTP_200_OK)
