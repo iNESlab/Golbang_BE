@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.8
-2024.08.02
+MVP demo ver 0.0.9
+2024.08.27
 events/views/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리

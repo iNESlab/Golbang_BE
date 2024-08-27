@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.3
-2024.08.02
+MVP demo ver 0.0.4
+2024.08.27
 participants/models.py
 
 역할: 참가자(Participant)과 관련된 데이터베이스 모델을 정의
