@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.5
-2024.08.23
+MVP demo ver 0.0.6
+2024.08.27
 events/serializers.py
 
 역할:
@@ -109,27 +109,30 @@ class EventDetailSerializer(serializers.ModelSerializer):
 
 class UserResultSerializer(serializers.ModelSerializer):
     # 사용자의 스트로크와 순위를 계산하여 반환하는 시리얼라이저
-    stroke = serializers.SerializerMethodField()    # 동적으로 스트로크값 계산
+    sum_score = serializers.SerializerMethodField()    # 동적으로 스코어값 계산
+    handicap_score = serializers.SerializerMethodField()
     rank = serializers.SerializerMethodField()      # 사용자 순위를 계산하기 위한 메서드 필드
     handicap_rank = serializers.SerializerMethodField() # 핸디캡 순위를 계산하기 위한 메서드 필드
     scorecard = serializers.SerializerMethodField() # 스코어카드 데이터 반환
 
     class Meta:
         model = User
-        fields = ['user_id', 'profile_image', 'name', 'stroke', 'rank', 'handicap_rank',  'scorecard']
+        fields = ['user_id', 'profile_image', 'name', 'sum_score', 'handicap_score', 'rank', 'handicap_rank',  'scorecard']
 
-    def get_stroke(self, obj):
+    def get_sum_score(self, obj):
         # 현재 이벤트 및 사용자 정보를 바탕으로 참가자를 조회
         event_id = self.context.get('event_id')
-        sort_type = self.context.get('sort_type', 'sum_score')
         participant = Participant.objects.filter(event_id=event_id, club_member__user=obj).first()
 
         if participant:
-            if sort_type == 'handicap_score':
-                return participant.handicap_score
-            else:
-                return participant.sum_score
+            return participant.sum_score
+        return 0  # 참가자가 없을 경우 기본값 반환
 
+    def get_handicap_score(self, obj):
+        event_id = self.context.get('event_id')
+        participants = Participant.objects.filter(event_id=event_id, club_member__user=obj).first()
+        if participants:
+            return participants.handicap_score
         return 0  # 참가자가 없을 경우 기본값 반환
 
     def get_rank(self, obj):
@@ -169,12 +172,8 @@ class EventResultSerializer(serializers.ModelSerializer):
     def get_participants(self, obj):
         # 컨텍스트에서 참가자 리스트를 가져와 정렬
         participants = self.context.get('participants')
-        sort_type = self.context.get('sort_type', 'sum_score')
-
-        if sort_type == 'handicap_score':
-            participants = sorted(participants, key=lambda p: p.handicap_score)
-        else:
-            participants = sorted(participants, key=lambda p: p.sum_score)
+        # sum_score를 디폴트로 정렬하도록 설정
+        participants = sorted(participants, key=lambda p: p.sum_score)
 
         return ParticipantDetailSerializer(participants, many=True).data
 
@@ -217,22 +216,3 @@ class ScoreCardSerializer(serializers.ModelSerializer):
 
     def get_scorecard(self, participant):
         return participant.get_scorecard() or []
-    #
-    # def get_team_scores(self, event, group_type, team_type):
-    #     team_participants = Participant.objects.filter(event=event, group_type=group_type, team_type=team_type)
-    #     front_nine_score = sum([p.get_first_half_score() for p in team_participants])
-    #     back_nine_score = sum([p.get_second_half_score() for p in team_participants])
-    #     total_score = sum([p.get_total_score() for p in team_participants])
-    #     handicap_score = sum([p.get_handicap_score() for p in team_participants])
-    #     return {
-    #         'front_nine_score': front_nine_score,
-    #         'back_nine_score': back_nine_score,
-    #         'total_score': total_score,
-    #         'handicap_score': handicap_score
-    #     }
-    #
-    # def get_team_a_scores(self, participant):
-    #     return self.get_team_scores(participant.event, participant.group_type, Participant.TeamType.TEAM1)
-    #
-    # def get_team_b_scores(self, participant):
-    #     return self.get_team_scores(participant.event, participant.group_type, Participant.TeamType.TEAM2)

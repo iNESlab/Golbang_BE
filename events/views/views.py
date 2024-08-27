@@ -1,12 +1,13 @@
 '''
-MVP demo ver 0.0.8
-2024.08.02
+MVP demo ver 0.0.9
+2024.08.27
 events/views/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
 - 모임 관리자 : 멤버 핸디캡 자동 매칭 기능(팀전/개인전)
 '''
 from datetime import date, datetime
+from django.db.models import Sum
 
 from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
@@ -188,9 +189,9 @@ class EventViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.delete()
 
-    # 이벤트 결과 조회 (GET)
-    @action(detail=True, methods=['get'], url_path='ranks')
-    def retrieve_event_ranks(self, request, pk=None):
+    # 이벤트 개인전 결과 조회 (GET)
+    @action(detail=True, methods=['get'], url_path='individual-results')
+    def retrieve_individual_ranks(self, request, pk=None):
         """
         GET 요청 시 특정 이벤트(Event)의 결과, 즉 전체 순위를 반환한다.
         요청 데이터: 이벤트 ID
@@ -207,14 +208,16 @@ class EventViewSet(viewsets.ModelViewSet):
         except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
             return handle_404_not_found('event', event_id)
 
-        # 쿼리 파라미터에서 sort_type을 가져옴 (없으면 기본값으로 sum_score)
-        sort_type = request.query_params.get('sort_type', 'sum_score')
-
         # 이벤트에 참여한 참가자들을 가져옴
         participants = Participant.objects.filter(event=event)
 
         # 시리얼라이저에 sort_type과 user를 컨텍스트로 넘김
-        serializer = EventResultSerializer(event, context={'participants': participants, 'sort_type': sort_type, 'request': request})
+        serializer = EventResultSerializer(
+            event,
+            context={
+                'participants': participants,
+                'request': request
+            })
 
         response_data = {
             'status': status.HTTP_200_OK,
@@ -223,7 +226,70 @@ class EventViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-    # 스코어 카드 조회
+    # 이벤트 팀전 결과 조회 (GET)
+    @action(detail=True, methods=['get'], url_path='team-results')
+    def retrieve_team_results(self, request, pk=None):
+        """
+        GET 요청 시 특정 이벤트(Event)의 팀전 결과를 반환합니다.
+        요청 데이터: 이벤트 ID
+        응답 데이터: 조별 승리 팀 개수와 전체 점수에서 승리한 팀, 그리고 참가자 관련 데이터 포함
+        """
+        event_id = pk
+
+        if not event_id:
+            return handle_400_bad_request("event id is required")
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:
+            return handle_404_not_found('event', event_id)
+
+        # 조별 점수 및 승리 팀 계산
+        event.calculate_group_scores()
+        event.calculate_total_scores()
+
+        # 핸디캡 적용 점수 계산
+        event.calculate_group_scores_with_handicap()
+        event.calculate_total_scores_with_handicap()
+
+        # 추가적으로 participants 정보를 포함하기 위해 컨텍스트에 전달
+        participants = Participant.objects.filter(event=event)
+
+        # 시리얼라이저에 데이터를 넘겨서 JSON 응답으로 변환
+        serializer = EventResultSerializer(
+            event,
+            context={
+                'participants': participants,
+                'request': request
+            }
+        )
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved team results',
+            'data': {
+                'group_scores': {
+                    'team_a_group_wins': event.team_a_group_wins,
+                    'team_b_group_wins': event.team_b_group_wins,
+                    'group_win_team': event.group_win_team,
+                    'team_a_group_wins_handicap': event.team_a_group_wins_handicap,
+                    'team_b_group_wins_handicap': event.team_b_group_wins_handicap,
+                    'group_win_team_handicap': event.group_win_team_handicap,
+                },
+                'total_scores': {
+                    'team_a_total_score': event.team_a_total_score,
+                    'team_b_total_score': event.team_b_total_score,
+                    'total_win_team': event.total_win_team,
+                    'team_a_total_score_handicap': event.team_a_total_score_handicap,
+                    'team_b_total_score_handicap': event.team_b_total_score_handicap,
+                    'total_win_team_handicap': event.total_win_team_handicap,
+                },
+                'ranks': serializer.data  # 시리얼라이저를 통해 생성된 데이터 포함
+            }
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    # 이벤트 스코어 카드 조회
     @action(detail=True, methods=['get'], url_path='scores')
     def retrieve_scores(self, request, pk=None):
         user = request.user
@@ -240,38 +306,41 @@ class EventViewSet(viewsets.ModelViewSet):
         try:
             participant = Participant.objects.get(event=event, club_member__user=user)
         except Participant.DoesNotExist:
-            return handle_404_not_found('partipant', user)
+            return handle_404_not_found('participant', user)
 
         group_type = participant.group_type
-        participants = Participant.objects.filter(event=event, group_type=group_type)
+        group_participants = Participant.objects.filter(event=event, group_type=group_type) # 조에 해당하는 참가자들
 
         # 팀 스코어를 저장할 변수들
         team_a_scores = None
         team_b_scores = None
 
         # 팀 타입이 NONE이 아닌 경우에만 팀 스코어 계산
-        if any(p.team_type != Participant.TeamType.NONE for p in participants):
-            team_a_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM1)
-            team_b_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM2)
+        if any(p.team_type != Participant.TeamType.NONE for p in group_participants):
+            team_a_scores = self.calculate_team_scores(group_participants, Participant.TeamType.TEAM1)
+            team_b_scores = self.calculate_team_scores(group_participants, Participant.TeamType.TEAM2)
 
-        serializer = ScoreCardSerializer(participants, many=True)
+        # 개인전+팀전 스코어카드를 시리얼라이즈
+        serializer = ScoreCardSerializer(group_participants, many=True)
+
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved score cards',
             'data': {
-                'participants': serializer.data,
-                'team_a_scores': team_a_scores,
-                'team_b_scores': team_b_scores
+                'participants': serializer.data,    # 개인전 스코어카드
+                'team_a_scores': team_a_scores,     # 팀 A의 점수 (개인전인 경우 None)
+                'team_b_scores': team_b_scores      # 팀 B의 점수 (개인전인 경우 None)
             }
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
+    # 특정 팀의 전반, 후반, 전체, 핸디캡 적용 점수를 계산
     def calculate_team_scores(self, participants, team_type):
-        team_participants = participants.filter(team_type=team_type)
-        front_nine_score = sum([p.get_first_half_score() for p in team_participants])
-        back_nine_score = sum([p.get_second_half_score() for p in team_participants])
-        total_score = sum([p.get_total_score() for p in team_participants])
-        handicap_score = sum([p.get_handicap_score() for p in team_participants])
+        team_participants = participants.filter(team_type=team_type) # 주어진 팀 타입(TEAM1 또는 TEAM2)에 속한 참가자들만 필터링
+        front_nine_score = sum([p.get_front_nine_score() for p in team_participants])   # 팀에 속한 모든 참가자들의 전반전 점수를 합산
+        back_nine_score = sum([p.get_back_nine_score() for p in team_participants])     # 팀에 속한 모든 참가자들의 후반전 점수를 합산
+        total_score = sum([p.get_total_score() for p in team_participants])             # 전반전과 후반전 점수를 합산한 전체 점수를 계산
+        handicap_score = sum([p.get_handicap_score() for p in team_participants])       # 각 참가자의 핸디캡 점수를 적용한 점수를 합산
         return {
             "front_nine_score": front_nine_score,
             "back_nine_score": back_nine_score,

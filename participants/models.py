@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.3
-2024.08.02
+MVP demo ver 0.0.4
+2024.08.27
 participants/models.py
 
 역할: 참가자(Participant)과 관련된 데이터베이스 모델을 정의
@@ -79,6 +79,7 @@ class Participant(models.Model):
 
    
 class HoleScore(models.Model):
+
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
     hole_number = models.IntegerField("홀 번호", default=1)
     score = models.IntegerField("홀 점수", default=0)
