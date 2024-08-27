@@ -55,6 +55,48 @@ class ParticipantViewSet(viewsets.ModelViewSet):
             return handle_400_bad_request({'error': str(e)})
 
 
+def calculate_statistics(participants, start_date=None, end_date=None, year=None):
+    """
+    통계 데이터를 계산하고 응답 데이터를 생성하는 함수
+    """
+    if not participants.exists():
+        if year:
+            return handle_404_not_found('participant data for the year', year)
+        elif start_date and end_date:
+            return handle_404_not_found('participant data for the given period', f"{start_date} to {end_date}")
+        else:
+            return handle_404_not_found('participant data', 'for the user')
+
+    # 평균 스코어 계산
+    average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
+
+    # 베스트 스코어 (최소 스코어) 계산
+    best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
+
+    # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
+    handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
+
+    # 총 라운드 수 계산
+    games_played = participants.count()
+
+    # 응답 데이터 초기화
+    data = {}
+    if year:
+        data["year"] = year
+    if start_date and end_date:
+        data["start_date"] = start_date.strftime('%Y-%m-%d')
+        data["end_date"] = (end_date - timedelta(seconds=1)).strftime('%Y-%m-%d')
+
+    # 응답 데이터에 통계 데이터 추가
+    data.update( {
+        "average_score": round(average_score, 1),
+        "best_score": best_score,
+        "handicap_bests_score": handicap_bests_score,
+        "games_played": games_played
+    } )
+
+    return data
+
 class StatisticsViewSet(viewsets.ViewSet):
     '''
     참가자 개인 통계 클래스
@@ -88,28 +130,7 @@ class StatisticsViewSet(viewsets.ViewSet):
         user = request.user  # 요청을 보낸 사용자를 가져옴
         participants = Participant.objects.filter(club_member__user=user)  # 해당 사용자의 모든 참가 데이터
 
-        if not participants.exists():  # 참가 데이터가 없을 경우, 404
-            return handle_404_not_found('participant data', 'for the user')
-
-        # 평균 스코어 계산
-        average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
-
-        # 베스트 스코어 (최소 스코어) 계산
-        best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
-
-        # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
-        handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
-
-        # 총 라운드 수 계산
-        games_played = participants.count()
-
-        # 응답 데이터 생성
-        data = {
-            "average_score": round(average_score, 1),
-            "best_score": best_score,
-            "handicap_bests_score": handicap_bests_score,
-            "games_played": games_played
-        }
+        data = calculate_statistics(participants)
 
         return Response({
             "status": status.HTTP_200_OK,
@@ -127,29 +148,7 @@ class StatisticsViewSet(viewsets.ViewSet):
         participants = Participant.objects.filter(club_member__user=user,
                                                   event__start_date_time__year=year)  # 특정 연도의 참가 데이터
 
-        if not participants.exists():  # 해당 연도의 참가 데이터가 없을 경우
-            return handle_404_not_found('participant data for the year', year)
-
-        # 평균 스코어 계산
-        average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
-
-        # 베스트 스코어 (최소 스코어) 계산
-        best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
-
-        # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
-        handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
-
-        # 총 라운드 수 계산
-        games_played = participants.count()
-
-        # 응답 데이터 생성
-        data = {
-            "year": year,
-            "average_score": round(average_score, 1),
-            "best_score": best_score,
-            "handicap_bests_score": handicap_bests_score,
-            "games_played": games_played
-        }
+        data = calculate_statistics(participants, year=year)
 
         return Response({
             "status": status.HTTP_200_OK,
@@ -185,31 +184,7 @@ class StatisticsViewSet(viewsets.ViewSet):
             event__start_date_time__range=[start_date, end_date + timedelta(days=1)] # 범위 지정할 때에 2번째 인자는 미만으로 처리되므로 end_date에 +1
         )
 
-        if not participants.exists():  # 해당 기간에 대한 참가 데이터가 없을 경우
-            return handle_404_not_found('participant data for the given period', f"{start_date} to {end_date}")
-
-        # 평균 스코어 계산
-        average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
-
-        # 베스트 스코어 (최소 스코어) 계산
-        best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
-
-        # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
-        handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
-
-        # 총 라운드 수 계산
-        games_played = participants.count()
-
-        # 응답 데이터 생성
-        data = {
-            "start_date": start_date.strftime('%Y-%m-%d'),
-            "end_date": (end_date - timedelta(seconds=1)).strftime('%Y-%m-%d'),
-            "average_score": round(average_score, 1),
-            "best_score": best_score,
-            "handicap_bests_score": handicap_bests_score,
-            "games_played": games_played
-        }
-
+        data = calculate_statistics(participants, start_date=start_date, end_date=end_date)
         return Response({
             "status": status.HTTP_200_OK,
             "message": f"Successfully retrieved statistics for the period {start_date} to {end_date}",
