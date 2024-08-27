@@ -43,6 +43,18 @@ class Event(models.Model):
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # 팀별 조별 승리 수
+    team_a_group_wins = models.IntegerField("Team A 조별 승리 수", default=0)
+    team_b_group_wins = models.IntegerField("Team B 조별 승리 수", default=0)
+    team_a_group_wins_handicap = models.IntegerField("Team A 핸디캡 적용한 조별 승리 수", default=0)
+    team_b_group_wins_handicap = models.IntegerField("Team B 핸디캡 적용한 조별 승리 수", default=0)
+
+    # 팀별 전체 점수
+    team_a_total_score = models.IntegerField("Team A 전체 점수 합계", default=0)
+    team_b_total_score = models.IntegerField("Team B 전체 점수 합계", default=0)
+    team_a_total_score_handicap = models.IntegerField("Team A 핸디캡 적용한 전체 점수 합계", default=0)
+    team_b_total_score_handicap = models.IntegerField("Team B 핸디캡 적용한 전체 점수 합계", default=0)
+
     # 이벤트 최종 승리 팀
     ## 조별로 많이 이긴 팀을 승리팀으로 저장
     group_win_team          = models.CharField("승리 팀 by 조", max_length=4,

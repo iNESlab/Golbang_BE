@@ -7,6 +7,7 @@ events/views/views.py
 - 모임 관리자 : 멤버 핸디캡 자동 매칭 기능(팀전/개인전)
 '''
 from datetime import date, datetime
+from django.db.models import Sum
 
 from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
@@ -220,6 +221,49 @@ class EventViewSet(viewsets.ModelViewSet):
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved ranks',
             'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    # 팀전 결과 조회 (GET)
+    @action(detail=True, methods=['get'], url_path='team-ranks')
+    def retrieve_team_ranks(self, request, pk=None):
+        """
+        GET 요청 시 특정 이벤트(Event)의 팀전 결과를 반환한다.
+        요청 데이터: 이벤트 ID
+        응답 데이터: 각 팀의 점수와 최종 승리 팀
+        """
+        event_id = pk
+
+        if not event_id:  # 이벤트 id가 없을 경우, 400 반환
+            return handle_400_bad_request("event id is required")
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('event', event_id)
+
+        # 팀별 점수를 계산
+        team_a_score = Participant.objects.filter(event=event, team_type=Participant.TeamType.TEAM1).aggregate(
+            total_score=Sum('sum_score'))['total_score'] or 0
+        team_b_score = Participant.objects.filter(event=event, team_type=Participant.TeamType.TEAM2).aggregate(
+            total_score=Sum('sum_score'))['total_score'] or 0
+
+        # 최종 승리 팀 결정
+        if team_a_score > team_b_score:
+            winning_team = "Team A"
+        elif team_b_score > team_a_score:
+            winning_team = "Team B"
+        else:
+            winning_team = "Draw"
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved team ranks',
+            'data': {
+                'team_a_score': team_a_score,
+                'team_b_score': team_b_score,
+                'winning_team': winning_team
+            }
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
