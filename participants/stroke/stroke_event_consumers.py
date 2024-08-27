@@ -122,6 +122,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
     async def process_participant(self, participant):
         # 참가자 데이터를 처리하여 rank 정보를 반환
+
         participant_id = participant.id
         rank_data = await self.get_event_rank_from_redis(participant.event_id, participant_id)
         user = participant.club_member.user
@@ -136,6 +137,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
     async def get_event_rank_from_redis(self, event_id, participant_id):
         # Redis에서 참가자의 랭킹 정보를 가져옴
+
         logging.info('Fetching hole scores from Redis')
         redis_key = f'event:{event_id}:participant:{participant_id}'
 
@@ -173,6 +175,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
     async def send_ranks_periodically(self):
         # 주기적으로 참가자들의 점수 전송
+
         logging.info('send_scores_periodically started')
         while True:
             try:
@@ -185,6 +188,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
     async def send_json(self, content):
         # JSON 데이터를 WebSocket을 통해 전송
+
         try:
             logging.debug(f'Sending JSON: {content}')
             await self.send(text_data=json.dumps(content, ensure_ascii=False))

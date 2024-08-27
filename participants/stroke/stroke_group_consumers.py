@@ -5,7 +5,6 @@ participa/stroke/stroke_group_consumer.py
 
 스코어카드(그룹별 현황 조회) / 그룹 내 참가자들의 점수를 실시간으로 관리
 '''
-
 import json
 import logging
 import asyncio
@@ -184,6 +183,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
     async def send_json(self, content):
         # JSON 데이터를 WebSocket을 통해 전송
+
         try:
             logging.debug(f'Sending JSON: {content}')
             await self.send(text_data=json.dumps(content, ensure_ascii=False))
@@ -193,6 +193,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
     async def send_scores_periodically(self):
         # 주기적으로 참가자들의 점수를 전송
+
         while True:
             try:
                 await self.send_scores()

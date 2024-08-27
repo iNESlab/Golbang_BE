@@ -6,7 +6,6 @@ participa/stroke/data_class.py
 기능: 참가자와 이벤트 데이터의 구조를 정의한 데이터 클래스
 - 데이터 전송 시 필요한 정보를 캡슐화함
 '''
-
 from dataclasses import dataclass
 from typing import Optional
 

@@ -37,10 +37,10 @@ class Participant(models.Model):
         GROUP8 = 8, "8조"
 
     class StatusType(models.TextChoices):
-        PARTY        = "PARTY", "수락 및 회식"
-        ACCEPT       = "ACCEPT", "수락"
-        DENY         = "DENY", "거절"
-        PENDING      = "PENDING", "대기"
+        PARTY = "PARTY", "수락 및 회식"
+        ACCEPT = "ACCEPT", "수락"
+        DENY = "DENY", "거절"
+        PENDING = "PENDING", "대기"
 
     club_member     = models.ForeignKey(ClubMember, on_delete=models.CASCADE, null=False, blank=True)
     event           = models.ForeignKey(Event, on_delete=models.CASCADE, null=False, blank=True)
@@ -77,7 +77,8 @@ class Participant(models.Model):
     def get_handicap_score(self):
         return self.get_total_score() - self.club_member.user.handicap
 
+   
 class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
     hole_number = models.IntegerField("홀 번호", default=1)
-    score       = models.IntegerField("홀 점수", default=0)
+    score = models.IntegerField("홀 점수", default=0)

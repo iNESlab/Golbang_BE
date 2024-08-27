@@ -28,6 +28,7 @@ class RedisInterface:
 
     async def update_participant_sum_and_handicap_score_in_redis(self, participant):
         # Redis에 참가자의 총 점수와 핸디캡 점수를 업데이트
+
         keys_pattern = f'participant:{participant.id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
 
@@ -46,6 +47,7 @@ class RedisInterface:
 
     async def update_rankings_in_redis(self, event_id):
         # Redis에 참가자들의 순위를 업데이트
+
         participants = await self.get_participants_from_redis(event_id)
 
         sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score)
@@ -78,6 +80,7 @@ class RedisInterface:
                 participant.rank = None
             if not hasattr(participant, 'handicap_rank'):
                 participant.handicap_rank = None
+
             current_score = getattr(participant, rank_type.replace('rank', 'score'))
             logging.info(f'previous_score: {previous_score}, current_score: {current_score}')
             # 순위 할당
@@ -114,6 +117,7 @@ class RedisInterface:
 
     async def get_participants_from_redis(self, event_id, group_type_filter=None):
         # Redis에서 참가자들을 가져옴
+
         base_key = f'event:{event_id}:participant:'
         keys = await sync_to_async(redis_client.keys)(f'{base_key}*')
         logging.info(f'keys:{keys}')
@@ -231,6 +235,7 @@ class RedisInterface:
 
     async def get_all_hole_scores_from_redis(self, participant_id):
         # Redis에서 모든 홀 점수를 가져옴
+
         logging.info('participant_id: %s', participant_id)
         keys_pattern = f'participant:{participant_id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
@@ -245,6 +250,7 @@ class RedisInterface:
 
     async def get_event_data_from_redis(self, event_id):
         # Redis에서 이벤트 데이터를 가져옴
+
         redis_key = f'event:{event_id}'
         event_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)
 
