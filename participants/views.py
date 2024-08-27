@@ -7,6 +7,7 @@ participants/views.py
 - 참가자 : 자신의 참가 상태를 변경
 '''
 from django.db.models import Avg, Min, Count
+from datetime import datetime, timedelta
 
 from rest_framework import status
 from rest_framework.decorators import permission_classes, action
@@ -82,6 +83,7 @@ class StatisticsViewSet(viewsets.ViewSet):
     def overall_statistics(self, request):
         '''
         전체 통계
+        GET /participants/statistics/overall/
         '''
         user = request.user  # 요청을 보낸 사용자를 가져옴
         participants = Participant.objects.filter(club_member__user=user)  # 해당 사용자의 모든 참가 데이터
@@ -119,6 +121,7 @@ class StatisticsViewSet(viewsets.ViewSet):
     def yearly_statistics(self, request, year=None):
         '''
         연도별 통계 조회
+        GET /participants/statistics/yearly/{year}/
         '''
         user = request.user
         participants = Participant.objects.filter(club_member__user=user,
@@ -151,5 +154,64 @@ class StatisticsViewSet(viewsets.ViewSet):
         return Response({
             "status": status.HTTP_200_OK,
             "message": f"Successfully retrieved statistics for the year {year}",
+            "data": data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='period')
+    def period_statistics(self, request):
+        '''
+        기간별 통계 조회
+        GET /participants/statistics/period/?start_date={start_date}&end_date={end_date}
+        '''
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        if not start_date or not end_date:  # 날짜가 제공되지 않은 경우 400
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "start_date and end_date query parameters are required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 날짜를 datetime 객체로 변환
+        start_date = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+
+        # end_date를 다음 날로 설정하여 해당 날짜의 끝까지 포함
+        end_date = end_date + timedelta(days=1) - timedelta(seconds=1)
+
+        user = request.user
+        participants = Participant.objects.filter( # 특정 날짜 범위 내의 참가 데이터
+            club_member__user=user,
+            event__start_date_time__range=[start_date, end_date + timedelta(days=1)] # 범위 지정할 때에 2번째 인자는 미만으로 처리되므로 end_date에 +1
+        )
+
+        if not participants.exists():  # 해당 기간에 대한 참가 데이터가 없을 경우
+            return handle_404_not_found('participant data for the given period', f"{start_date} to {end_date}")
+
+        # 평균 스코어 계산
+        average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
+
+        # 베스트 스코어 (최소 스코어) 계산
+        best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
+
+        # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
+        handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
+
+        # 총 라운드 수 계산
+        games_played = participants.count()
+
+        # 응답 데이터 생성
+        data = {
+            "start_date": start_date.strftime('%Y-%m-%d'),
+            "end_date": (end_date - timedelta(seconds=1)).strftime('%Y-%m-%d'),
+            "average_score": round(average_score, 1),
+            "best_score": best_score,
+            "handicap_bests_score": handicap_bests_score,
+            "games_played": games_played
+        }
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": f"Successfully retrieved statistics for the period {start_date} to {end_date}",
             "data": data
         }, status=status.HTTP_200_OK)
