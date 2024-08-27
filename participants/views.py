@@ -69,16 +69,14 @@ class StatisticsViewSet(viewsets.ViewSet):
             "message": "Statistics API root",
             "data": {
                 "endpoints": {
-                    "overall": "GET /statistics/overall/",
-                    "yearly": "GET /statistics/yearly/{year}/",
-                    "period": "GET /statistics/period/?start_date={start_date}&end_date={end_date}",
-                    "ranks": "GET /statistics/ranks/?club_id={club_id}",
-                    "events": "GET /statistics/events/?club_id={club_id}",
+                    "overall": "GET /participants/statistics/overall/",
+                    "yearly": "GET /participants/statistics/yearly/{year}/",
+                    "period": "GET /participants/statistics/period/?start_date={start_date}&end_date={end_date}",
+                    "ranks": "GET /clubs/statistics/ranks/?club_id={club_id}",
+                    "events": "GET /clubs/statistics/events/?club_id={club_id}",
                 }
             }
         })
-
-        # StatisticsViewSet 클래스 내부
 
     @action(detail=False, methods=['get'], url_path='overall')
     def overall_statistics(self, request):
@@ -114,5 +112,44 @@ class StatisticsViewSet(viewsets.ViewSet):
         return Response({
             "status": status.HTTP_200_OK,
             "message": "Successfully retrieved overall statistics",
+            "data": data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='yearly/(?P<year>[0-9]{4})') # 0~9까지 4자리 수
+    def yearly_statistics(self, request, year=None):
+        '''
+        연도별 통계 조회
+        '''
+        user = request.user
+        participants = Participant.objects.filter(club_member__user=user,
+                                                  event__start_date_time__year=year)  # 특정 연도의 참가 데이터
+
+        if not participants.exists():  # 해당 연도의 참가 데이터가 없을 경우
+            return handle_404_not_found('participant data for the year', year)
+
+        # 평균 스코어 계산
+        average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
+
+        # 베스트 스코어 (최소 스코어) 계산
+        best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
+
+        # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
+        handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
+
+        # 총 라운드 수 계산
+        games_played = participants.count()
+
+        # 응답 데이터 생성
+        data = {
+            "year": year,
+            "average_score": round(average_score, 1),
+            "best_score": best_score,
+            "handicap_bests_score": handicap_bests_score,
+            "games_played": games_played
+        }
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": f"Successfully retrieved statistics for the year {year}",
             "data": data
         }, status=status.HTTP_200_OK)
