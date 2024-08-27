@@ -6,8 +6,10 @@ participants/views.py
 역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
 - 참가자 : 자신의 참가 상태를 변경
 '''
+from django.db.models import Avg, Min, Count
+
 from rest_framework import status
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -50,3 +52,67 @@ class ParticipantViewSet(viewsets.ModelViewSet):
             return handle_404_not_found('participant', kwargs['pk'])
         except Exception as e: # 기타 예외 처리
             return handle_400_bad_request({'error': str(e)})
+
+
+class StatisticsViewSet(viewsets.ViewSet):
+    '''
+    참가자 개인 통계 클래스
+    '''
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        '''
+        사용 가능한 통계 API의 목록을 반환
+        '''
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Statistics API root",
+            "data": {
+                "endpoints": {
+                    "overall": "GET /statistics/overall/",
+                    "yearly": "GET /statistics/yearly/{year}/",
+                    "period": "GET /statistics/period/?start_date={start_date}&end_date={end_date}",
+                    "ranks": "GET /statistics/ranks/?club_id={club_id}",
+                    "events": "GET /statistics/events/?club_id={club_id}",
+                }
+            }
+        })
+
+        # StatisticsViewSet 클래스 내부
+
+    @action(detail=False, methods=['get'], url_path='overall')
+    def overall_statistics(self, request):
+        '''
+        전체 통계
+        '''
+        user = request.user  # 요청을 보낸 사용자를 가져옴
+        participants = Participant.objects.filter(club_member__user=user)  # 해당 사용자의 모든 참가 데이터
+
+        if not participants.exists():  # 참가 데이터가 없을 경우, 404
+            return handle_404_not_found('participant data', 'for the user')
+
+        # 평균 스코어 계산
+        average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
+
+        # 베스트 스코어 (최소 스코어) 계산
+        best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
+
+        # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
+        handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
+
+        # 총 라운드 수 계산
+        games_played = participants.count()
+
+        # 응답 데이터 생성
+        data = {
+            "average_score": round(average_score, 1),
+            "best_score": best_score,
+            "handicap_bests_score": handicap_bests_score,
+            "games_played": games_played
+        }
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Successfully retrieved overall statistics",
+            "data": data
+        }, status=status.HTTP_200_OK)
