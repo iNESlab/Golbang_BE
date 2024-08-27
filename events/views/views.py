@@ -272,8 +272,8 @@ class EventViewSet(viewsets.ModelViewSet):
                     'team_a_group_wins': event.team_a_group_wins,
                     'team_b_group_wins': event.team_b_group_wins,
                     'group_win_team': event.group_win_team,
-                    'team_a_group_score_handicap': event.team_a_group_score_handicap,
-                    'team_b_group_score_handicap': event.team_b_group_score_handicap,
+                    'team_a_group_wins_handicap': event.team_a_group_wins_handicap,
+                    'team_b_group_wins_handicap': event.team_b_group_wins_handicap,
                     'group_win_team_handicap': event.group_win_team_handicap,
                 },
                 'total_scores': {
