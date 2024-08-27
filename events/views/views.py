@@ -299,19 +299,19 @@ class EventViewSet(viewsets.ModelViewSet):
             return handle_404_not_found('participant', user)
 
         group_type = participant.group_type
-        participants = Participant.objects.filter(event=event, group_type=group_type)
+        group_participants = Participant.objects.filter(event=event, group_type=group_type) # 조에 해당하는 참가자들
 
         # 팀 스코어를 저장할 변수들
         team_a_scores = None
         team_b_scores = None
 
         # 팀 타입이 NONE이 아닌 경우에만 팀 스코어 계산
-        if any(p.team_type != Participant.TeamType.NONE for p in participants):
-            team_a_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM1)
-            team_b_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM2)
+        if any(p.team_type != Participant.TeamType.NONE for p in group_participants):
+            team_a_scores = self.calculate_team_scores(group_participants, Participant.TeamType.TEAM1)
+            team_b_scores = self.calculate_team_scores(group_participants, Participant.TeamType.TEAM2)
 
         # 개인전+팀전 스코어카드를 시리얼라이즈
-        serializer = ScoreCardSerializer(participants, many=True)
+        serializer = ScoreCardSerializer(group_participants, many=True)
 
         response_data = {
             'status': status.HTTP_200_OK,
