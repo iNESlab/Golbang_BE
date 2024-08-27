@@ -1,7 +1,7 @@
 '''
 MVP demo ver 0.0.8
 2024.08.02
-events/urls.py
+participants/urls.py
 
 역할: participant 앱 내의 URL API 엔드포인트 설정
 현재 기능: 이벤트 수정

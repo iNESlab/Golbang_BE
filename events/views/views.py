@@ -8,7 +8,7 @@ events/views/views.py
 '''
 from datetime import date, datetime
 
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,7 +18,8 @@ from clubs.models import ClubMember, Club
 from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
 from participants.models import Participant
 from events.models import Event
-from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer
+from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer, \
+    ScoreCardSerializer
 from events.utils import EventUtils
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 
@@ -168,7 +169,7 @@ class EventViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-# 이벤트 삭제 메서드 (DELETE)
+    # 이벤트 삭제 메서드 (DELETE)
     def destroy(self, request, *args, **kwargs):
         user = request.user
         event_id = self.kwargs.get('pk')
@@ -186,3 +187,94 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.delete()
+
+    # 이벤트 결과 조회 (GET)
+    @action(detail=True, methods=['get'], url_path='ranks')
+    def retrieve_event_ranks(self, request, pk=None):
+        """
+        GET 요청 시 특정 이벤트(Event)의 결과, 즉 전체 순위를 반환한다.
+        요청 데이터: 이벤트 ID
+        응답 데이터: 참가자들의 순위 리스트 (sum_score 또는 handicap_score 기준 오름차순 정렬)
+        """
+        # user = request.user
+        event_id = pk
+
+        if not event_id:  # 이벤트 id가 없을 경우, 400 반환
+            return handle_400_bad_request("event id is required")
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('event', event_id)
+
+        # 쿼리 파라미터에서 sort_type을 가져옴 (없으면 기본값으로 sum_score)
+        sort_type = request.query_params.get('sort_type', 'sum_score')
+
+        # 이벤트에 참여한 참가자들을 가져옴
+        participants = Participant.objects.filter(event=event)
+
+        # 시리얼라이저에 sort_type과 user를 컨텍스트로 넘김
+        serializer = EventResultSerializer(event, context={'participants': participants, 'sort_type': sort_type, 'request': request})
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved ranks',
+            'data': serializer.data
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    # 스코어 카드 조회
+    @action(detail=True, methods=['get'], url_path='scores')
+    def retrieve_scores(self, request, pk=None):
+        user = request.user
+        event_id = pk
+
+        if not event_id:  # 이벤트 id가 없을 경우, 400 반환
+            return handle_400_bad_request("event id is required")
+
+        try:
+            event = Event.objects.get(pk=event_id)
+        except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('event', event_id)
+
+        try:
+            participant = Participant.objects.get(event=event, club_member__user=user)
+        except Participant.DoesNotExist:
+            return handle_404_not_found('partipant', user)
+
+        group_type = participant.group_type
+        participants = Participant.objects.filter(event=event, group_type=group_type)
+
+        # 팀 스코어를 저장할 변수들
+        team_a_scores = None
+        team_b_scores = None
+
+        # 팀 타입이 NONE이 아닌 경우에만 팀 스코어 계산
+        if any(p.team_type != Participant.TeamType.NONE for p in participants):
+            team_a_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM1)
+            team_b_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM2)
+
+        serializer = ScoreCardSerializer(participants, many=True)
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved score cards',
+            'data': {
+                'participants': serializer.data,
+                'team_a_scores': team_a_scores,
+                'team_b_scores': team_b_scores
+            }
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    def calculate_team_scores(self, participants, team_type):
+        team_participants = participants.filter(team_type=team_type)
+        front_nine_score = sum([p.get_first_half_score() for p in team_participants])
+        back_nine_score = sum([p.get_second_half_score() for p in team_participants])
+        total_score = sum([p.get_total_score() for p in team_participants])
+        handicap_score = sum([p.get_handicap_score() for p in team_participants])
+        return {
+            "front_nine_score": front_nine_score,
+            "back_nine_score": back_nine_score,
+            "total_score": total_score,
+            "handicap_score": handicap_score
+        }

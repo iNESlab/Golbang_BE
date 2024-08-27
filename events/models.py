@@ -5,7 +5,7 @@ events/models.py
 
 역할: 이벤트(Event)과 관련된 데이터베이스 모델을 정의
 기능:
-- 이베트 정보 저장 (제목, 장소, 시작-끝 시간, 반복, 게임 모드, 알람 시간, 생성일, 수정일)
+- 이벤트 정보 저장 (제목, 장소, 시작-끝 시간, 반복, 게임 모드, 알람 시간, 생성일, 수정일)
 - club 과 1: n 관계로 정의
 '''
 from datetime import datetime
@@ -41,14 +41,18 @@ class Event(models.Model):
     game_mode       = models.CharField("게임 모드", max_length=3, choices=GameMode.choices, default=GameMode.STROKE_PLAY)
     alert_date_time = models.DateTimeField("알람 일자", null=True, blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)
-    updated_at      = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     # 이벤트 최종 승리 팀
+    ## 조별로 많이 이긴 팀을 승리팀으로 저장
     group_win_team          = models.CharField("승리 팀 by 조", max_length=4,
                                        choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+    ## 전체 스코어 합계를 토대로 승리팀 저장
     total_win_team          = models.CharField("승리 팀 by 합계", max_length=4,
                                        choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+    ## 핸디캡을 적용했을 때 조별로 많이 이긴 팀을 승리팀으로 저장
     group_win_team_handicap = models.CharField("승리 팀 by 핸디캡 조", max_length=4,
-                                               choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+                                       choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+    ## 핸디캡을 적용하여 전체 스코어 합계를 토대로 승리팀 저장
     total_win_team_handicap = models.CharField("승리 팀 by 핸디캡 합계", max_length=4,
-                                               choices=WinningTeamType.choices, default=WinningTeamType.NONE)
+                                       choices=WinningTeamType.choices, default=WinningTeamType.NONE)

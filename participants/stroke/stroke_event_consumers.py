@@ -1,3 +1,10 @@
+'''
+MVP demo ver 0.0.3
+2024.08.23
+participa/stroke/stroke_event_consumer.py
+
+전체 현황 조회
+'''
 import json
 import logging
 import asyncio
@@ -26,6 +33,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             if user is None or user.is_anonymous:
                 # await self.send_json({'error': "Authentication required"})
                 # accept 전까지는 send_json을 사용하지 못함 => 이는 구체적인 에러 메시지를 못만듬
+                # 즉, 인증이 되지 않은 사용자는 연결을 거부
                 await self.close(code=4001)
                 return
 
@@ -113,6 +121,8 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
 
     async def process_participant(self, participant):
+        # 참가자 데이터를 처리하여 rank 정보를 반환
+
         participant_id = participant.id
         rank_data = await self.get_event_rank_from_redis(participant.event_id, participant_id)
         user = participant.club_member.user
@@ -126,6 +136,8 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
         }
 
     async def get_event_rank_from_redis(self, event_id, participant_id):
+        # Redis에서 참가자의 랭킹 정보를 가져옴
+
         logging.info('Fetching hole scores from Redis')
         redis_key = f'event:{event_id}:participant:{participant_id}'
 
@@ -162,6 +174,8 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
         )
 
     async def send_ranks_periodically(self):
+        # 주기적으로 참가자들의 점수 전송
+
         logging.info('send_scores_periodically started')
         while True:
             try:
@@ -173,6 +187,8 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             await asyncio.sleep(300)  # 5분마다 주기적으로 스코어 전송
 
     async def send_json(self, content):
+        # JSON 데이터를 WebSocket을 통해 전송
+
         try:
             logging.debug(f'Sending JSON: {content}')
             await self.send(text_data=json.dumps(content, ensure_ascii=False))

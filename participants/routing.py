@@ -1,3 +1,5 @@
+# participants/routing.py
+
 from django.urls import path
 
 from participants.stroke import stroke_event_consumers, stroke_group_consumers

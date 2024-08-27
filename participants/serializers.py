@@ -20,6 +20,9 @@ from participants.models import Participant, HoleScore
 
 
 class ParticipantCreateUpdateSerializer(serializers.ModelSerializer):
+    '''
+    참가자 생성 및 업데이트 시리얼라이저
+    '''
     participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     member_id = serializers.PrimaryKeyRelatedField(
         queryset=ClubMember.objects.all(),
@@ -37,7 +40,7 @@ class ParticipantCreateUpdateSerializer(serializers.ModelSerializer):
         managed = True  # True면 장고는 해당 모델에 대해 DB 테이블과 동기화되도록 유지한다. Default True
         model = Participant
         fields = ['participant_id', 'member_id', 'event_id',
-                  'team_type', 'group_type', 'sum_score', 'rank', 'status_type']
+                  'team_type', 'group_type', 'sum_score', 'rank', 'handicap_rank', 'status_type']
 
 
     def get_sum_score(self, obj):
@@ -46,17 +49,21 @@ class ParticipantCreateUpdateSerializer(serializers.ModelSerializer):
         return total_score
 
 class ParticipantDetailSerializer(serializers.ModelSerializer):
+    '''
+    참가자 상세정보를 반환하는 시리얼라이저
+    '''
     participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     member = ClubMemberSerializer(read_only=True)
     sum_score = serializers.SerializerMethodField(read_only=True)
     handicap_score = serializers.SerializerMethodField(read_only=True)
-    hole_number = serializers.SerializerMethodField(read_only=True)
+    hole_number = serializers.SerializerMethodField(read_only=True) # 마지막 홀 번호 반환하는 메서드 필드
 
     class Meta:
         model = Participant
         fields = ['participant_id', 'member', 'status_type', 'team_type', 'hole_number',
-                  'group_type', 'sum_score', 'rank', 'handicap_score']
+                  'group_type', 'sum_score', 'rank', 'handicap_rank', 'handicap_score']
     def get_hole_number(self, obj):
+        # 마지막 홀 넘버 반환
         hole_score = HoleScore.objects.filter(participant=obj).order_by('-hole_number').first()
         return hole_score.hole_number if hole_score else None
 
@@ -67,6 +74,9 @@ class ParticipantDetailSerializer(serializers.ModelSerializer):
         return int(obj.sum_score) - int(obj.club_member.user.handicap)
 
 class ParticipantAutoMatchSerializer(serializers.ModelSerializer):
+    '''
+    참가자 자동 매칭 정보 반환 시리얼라이저
+    '''
     member_id = serializers.PrimaryKeyRelatedField(
         queryset=ClubMember.objects.all(),
         source='club_member'
@@ -75,9 +85,11 @@ class ParticipantAutoMatchSerializer(serializers.ModelSerializer):
     handicap = serializers.SerializerMethodField(read_only=True)
     team_type = serializers.CharField(read_only=True)
     group_type = serializers.CharField(read_only=True)
+
     class Meta:
         model = Participant
         fields = ['member_id', 'member', 'handicap', 'team_type', 'group_type']
+
     def get_handicap(self, obj):
         # obj가 dict인 경우 처리
         if isinstance(obj, dict):
@@ -90,6 +102,9 @@ class ParticipantAutoMatchSerializer(serializers.ModelSerializer):
         return None
 
 class HoleScoreSerializer(serializers.ModelSerializer):
+    '''
+    홀 정보 시리얼라이저
+    '''
     participant_id = serializers.PrimaryKeyRelatedField(
         queryset   = Participant.objects.all(),
         source     = 'participant'

@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model, authenticate  # 현재 활성화
 from django.conf import settings                # Django 프로젝트의 설정 파일
 from django.utils.decorators import method_decorator    # 클래스 기반 뷰애 데코레이터 적용하기 위한 함수형 데코레이터
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie, csrf_exempt  # CSRF 보호를 위한 데코레이터
+
 from auth.authenticate import generate_access_token, jwt_login, is_token_expired  # JWT 토큰 생성하고 로그인 처리하는 함수
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken # RefreshToken
@@ -159,5 +160,3 @@ class LogoutApi(APIView):
             return response
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-

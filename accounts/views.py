@@ -1,22 +1,23 @@
 '''
-MVP demo ver 0.0.4
-2024.07.27
+MVP demo ver 0.0.6
+2024.08.27
 accounts/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리
 현재 기능:
 - 일반 회원가입
 - 소셜 회원가입 & 로그인, 로그인 성공
+- 회원 전체 조회, 회원정보 조회, 수정
+- 비밀번호 인증, 변경
 '''
 
-from django.conf import settings
-from django.urls import reverse
-import requests
-from rest_framework import status                                   # HTTP 응답 상태 코드를 제공하는 모듈
-from rest_framework.decorators import api_view, permission_classes  # 함수기반 API 뷰, 뷰에 대한 접근 권한
-from rest_framework.permissions import AllowAny  # 권한 클래스
-from rest_framework.response import Response                        # API 응답 생성 
-from accounts.serializers import UserSerializer
+from rest_framework import status, viewsets  # HTTP 응답 상태 코드를 제공하는 모듈
+from rest_framework.decorators import api_view, permission_classes, action  # 함수기반 API 뷰, 뷰에 대한 접근 권한
+from rest_framework.permissions import AllowAny, IsAuthenticated  # 권한 클래스
+from rest_framework.response import Response                        # API 응답 생성
+from rest_framework.views import APIView
+
+from accounts.serializers import UserSerializer, UserInfoSerializer
 from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
@@ -103,3 +104,113 @@ def login_success(request):
     user = User.objects.get(email=user_email)
     print("로그인 성공: ", user)
     return render(request, 'login_success.html', {'user': user})
+
+'''
+회원정보
+'''
+class UserInfoViewSet(viewsets.ModelViewSet):
+    """
+    사용자 정보 조회 및 수정 ViewSet
+    """
+    queryset = User.objects.all()  # 모든 사용자 조회
+    serializer_class = UserInfoSerializer
+    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+
+    def list(self, request, *args, **kwargs):
+        """
+        전체 사용자 목록을 조회
+        """
+        users = self.get_queryset()  # 모든 사용자 쿼리셋 가져오기
+        serializer = self.get_serializer(users, many=True)
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved user list',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def get(self, request):
+        """
+        특정 사용자 정보 조회
+        """
+        instance = self.get_object()  # 특정 사용자 객체 가져오기
+        serializer = self.get_serializer(instance)
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Successfully retrieved user info",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        특정 사용자 정보 수정
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'messages': 'Invalid data',
+                'error': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+        read_serializer = self.get_serializer(user)
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully updated user info',
+            'data': read_serializer.data
+        }, status=status.HTTP_200_OK)
+
+
+class PasswordManagementView(APIView):
+    '''
+    비밀번호 변경
+    '''
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        action = kwargs.get('action')
+
+        if action == 'verify':
+            return self.verify_password(request)
+        elif action == 'change':
+            return self.change_password(request)
+        else:
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "Invalid action"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    def verify_password(self, request):
+        current_password = request.data.get('current_password')
+        user = request.user
+
+        if not user.check_password(current_password):
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "Current password is incorrect"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Password verified successfully"
+        }, status=status.HTTP_200_OK)
+
+    def change_password(self, request):
+        new_password = request.data.get('new_password')
+        user = request.user
+
+        if not new_password:
+            return Response({
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "New password is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "Password updated successfully"
+        }, status=status.HTTP_200_OK)
