@@ -280,7 +280,7 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 이벤트 스코어 카드 조회
-    @action(detail=True, methods=['get'], url_path='individual-scores')
+    @action(detail=True, methods=['get'], url_path='scores')
     def retrieve_scores(self, request, pk=None):
         user = request.user
         event_id = pk
@@ -310,28 +310,27 @@ class EventViewSet(viewsets.ModelViewSet):
             team_a_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM1)
             team_b_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM2)
 
-        # 개인전 스코어카드를 시리얼라이즈
+        # 개인전+팀전 스코어카드를 시리얼라이즈
         serializer = ScoreCardSerializer(participants, many=True)
 
-        # 응답 데이터에 팀 스코어를 추가
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved score cards',
             'data': {
-                'participants': serializer.data,  # 개인전 스코어카드
-                'team_a_scores': team_a_scores,  # 팀 A의 점수
-                'team_b_scores': team_b_scores  # 팀 B의 점수
+                'participants': serializer.data,    # 개인전 스코어카드
+                'team_a_scores': team_a_scores,     # 팀 A의 점수 (개인전인 경우 None)
+                'team_b_scores': team_b_scores      # 팀 B의 점수 (개인전인 경우 None)
             }
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 특정 팀의 전반, 후반, 전체, 핸디캡 적용 점수를 계산
     def calculate_team_scores(self, participants, team_type):
-        team_participants = participants.filter(team_type=team_type)
-        front_nine_score = sum([p.get_front_nine_score() for p in team_participants])
-        back_nine_score = sum([p.get_back_nine_score() for p in team_participants])
-        total_score = sum([p.get_total_score() for p in team_participants])
-        handicap_score = sum([p.get_handicap_score() for p in team_participants])
+        team_participants = participants.filter(team_type=team_type) # 주어진 팀 타입(TEAM1 또는 TEAM2)에 속한 참가자들만 필터링
+        front_nine_score = sum([p.get_front_nine_score() for p in team_participants])   # 팀에 속한 모든 참가자들의 전반전 점수를 합산
+        back_nine_score = sum([p.get_back_nine_score() for p in team_participants])     # 팀에 속한 모든 참가자들의 후반전 점수를 합산
+        total_score = sum([p.get_total_score() for p in team_participants])             # 전반전과 후반전 점수를 합산한 전체 점수를 계산
+        handicap_score = sum([p.get_handicap_score() for p in team_participants])       # 각 참가자의 핸디캡 점수를 적용한 점수를 합산
         return {
             "front_nine_score": front_nine_score,
             "back_nine_score": back_nine_score,

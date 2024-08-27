@@ -216,17 +216,3 @@ class ScoreCardSerializer(serializers.ModelSerializer):
 
     def get_scorecard(self, participant):
         return participant.get_scorecard() or []
-
-class TeamScoreCardSerializer(serializers.Serializer):
-    """
-    팀전 스코어카드 결과를 반환하는 시리얼라이저
-    """
-    team_a_front_nine_score = serializers.IntegerField()
-    team_a_back_nine_score = serializers.IntegerField()
-    team_a_total_score = serializers.IntegerField()
-    team_a_handicap_score = serializers.IntegerField()
-
-    team_b_front_nine_score = serializers.IntegerField()
-    team_b_back_nine_score = serializers.IntegerField()
-    team_b_total_score = serializers.IntegerField()
-    team_b_handicap_score = serializers.IntegerField()
