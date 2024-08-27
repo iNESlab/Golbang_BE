@@ -189,7 +189,7 @@ class EventViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.delete()
 
-    # 이벤트 결과 조회 (GET)
+    # 이벤트 개인전 결과 조회 (GET)
     @action(detail=True, methods=['get'], url_path='individual-results')
     def retrieve_individual_ranks(self, request, pk=None):
         """
@@ -226,7 +226,7 @@ class EventViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-    # 팀전 결과 조회 (GET)
+    # 이벤트 팀전 결과 조회 (GET)
     @action(detail=True, methods=['get'], url_path='team-results')
     def retrieve_team_results(self, request, pk=None):
         """
@@ -279,8 +279,8 @@ class EventViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
-    # 스코어 카드 조회
-    @action(detail=True, methods=['get'], url_path='scores')
+    # 이벤트 스코어 카드 조회
+    @action(detail=True, methods=['get'], url_path='individual-scores')
     def retrieve_scores(self, request, pk=None):
         user = request.user
         event_id = pk
@@ -296,7 +296,7 @@ class EventViewSet(viewsets.ModelViewSet):
         try:
             participant = Participant.objects.get(event=event, club_member__user=user)
         except Participant.DoesNotExist:
-            return handle_404_not_found('partipant', user)
+            return handle_404_not_found('participant', user)
 
         group_type = participant.group_type
         participants = Participant.objects.filter(event=event, group_type=group_type)
@@ -310,22 +310,26 @@ class EventViewSet(viewsets.ModelViewSet):
             team_a_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM1)
             team_b_scores = self.calculate_team_scores(participants, Participant.TeamType.TEAM2)
 
+        # 개인전 스코어카드를 시리얼라이즈
         serializer = ScoreCardSerializer(participants, many=True)
+
+        # 응답 데이터에 팀 스코어를 추가
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved score cards',
             'data': {
-                'participants': serializer.data,
-                'team_a_scores': team_a_scores,
-                'team_b_scores': team_b_scores
+                'participants': serializer.data,  # 개인전 스코어카드
+                'team_a_scores': team_a_scores,  # 팀 A의 점수
+                'team_b_scores': team_b_scores  # 팀 B의 점수
             }
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
+    # 특정 팀의 전반, 후반, 전체, 핸디캡 적용 점수를 계산
     def calculate_team_scores(self, participants, team_type):
         team_participants = participants.filter(team_type=team_type)
-        front_nine_score = sum([p.get_first_half_score() for p in team_participants])
-        back_nine_score = sum([p.get_second_half_score() for p in team_participants])
+        front_nine_score = sum([p.get_front_nine_score() for p in team_participants])
+        back_nine_score = sum([p.get_back_nine_score() for p in team_participants])
         total_score = sum([p.get_total_score() for p in team_participants])
         handicap_score = sum([p.get_handicap_score() for p in team_participants])
         return {

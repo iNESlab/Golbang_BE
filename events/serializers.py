@@ -216,22 +216,17 @@ class ScoreCardSerializer(serializers.ModelSerializer):
 
     def get_scorecard(self, participant):
         return participant.get_scorecard() or []
-    #
-    # def get_team_scores(self, event, group_type, team_type):
-    #     team_participants = Participant.objects.filter(event=event, group_type=group_type, team_type=team_type)
-    #     front_nine_score = sum([p.get_first_half_score() for p in team_participants])
-    #     back_nine_score = sum([p.get_second_half_score() for p in team_participants])
-    #     total_score = sum([p.get_total_score() for p in team_participants])
-    #     handicap_score = sum([p.get_handicap_score() for p in team_participants])
-    #     return {
-    #         'front_nine_score': front_nine_score,
-    #         'back_nine_score': back_nine_score,
-    #         'total_score': total_score,
-    #         'handicap_score': handicap_score
-    #     }
-    #
-    # def get_team_a_scores(self, participant):
-    #     return self.get_team_scores(participant.event, participant.group_type, Participant.TeamType.TEAM1)
-    #
-    # def get_team_b_scores(self, participant):
-    #     return self.get_team_scores(participant.event, participant.group_type, Participant.TeamType.TEAM2)
+
+class TeamScoreCardSerializer(serializers.Serializer):
+    """
+    팀전 스코어카드 결과를 반환하는 시리얼라이저
+    """
+    team_a_front_nine_score = serializers.IntegerField()
+    team_a_back_nine_score = serializers.IntegerField()
+    team_a_total_score = serializers.IntegerField()
+    team_a_handicap_score = serializers.IntegerField()
+
+    team_b_front_nine_score = serializers.IntegerField()
+    team_b_back_nine_score = serializers.IntegerField()
+    team_b_total_score = serializers.IntegerField()
+    team_b_handicap_score = serializers.IntegerField()
