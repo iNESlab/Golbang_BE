@@ -19,6 +19,8 @@ from participants.utils.statistics import calculate_statistics
 
 from datetime import timedelta
 
+from utils.error_handlers import handle_400_bad_request
+
 class StatisticsViewSet(viewsets.ViewSet):
     '''
     참가자 개인 통계 클래스
@@ -88,10 +90,7 @@ class StatisticsViewSet(viewsets.ViewSet):
         end_date = request.query_params.get('end_date')
 
         if not start_date or not end_date:  # 날짜가 제공되지 않은 경우 400
-            return Response({
-                "status": status.HTTP_400_BAD_REQUEST,
-                "message": "start_date and end_date query parameters are required."
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return handle_400_bad_request("start_date and end_date query parameters are required.")
 
         # 날짜를 datetime 객체로 변환
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
