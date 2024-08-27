@@ -132,3 +132,65 @@ class Event(models.Model):
             self.total_win_team = self.WinningTeamType.DRAW
 
         self.save() # 변경된 데이터를 데이터베이스에 저장
+
+    # 팀전 핸디캡 결과 계산 로직
+    def calculate_group_scores_with_handicap(self):
+        from participants.models import Participant  # 지연 import
+
+        """
+        각 조별로 팀 A와 팀 B의 핸디캡 적용 점수를 합산하여 전체 조별 점수를 계산한다.
+        """
+        participants = Participant.objects.filter(event=self)
+        group_scores = participants.values('group_type').distinct()
+
+        a_group_wins_handicap = 0
+        b_group_wins_handicap = 0
+
+        for group in group_scores:
+            group_type = group['group_type']
+            team_a_score_handicap = \
+            participants.filter(group_type=group_type, team_type=Participant.TeamType.TEAM1).aggregate(
+                total=Sum('handicap_score'))['total'] or 0
+            team_b_score_handicap = \
+            participants.filter(group_type=group_type, team_type=Participant.TeamType.TEAM2).aggregate(
+                total=Sum('handicap_score'))['total'] or 0
+
+            if team_a_score_handicap < team_b_score_handicap:
+                b_group_wins_handicap += 1
+            elif team_b_score_handicap < team_a_score_handicap:
+                a_group_wins_handicap += 1
+
+        self.team_a_group_score_handicap = a_group_wins_handicap
+        self.team_b_group_score_handicap = b_group_wins_handicap
+
+        if a_group_wins_handicap > b_group_wins_handicap:
+            self.group_win_team_handicap = self.WinningTeamType.TEAM1
+        elif b_group_wins_handicap > a_group_wins_handicap:
+            self.group_win_team_handicap = self.WinningTeamType.TEAM2
+        else:
+            self.group_win_team_handicap = self.WinningTeamType.DRAW
+
+        self.save()
+
+    def calculate_total_scores_with_handicap(self):
+        from participants.models import Participant  # 지연 import
+
+        """
+        모든 조의 핸디캡 적용 점수를 합산하여 팀 A와 팀 B의 전체 점수를 계산한다.
+        """
+        participants = Participant.objects.filter(event=self)
+        self.team_a_total_score_handicap = \
+        participants.filter(team_type=Participant.TeamType.TEAM1).aggregate(total=Sum('handicap_score'))[
+            'total'] or 0
+        self.team_b_total_score_handicap = \
+        participants.filter(team_type=Participant.TeamType.TEAM2).aggregate(total=Sum('handicap_score'))[
+            'total'] or 0
+
+        if self.team_a_total_score_handicap < self.team_b_total_score_handicap:
+            self.total_win_team_handicap = self.WinningTeamType.TEAM2
+        elif self.team_b_total_score_handicap < self.team_a_total_score_handicap:
+            self.total_win_team_handicap = self.WinningTeamType.TEAM1
+        else:
+            self.total_win_team_handicap = self.WinningTeamType.DRAW
+
+        self.save()

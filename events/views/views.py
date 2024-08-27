@@ -248,6 +248,10 @@ class EventViewSet(viewsets.ModelViewSet):
         event.calculate_group_scores()
         event.calculate_total_scores()
 
+        # 핸디캡 적용 점수 계산
+        event.calculate_group_scores_with_handicap()
+        event.calculate_total_scores_with_handicap()
+
         # 추가적으로 participants 정보를 포함하기 위해 컨텍스트에 전달
         participants = Participant.objects.filter(event=event)
 
@@ -268,11 +272,17 @@ class EventViewSet(viewsets.ModelViewSet):
                     'team_a_group_wins': event.team_a_group_wins,
                     'team_b_group_wins': event.team_b_group_wins,
                     'group_win_team': event.group_win_team,
+                    'team_a_group_score_handicap': event.team_a_group_score_handicap,
+                    'team_b_group_score_handicap': event.team_b_group_score_handicap,
+                    'group_win_team_handicap': event.group_win_team_handicap,
                 },
                 'total_scores': {
                     'team_a_total_score': event.team_a_total_score,
                     'team_b_total_score': event.team_b_total_score,
                     'total_win_team': event.total_win_team,
+                    'team_a_total_score_handicap': event.team_a_total_score_handicap,
+                    'team_b_total_score_handicap': event.team_b_total_score_handicap,
+                    'total_win_team_handicap': event.total_win_team_handicap,
                 },
                 'ranks': serializer.data  # 시리얼라이저를 통해 생성된 데이터 포함
             }
