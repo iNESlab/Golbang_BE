@@ -208,9 +208,6 @@ class EventViewSet(viewsets.ModelViewSet):
         except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
             return handle_404_not_found('event', event_id)
 
-        # 쿼리 파라미터에서 sort_type을 가져옴 (없으면 기본값으로 sum_score)
-        sort_type = request.query_params.get('sort_type', 'sum_score')
-
         # 이벤트에 참여한 참가자들을 가져옴
         participants = Participant.objects.filter(event=event)
 
@@ -219,7 +216,6 @@ class EventViewSet(viewsets.ModelViewSet):
             event,
             context={
                 'participants': participants,
-                'sort_type': sort_type,
                 'request': request
             })
 
@@ -248,9 +244,6 @@ class EventViewSet(viewsets.ModelViewSet):
         except Event.DoesNotExist:
             return handle_404_not_found('event', event_id)
 
-        # 쿼리 파라미터에서 sort_type을 가져옴 (없으면 기본값으로 sum_score)
-        sort_type = request.query_params.get('sort_type', 'sum_score')
-
         # 조별 점수 및 승리 팀 계산
         event.calculate_group_scores()
         event.calculate_total_scores()
@@ -263,7 +256,6 @@ class EventViewSet(viewsets.ModelViewSet):
             event,
             context={
                 'participants': participants,
-                'sort_type': sort_type,
                 'request': request
             }
         )

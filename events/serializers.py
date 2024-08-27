@@ -172,12 +172,8 @@ class EventResultSerializer(serializers.ModelSerializer):
     def get_participants(self, obj):
         # 컨텍스트에서 참가자 리스트를 가져와 정렬
         participants = self.context.get('participants')
-        sort_type = self.context.get('sort_type', 'sum_score')
-
-        if sort_type == 'handicap_score':
-            participants = sorted(participants, key=lambda p: p.handicap_score)
-        else:
-            participants = sorted(participants, key=lambda p: p.sum_score)
+        # sum_score를 디폴트로 정렬하도록 설정
+        participants = sorted(participants, key=lambda p: p.sum_score)
 
         return ParticipantDetailSerializer(participants, many=True).data
 
