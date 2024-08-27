@@ -1,7 +1,7 @@
 '''
 MVP demo ver 0.0.9
 2024.08.27
-events/views/views.py
+events/views/participants_view.py
 
 역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
 - 모임 관리자 : 멤버 핸디캡 자동 매칭 기능(팀전/개인전)

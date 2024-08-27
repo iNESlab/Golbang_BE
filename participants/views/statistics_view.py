@@ -1,101 +1,23 @@
 '''
 MVP demo ver 0.0.8
-2024.08.02
-participants/views.py
+2024.08.28
+participants/views/statistics_view.py
 
-역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
-- 참가자 : 자신의 참가 상태를 변경
+역할: Django Rest Framework(DRF)를 사용하여 참가자의 개인 통계 API 엔드포인트의 로직을 처리
+- 전체 통계, 연도별 통계, 기간별 통계
 '''
-from django.db.models import Avg, Min, Count
 from datetime import datetime, timedelta
 
 from rest_framework import status
-from rest_framework.decorators import permission_classes, action
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import viewsets
 
 from participants.models import Participant
-from participants.serializers import ParticipantCreateUpdateSerializer
-from utils.error_handlers import handle_400_bad_request, handle_404_not_found, handle_401_unauthorized
+from participants.utils.statistics import calculate_statistics
 
-@permission_classes([IsAuthenticated])
-class ParticipantViewSet(viewsets.ModelViewSet):
-    queryset = Participant.objects.all()
-    serializer_class = ParticipantCreateUpdateSerializer
-
-    def partial_update(self, request, *args, **kwargs):
-        try:
-            user = self.request.user
-            status_type = self.request.query_params.get('status_type')
-            if status_type not in Participant.StatusType.__members__:
-                return handle_400_bad_request(f'status_type: {status_type} 이 잘못되었습니다.  '
-                                              f'올바른 status_type : ACCEPT, PARTY, DENY, PENDING')
-
-            participant = Participant.objects.get(pk=kwargs['pk'])
-
-            find_user=participant.club_member.user # 참가자에 대한 사용자 정보
-            if not find_user == user:
-                return handle_401_unauthorized(f'해당 참가자({find_user.name})가 아닙니다.')
-
-            participant.status_type = status_type   # 상태 타입 업데이트
-            participant.save()
-
-            serializer = ParticipantCreateUpdateSerializer(participant)
-
-            response_data = {
-                'status': status.HTTP_200_OK,
-                'message': 'Successfully participant status_type update',
-                'data': serializer.data
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-        except Participant.DoesNotExist: # 참가자가 존재하지 않을 경우
-            return handle_404_not_found('participant', kwargs['pk'])
-        except Exception as e: # 기타 예외 처리
-            return handle_400_bad_request({'error': str(e)})
-
-
-def calculate_statistics(participants, start_date=None, end_date=None, year=None):
-    """
-    통계 데이터를 계산하고 응답 데이터를 생성하는 함수
-    """
-    if not participants.exists():
-        if year:
-            return handle_404_not_found('participant data for the year', year)
-        elif start_date and end_date:
-            return handle_404_not_found('participant data for the given period', f"{start_date} to {end_date}")
-        else:
-            return handle_404_not_found('participant data', 'for the user')
-
-    # 평균 스코어 계산
-    average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
-
-    # 베스트 스코어 (최소 스코어) 계산
-    best_score = participants.aggregate(best=Min('sum_score'))['best'] or 0
-
-    # 핸디캡 적용 베스트 스코어 (최소 핸디캡 스코어) 계산
-    handicap_bests_score = participants.aggregate(best=Min('handicap_score'))['best'] or 0
-
-    # 총 라운드 수 계산
-    games_played = participants.count()
-
-    # 응답 데이터 초기화
-    data = {}
-    if year:
-        data["year"] = year
-    if start_date and end_date:
-        data["start_date"] = start_date.strftime('%Y-%m-%d')
-        data["end_date"] = (end_date - timedelta(seconds=1)).strftime('%Y-%m-%d')
-
-    # 응답 데이터에 통계 데이터 추가
-    data.update( {
-        "average_score": round(average_score, 1),
-        "best_score": best_score,
-        "handicap_bests_score": handicap_bests_score,
-        "games_played": games_played
-    } )
-
-    return data
+from datetime import timedelta
 
 class StatisticsViewSet(viewsets.ViewSet):
     '''
