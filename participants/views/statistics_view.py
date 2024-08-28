@@ -45,7 +45,6 @@ class StatisticsViewSet(viewsets.ViewSet):
                     "yearly": "GET /participants/statistics/yearly/{year}/",
                     "period": "GET /participants/statistics/period/?start_date={start_date}&end_date={end_date}",
                     "ranks": "GET /clubs/statistics/ranks/?club_id={club_id}",
-                    "events": "GET /clubs/statistics/events/?club_id={club_id}",
                 }
             }
         })
