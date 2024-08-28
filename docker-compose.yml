@@ -43,6 +43,32 @@ services:     # 컨테이너 지정
     volumes: # 파일 시스템 정의
       - redisdata:/data
 
+  celery:   # celery 작업자
+    container_name: celery
+    build: .
+    command: celery -A golbang worker -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: golbang.settings
+      REDIS_URL: redis://redis:6380/0
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+
+  celery-beat:   # 주기적으로 업데이트
+    container_name: celery-beat
+    build: .
+    command: celery -A golbang beat -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: golbang.settings
+      REDIS_URL: redis://redis:6380/0
+      REDIS_HOST: redis
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+
 volumes:
   dbdata:
   redisdata:
