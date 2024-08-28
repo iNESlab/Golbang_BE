@@ -12,8 +12,12 @@ Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬�
 '''
 
 from rest_framework import serializers
+
+from participants.models import Participant
 from .models import Club, ClubMember
 from django.contrib.auth import get_user_model
+
+from .utils import calculate_event_points
 
 User = get_user_model()
 
