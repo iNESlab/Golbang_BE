@@ -17,6 +17,7 @@ class ParticipantUpdateData:
     handicap_rank: str
     sum_score: int
     handicap_score: int
+    points: int
     is_group_win: Optional[bool]
     is_group_win_handicap: Optional[bool]
 

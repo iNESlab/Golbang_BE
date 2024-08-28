@@ -114,6 +114,9 @@ class MySQLInterface:
             if participant_data.rank is not None and participant_data.handicap_rank is not None:
                 await self.update_participant_rank_in_db(participant_data)
 
+            # 참가자 포인트 계산 및 저장
+            await sync_to_async(participant.calculate_points)()
+
     async def transfer_hole_scores_to_db(self, participants):
         # Redis에서 홀 점수를 가져와서 MySQL로 전달
         for participant in participants:
