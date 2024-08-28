@@ -7,97 +7,89 @@ clubs/views/club_statistics.py
 '''
 
 from participants.models import Participant
-from events.models import Event
+from participants.serializers import EventStatisticsSerializer
 
 from . import ClubViewSet
 from ..models import Club, ClubMember
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 
 from rest_framework.decorators import action
-from rest_framework import viewsets, status
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Sum, Avg
 
-from ..utils import calculate_event_points
+from ..serializers import ClubRankingSerializer, ClubStatisticsSerializer
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ClubStatisticsViewSet(ClubViewSet):
     permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['get'], url_path='club-info')
-    def club_info(self, request):
-        '''
-        모임별 랭킹 및 이벤트 리스트 조회
-        GET /clubs/statistics/club-info/?club_id={club_id}
-        '''
+    @action(detail=False, methods=['get'], url_path='rank')
+    def retrieve_statistics(self, request):
+        """
+        특정 클럽의 통계 및 이벤트 정보를 조회하는 엔드포인트
+        """
+        logger.info("retrieve_statistics called")
         club_id = request.query_params.get('club_id')
+
         if not club_id:
-            return handle_400_bad_request('club_id is required.')
+            logger.error("Club ID is missing in the request.")
+            return handle_400_bad_request("club_id is required.")
 
         try:
             club = Club.objects.get(id=club_id)
+            logger.info(f"Club found: {club}")
         except Club.DoesNotExist:
-            return handle_404_not_found('Club', club_id)
+            logger.error(f"Club not found with id: {club_id}")
+            return handle_404_not_found('club', club_id)
 
+        # 사용자와 클럽 멤버 확인
         user = request.user
+        logger.info(f"Request made by user: {user}")
         try:
+            # 클럽 멤버가 있는지 확인
             club_member = ClubMember.objects.get(club=club, user=user)
+            logger.info(f"Club member found: {club_member}")
         except ClubMember.DoesNotExist:
-            return handle_404_not_found('Club member', f"for club_id {club_id} and user {user.id}")
+            logger.error(f"Club member not found for user {user} in club {club}")
+            return handle_404_not_found('club member', club_id)
 
-        # 모임별 랭킹 데이터 생성
-        total_events = Event.objects.filter(club=club).count()
-        participation_count = Participant.objects.filter(club_member=club_member).count()
-        participation_rate = (participation_count / total_events) * 100 if total_events > 0 else 0
-        total_points = Participant.objects.filter(club_member=club_member).aggregate(total_points=Sum('sum_score'))['total_points'] or 0
+        # 클럽 멤버의 랭킹 계산
+        ClubMember.calculate_avg_rank(club)
+        ClubMember.calculate_handicap_avg_rank(club)
+        logger.info(f"Ranks calculated for club: {club}")
 
-        # 사용자 순위 계산
-        participants_with_rank = Participant.objects.filter(club_member__club=club).annotate(total_points=Sum('sum_score')).order_by('-total_points')
+        # 참가자 포인트 계산 및 업데이트
+        participants = Participant.objects.filter(club_member__club=club)
+        for participant in participants:
+            participant.calculate_points()
+            logger.info(f"Points calculated for participants in club: {participant}")
 
-        rank = None
-        for idx, participant in enumerate(participants_with_rank, start=1):
-            if participant.club_member.user == user:
-                rank = idx
-                break
+        # 클럽 멤버들의 총 포인트 업데이트
+        for member in ClubMember.objects.filter(club=club):
+            member.update_total_points()
+        logger.info(f"Total points updated for members in club: {club}")
 
-        # 이벤트 리스트 생성
-        events = Event.objects.filter(club=club).values('id', 'event_title', 'start_date_time')
-        event_list = []
-        for event in events:
-            participant = Participant.objects.filter(event_id=event['id'], club_member=club_member).first()
-            if participant:
-                event_participants = Participant.objects.filter(event_id=event['id'], club_member__club=club).annotate(total_points=Sum('sum_score')).order_by('-total_points')
-                event_rank = None
-                for idx, p in enumerate(event_participants, start=1):
-                    if p.club_member.user == user:
-                        event_rank = idx
-                        break
+        # 클럽 멤버의 랭킹 정보 시리얼라이징
+        ranking_serializer = ClubRankingSerializer(club_member)
+        logger.info(f"Ranking data serialized: {ranking_serializer.data}")
 
-                event_list.append({
-                    "event_id": event['id'],
-                    "event_name": event['event_title'],
-                    "total_score": participant.sum_score,
-                    "points": participant.sum_score,  # 포인트 계산 방식에 따라 수정 가능
-                    "total_participants": event_participants.count(),
-                    "rank": event_rank
-                })
+        # 클럽에 있는 이벤트에 대한 참가자 정보 시리얼라이징
+        participants = Participant.objects.filter(club_member=club_member)
+        event_serializer = EventStatisticsSerializer(participants, many=True)
+        logger.info(f"Event data serialized for {len(participants)} participants")
 
-        # 응답 데이터 생성
+        # 전체 응답 시리얼라이징
         data = {
-            "ranking": {
-                "club_id": club.id,
-                "rank": rank,
-                "total_events": total_events,
-                "participation_count": participation_count,
-                "participation_rate": round(participation_rate, 1),
-                "total_points": total_points
-            },
-            "events": event_list
+            'ranking': ranking_serializer.data,
+            'events': event_serializer.data
         }
-
+        # response_serializer = ClubStatisticsSerializer(data=data)
         return Response({
-            "status": status.HTTP_200_OK,
-            "message": "Successfully retrieved club information",
-            "data": data
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved statistics in club',
+            'data': data
         }, status=status.HTTP_200_OK)

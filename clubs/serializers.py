@@ -96,8 +96,14 @@ class ClubRankingSerializer(serializers.ModelSerializer):
                   'participation_count', 'participation_rate']
 
     def get_total_events(self, obj):
-        # 총 이벤트 수 계산
-        return obj.club.events.count()
+        from events.models import Event
+
+        """
+        클럽에 관련된 총 이벤트 수를 반환
+        """
+        club = obj.club
+        total_events = Event.objects.filter(club=club).count()
+        return total_events
 
     def get_participation_count(self, obj):
         # 참가자가 참석한 총 이벤트 수

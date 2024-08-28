@@ -14,9 +14,11 @@ from django.contrib.auth import get_user_model
 
 from django.db.models import Sum
 
-from utils.assign_ranks import assign_ranks
-
 User = get_user_model()
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Club(models.Model):
     name        = models.CharField(max_length=100)
@@ -81,10 +83,11 @@ class ClubMember(models.Model):
             # 평균 점수를 계산하여 업데이트
             member.total_avg_score = total_sum_score / event_count if event_count > 0 else 0
             member.save()
+            logger.info(f"=========================member {member.user.name}: {member.total_avg_score}========")
 
         # 3. 모든 멤버를 평균 점수 기준으로 정렬하여 랭킹을 부여
         sorted_members = sorted(members, key=lambda m: m.total_avg_score)
-        assign_ranks(sorted_members, 'sum_rank')
+        cls.assign_ranks(sorted_members, 'total_avg_score')
 
     @classmethod
     def calculate_handicap_avg_rank(cls, club):
@@ -111,4 +114,32 @@ class ClubMember(models.Model):
 
         # 3. 모든 멤버를 핸디캡 평균 점수 기준으로 정렬하여 랭킹을 부여
         sorted_members = sorted(members, key=lambda m: m.total_handicap_avg_score)
-        assign_ranks(sorted_members, 'handicap_rank')
+        cls.assign_ranks(sorted_members, 'total_handicap_avg_score')
+
+    def assign_ranks(cls, members, sort_type):
+        """
+        sort_type에 따라 클럽 멤버들을 정렬하고, 동점자를 고려한 순위를 계산하여 데이터베이스에 저장.
+        sort_type이 'total_avg_score'일 경우 'total_rank'에, 'total_handicap_avg_score'일 경우 'total_handicap_rank'에 순위 저장.
+        """
+        previous_score = None
+        rank = 1
+        tied_rank = 1  # 동점자의 랭크를 별도로 관리
+
+        # rank_type 설정: sort_type에 따라 업데이트할 필드를 동적으로 결정
+        rank_field = 'total_rank' if sort_type == 'total_avg_score' else 'total_handicap_rank'
+
+        for idx, member in enumerate(members):
+            current_score = getattr(member, sort_type)
+
+            if current_score == previous_score:
+                setattr(member, rank_field, f"T{tied_rank}")  # 이전 참가자와 동일한 점수라면 T로 표기
+                setattr(members[idx - 1], rank_field, f"T{tied_rank}")  # 이전 참가자의 랭크도 T로 업데이트
+            else:
+                setattr(member, rank_field, str(rank))  # 새로운 점수일 경우 일반 순위
+                tied_rank = rank  # 새로운 점수에서 동점 시작 지점을 설정
+
+            previous_score = current_score
+            rank += 1  # 다음 순위로 이동
+
+            # 업데이트된 랭킹을 데이터베이스에 저장
+            member.save()
