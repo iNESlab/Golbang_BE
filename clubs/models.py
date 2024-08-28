@@ -12,6 +12,8 @@ clubs/models.py
 from django.db import models
 from django.contrib.auth import get_user_model
 
+from django.db.models import Sum
+
 User = get_user_model()
 
 class Club(models.Model):
@@ -39,3 +41,16 @@ class ClubMember(models.Model):
 
     class Meta:
         unique_together = ('user', 'club')
+
+    def update_total_points(self):
+        """
+        클럽 멤버의 전체 포인트를 모든 이벤트의 포인트 합으로 업데이트
+        """
+        from participants.models import Participant
+
+        # 참가자의 모든 이벤트 포인트를 합산
+        total_points = Participant.objects.filter(club_member=self).aggregate(total=Sum('points'))['total'] or 0
+
+        # 총 포인트 업데이트
+        self.total_points = total_points
+        self.save()

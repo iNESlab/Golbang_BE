@@ -117,6 +117,13 @@ class MySQLInterface:
             # 참가자 포인트 계산 및 저장
             await sync_to_async(participant.calculate_points)()
 
+            from clubs.models import ClubMember
+
+            # 모든 참가자의 포인트 계산이 끝난 후, 클럽 멤버들의 총 포인트 업데이트
+            club = participants.event.club  # 참가자가 속한 모임을 가져옴
+            for member in ClubMember.objects.filter(club=club):
+                await sync_to_async(member.update_total_points)()
+
     async def transfer_hole_scores_to_db(self, participants):
         # Redis에서 홀 점수를 가져와서 MySQL로 전달
         for participant in participants:
