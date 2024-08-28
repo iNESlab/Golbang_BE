@@ -12,8 +12,11 @@ Django REST Framework에서 데이터의 직렬화(Serialization)와 역직렬�
 '''
 
 from rest_framework import serializers
+
 from .models import Club, ClubMember
 from django.contrib.auth import get_user_model
+
+from .utils import calculate_event_points
 
 User = get_user_model()
 
@@ -77,3 +80,47 @@ class ClubAdminAddSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClubMember
         fields = ('user', 'role')
+
+class ClubRankingSerializer(serializers.ModelSerializer):
+    """
+    클럽 멤버의 랭킹 정보를 직렬화하는 시리얼라이저
+    """
+    club_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    total_events = serializers.SerializerMethodField()          # 총 이벤트 수
+    participation_count = serializers.SerializerMethodField()   # 총 참석한 횟수
+    participation_rate = serializers.SerializerMethodField()    # 참석율
+
+    class Meta:
+        model = ClubMember
+        fields = ['club_id', 'total_rank', 'total_handicap_rank', 'total_points', 'total_events',
+                  'participation_count', 'participation_rate']
+
+    def get_total_events(self, obj):
+        from events.models import Event
+
+        """
+        클럽에 관련된 총 이벤트 수를 반환
+        """
+        club = obj.club
+        total_events = Event.objects.filter(club=club).count()
+        return total_events
+
+    def get_participation_count(self, obj):
+        # 클럽 멤버가 참석한 총 이벤트 수를 반환 (ACCEPT와 PARTY 상태인 참가자만 포함)
+        from participants.models import Participant
+        return Participant.objects.filter(club_member=obj, status_type__in=['ACCEPT', 'PARTY']).count()
+
+    def get_participation_rate(self, obj):
+        # 참석률 계산
+        total_events = self.get_total_events(obj)
+        participation_count = self.get_participation_count(obj)
+        return (participation_count / total_events * 100) if total_events > 0 else 0.0
+
+class ClubStatisticsSerializer(serializers.Serializer):
+    from participants.serializers import EventStatisticsSerializer
+
+    """
+    클럽 통계 정보를 반환하는 메인 시리얼라이저
+    """
+    ranking = ClubRankingSerializer()
+    events = EventStatisticsSerializer(many=True)

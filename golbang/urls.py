@@ -1,12 +1,12 @@
 '''
-MVP demo ver 0.0.2
-2024.07.25
+MVP demo ver 0.0.3
+2024.08.28
 golbang/urls.py
 
 역할: 골방 프로젝트 전체의 엔드포인트 라우팅
 현재 기능:
 - admin
-- accounts, club(모임), event(이벤트)
+- accounts, club(모임), event(이벤트), participants(참가자), statistics(통계)
 '''
 
 from django.contrib import admin
@@ -32,8 +32,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),  # admin 페이지
     path('api/v1/users/', include('accounts.urls')),    # accounts 앱의 URL
     path('api/v1/clubs/', include('clubs.urls')),       # clubs 앱의 URL
-    path('api/v1/events/', include('events.urls')),
-    path('api/v1/participants/', include('participants.urls')),
+    path('api/v1/events/', include('events.urls')),     # events 앱의 URL
+    path('api/v1/participants/', include('participants.urls')), # participatns 앱의 URL
+
     path('auth/', include('drf_social_oauth2.urls', namespace='drf')),
 
     # Swagger URL

@@ -113,3 +113,52 @@ class HoleScoreSerializer(serializers.ModelSerializer):
     class Meta:
         model  = HoleScore
         fields = ['action', 'participant_id', 'hole_number', 'score']
+
+
+class ParticipantEventStatisticsSerializer(serializers.ModelSerializer):
+    """
+    이벤트 종료 후, 한 이벤트에 대해 모든 참가자들의 통계 정보를 반환하는 시리얼라이저
+    """
+    participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    total_points = serializers.SerializerMethodField(read_only=True)
+    total_participants  = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Participant
+        fields = ['participant_id', 'sum_score', 'handicap_score',  'rank', 'handicap_rank', 'points', 'total_points', 'total_participants']
+
+    def get_total_participants(self, obj):
+        """
+        이벤트에 참여한 전체 참가자 수 반환
+        """
+        return Participant.objects.filter(event=obj.event).count()
+
+    def get_total_points(self, obj):
+        """
+        클럽 멤버의 전체 포인트를 반환
+        """
+        # Participant의 club_member 필드를 통해 ClubMember 인스턴스를 가져옴
+        club_member = obj.club_member
+
+        # ClubMember 인스턴스의 total_points를 업데이트하고 반환
+        club_member.update_total_points()
+        return club_member.total_points
+
+class EventStatisticsSerializer(serializers.ModelSerializer):
+    """
+    각 이벤트에 대한 참가자(본인) 통계를 직렬화하는 시리얼라이저
+    """
+    event_id = serializers.PrimaryKeyRelatedField(source='event.id', read_only=True)
+    event_name = serializers.CharField(source='event.event_title', read_only=True)
+    total_participants = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Participant
+        fields = ['event_id', 'event_name', 'sum_score', 'handicap_score', 'points',
+                  'total_participants', 'rank', 'handicap_rank']
+
+    def get_total_participants(self, obj):
+        """
+        이벤트에 참여한 전체 참가자 수 반환 (ACCEPT와 PARTY 상태인 참가자만 포함)
+        """
+        return Participant.objects.filter(event=obj.event, status_type__in=['ACCEPT', 'PARTY']).count()

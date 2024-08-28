@@ -1,7 +1,7 @@
 '''
 MVP demo ver 0.0.6
 2024.08.27
-accounts/views.py
+accounts/participants_view.py
 
 역할: Django Rest Framework(DRF)를 사용하여 API 엔드포인트의 로직을 처리
 현재 기능:

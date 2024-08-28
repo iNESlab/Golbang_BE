@@ -8,11 +8,12 @@ participants/urls.py
 '''
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ParticipantViewSet
+from .views import ParticipantViewSet, StatisticsViewSet
 
 # end point: api/v1/participants
 router = DefaultRouter()
 router.register(r'', ParticipantViewSet,'participants')
+router.register(r'statistics', StatisticsViewSet,'statistics')
 
 urlpatterns = [
     path('', include(router.urls)),

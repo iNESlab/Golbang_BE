@@ -93,26 +93,47 @@ class MySQLInterface:
         Event.objects.filter(id=event_id).update(**asdict(event_data))
 
     async def transfer_participant_data_to_db(self, participants):
-        # Redis에서 참가자 데이터를 가져와서 MySQL로 전달
-        for participant in participants:
-            redis_key = f'participant:{participant.id}'
-            logging.info('redis_key: %s', redis_key)
+        from clubs.models import ClubMember
+        try:
+            # Redis에서 참가자 데이터를 가져와서 MySQL로 전달
+            for participant in participants:
+                redis_key = f'participant:{participant.id}'
+                logging.info('redis_key: %s', redis_key)
 
-            participant_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)
+                participant_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)
 
-            # ParticipantUpdateData 객체 생성
-            participant_data = ParticipantUpdateData(
-                participant_id=participant.id,
-                rank=participant_data_dict.get(b"rank"),
-                handicap_rank=participant_data_dict.get(b"handicap_rank"),
-                sum_score=participant_data_dict.get(b"sum_score"),
-                handicap_score=participant_data_dict.get(b"handicap_score"),
-                is_group_win=participant_data_dict.get(b"is_group_win"),
-                is_group_win_handicap=participant_data_dict.get(b"is_group_win_handicap")
-            )
+                # ParticipantUpdateData 객체 생성
+                participant_data = ParticipantUpdateData(
+                    participant_id=participant.id,
+                    rank=participant_data_dict.get(b"rank"),
+                    handicap_rank=participant_data_dict.get(b"handicap_rank"),
+                    sum_score=participant_data_dict.get(b"sum_score"),
+                    handicap_score=participant_data_dict.get(b"handicap_score"),
+                    is_group_win=participant_data_dict.get(b"is_group_win"),
+                    is_group_win_handicap=participant_data_dict.get(b"is_group_win_handicap")
+                )
 
-            if participant_data.rank is not None and participant_data.handicap_rank is not None:
-                await self.update_participant_rank_in_db(participant_data)
+                if participant_data.rank is not None and participant_data.handicap_rank is not None:
+                    await self.update_participant_rank_in_db(participant_data)
+
+                # 참가자 포인트 계산 및 저장
+                await sync_to_async(participant.calculate_points)()
+
+        except Exception as e:
+            logging.error(f"Error updating participant data: {e}")
+
+        # 모든 참가자의 포인트 계산이 끝난 후, 클럽 멤버들의 총 포인트 업데이트
+        try:
+            club = participants[0].event.club  # 첫 번째 참가자가 속한 모임을 가져옴 (모든 참가자가 동일한 클럽에 속해있음)
+            for member in ClubMember.objects.filter(club=club):
+                await sync_to_async(member.update_total_points)()
+
+            # 클럽 멤버들의 평균 점수 및 핸디캡 점수 랭킹 업데이트
+            await sync_to_async(ClubMember.calculate_avg_rank)(club)
+            await sync_to_async(ClubMember.calculate_handicap_avg_rank)(club)
+
+        except Exception as e:
+            logging.error(f"Error updating club member points or ranks: {e}")
 
     async def transfer_hole_scores_to_db(self, participants):
         # Redis에서 홀 점수를 가져와서 MySQL로 전달

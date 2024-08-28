@@ -21,7 +21,6 @@ from clubs.models import Club
 from participants.models import Participant, HoleScore
 from .models import Event
 from participants.serializers import ParticipantCreateUpdateSerializer, ParticipantDetailSerializer
-from .utils import EventUtils
 
 class EventCreateUpdateSerializer(serializers.ModelSerializer):
     event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
