@@ -5,6 +5,12 @@ clubs/views/club_statistics.py
 
 역할: 모임 내 랭킹 조회
 '''
+import logging
+
+from rest_framework.decorators import action
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from participants.models import Participant
 from participants.serializers import EventStatisticsSerializer
@@ -12,15 +18,8 @@ from participants.serializers import EventStatisticsSerializer
 from . import ClubViewSet
 from ..models import Club, ClubMember
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
-
-from rest_framework.decorators import action
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-
 from ..serializers import ClubRankingSerializer, ClubStatisticsSerializer
-
-import logging
+from clubs.tasks import calculate_club_ranks_and_points
 
 logger = logging.getLogger(__name__)
 
@@ -57,21 +56,9 @@ class ClubStatisticsViewSet(ClubViewSet):
             logger.error(f"Club member not found for user {user} in club {club}")
             return handle_404_not_found('club member', club_id)
 
-        # 클럽 멤버의 랭킹 계산
-        ClubMember.calculate_avg_rank(club)
-        ClubMember.calculate_handicap_avg_rank(club)
-        logger.info(f"Ranks calculated for club: {club}")
-
-        # 참가자 포인트 계산 및 업데이트
-        participants = Participant.objects.filter(club_member__club=club, status_type__in=['ACCEPT', 'PARTY'])
-        for participant in participants:
-            participant.calculate_points()
-            logger.info(f"Points calculated for participants in club: {participant}")
-
-        # 클럽 멤버들의 총 포인트 업데이트
-        for member in ClubMember.objects.filter(club=club):
-            member.update_total_points()
-        logger.info(f"Total points updated for members in club: {club}")
+        # 비동기 작업으로 랭킹 및 포인트 계산 수행
+        calculate_club_ranks_and_points.delay(club_id)
+        logger.info(f"Celery task scheduled for updating ranks and points for club: {club_id}")
 
         # 클럽 멤버의 랭킹 정보 시리얼라이징
         ranking_serializer = ClubRankingSerializer(club_member)

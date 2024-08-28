@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.3
-2024.07.24
+MVP demo ver 0.0.9
+2024.08.28
 clubs/models.py
 
 역할: 모임(Club)과 관련된 데이터베이스 모델을 정의
