@@ -97,9 +97,6 @@ class Participant(models.Model):
         else:
             rank_value = int(self.rank)
 
-        # 동점자 순위에 해당하는 참가자 수 계산
-        tied_participants = Participant.objects.filter(event=self.event, rank=self.rank).count()
-
         # 점수 계산: 동점자 수를 고려한 점수 할당
         score_points = total_participants - rank_value + 1
 

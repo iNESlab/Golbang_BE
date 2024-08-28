@@ -120,7 +120,7 @@ class StatisticsViewSet(viewsets.ViewSet):
     @action(detail=True, methods=['post'], url_path='calculate-points')
     def calculate_points(self, request, pk=None):
         """
-        특정 이벤트가 종료된 후, 참가자들의 포인트를 계산하고 저장합니다.
+        특정 이벤트가 종료된 후, 참가자들의 포인트를 계산하고 저장
         """
         try:
             event = Event.objects.get(pk=pk)
