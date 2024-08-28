@@ -143,3 +143,20 @@ class ParticipantEventStatisticsSerializer(serializers.ModelSerializer):
         # ClubMember 인스턴스의 total_points를 업데이트하고 반환
         club_member.update_total_points()
         return club_member.total_points
+
+class EventStatisticsSerializer(serializers.ModelSerializer):
+    """
+    각 이벤트에 대한 참가자 통계를 직렬화하는 시리얼라이저
+    """
+    event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    event_name = serializers.CharField(source='event.event_title', read_only=True)
+    total_participants = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Participant
+        fields = ['event_id', 'event_name', 'sum_score', 'handicap_score', 'points',
+                  'total_participants', 'rank', 'handicap_rank']
+
+    def get_total_participants(self, obj):
+        # 이벤트에 참여한 전체 참가자 수 반환
+        return Participant.objects.filter(event=obj.event).count()
