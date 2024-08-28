@@ -63,7 +63,7 @@ class ClubStatisticsViewSet(ClubViewSet):
         logger.info(f"Ranks calculated for club: {club}")
 
         # 참가자 포인트 계산 및 업데이트
-        participants = Participant.objects.filter(club_member__club=club)
+        participants = Participant.objects.filter(club_member__club=club, status_type__in=['ACCEPT', 'PARTY'])
         for participant in participants:
             participant.calculate_points()
             logger.info(f"Points calculated for participants in club: {participant}")

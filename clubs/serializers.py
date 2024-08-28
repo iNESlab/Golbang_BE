@@ -106,15 +106,15 @@ class ClubRankingSerializer(serializers.ModelSerializer):
         return total_events
 
     def get_participation_count(self, obj):
-        # 참가자가 참석한 총 이벤트 수
-        return obj.participant_set.count()
+        # 클럽 멤버가 참석한 총 이벤트 수를 반환 (ACCEPT와 PARTY 상태인 참가자만 포함)
+        from participants.models import Participant
+        return Participant.objects.filter(club_member=obj, status_type__in=['ACCEPT', 'PARTY']).count()
 
     def get_participation_rate(self, obj):
         # 참석률 계산
         total_events = self.get_total_events(obj)
         participation_count = self.get_participation_count(obj)
         return (participation_count / total_events * 100) if total_events > 0 else 0.0
-
 
 class ClubStatisticsSerializer(serializers.Serializer):
     from participants.serializers import EventStatisticsSerializer

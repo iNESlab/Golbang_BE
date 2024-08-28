@@ -127,8 +127,9 @@ class StatisticsViewSet(viewsets.ViewSet):
         except Event.DoesNotExist:
             return handle_404_not_found('event', pk)
 
-        # 이벤트에 참가한 모든 참가자들을 대상으로 포인트 계산
-        participants = Participant.objects.filter(event=event)
+        # 이벤트에 "참가"한 모든 참가자들을 대상으로 포인트 계산
+        participants = Participant.objects.filter(event=event, status_type__in=['ACCEPT', 'PARTY'])
+
         for participant in participants:
             participant.calculate_points()
 

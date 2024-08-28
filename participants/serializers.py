@@ -117,7 +117,7 @@ class HoleScoreSerializer(serializers.ModelSerializer):
 
 class ParticipantEventStatisticsSerializer(serializers.ModelSerializer):
     """
-    이벤트 종료 후, 참가자들의 통계 정보를 반환하는 시리얼라이저
+    이벤트 종료 후, 한 이벤트에 대해 모든 참가자들의 통계 정보를 반환하는 시리얼라이저
     """
     participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     total_points = serializers.SerializerMethodField(read_only=True)
@@ -146,7 +146,7 @@ class ParticipantEventStatisticsSerializer(serializers.ModelSerializer):
 
 class EventStatisticsSerializer(serializers.ModelSerializer):
     """
-    각 이벤트에 대한 참가자 통계를 직렬화하는 시리얼라이저
+    각 이벤트에 대한 참가자(본인) 통계를 직렬화하는 시리얼라이저
     """
     event_id = serializers.PrimaryKeyRelatedField(source='event.id', read_only=True)
     event_name = serializers.CharField(source='event.event_title', read_only=True)
@@ -158,5 +158,7 @@ class EventStatisticsSerializer(serializers.ModelSerializer):
                   'total_participants', 'rank', 'handicap_rank']
 
     def get_total_participants(self, obj):
-        # 이벤트에 참여한 전체 참가자 수 반환
-        return Participant.objects.filter(event=obj.event).count()
+        """
+        이벤트에 참여한 전체 참가자 수 반환 (ACCEPT와 PARTY 상태인 참가자만 포함)
+        """
+        return Participant.objects.filter(event=obj.event, status_type__in=['ACCEPT', 'PARTY']).count()
