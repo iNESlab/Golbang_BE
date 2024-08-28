@@ -116,20 +116,20 @@ class ClubMember(models.Model):
         sorted_members = sorted(members, key=lambda m: m.total_handicap_avg_score)
         cls.assign_ranks(sorted_members, 'total_handicap_avg_score')
 
-    def assign_ranks(cls, members, sort_type):
+    def assign_ranks(members, type):
         """
-        sort_type에 따라 클럽 멤버들을 정렬하고, 동점자를 고려한 순위를 계산하여 데이터베이스에 저장.
-        sort_type이 'total_avg_score'일 경우 'total_rank'에, 'total_handicap_avg_score'일 경우 'total_handicap_rank'에 순위 저장.
+        동점자를 고려한 순위를 계산하여 데이터베이스에 저장.
+        type이 'total_avg_score'일 경우 'total_rank'에, 'total_handicap_avg_score'일 경우 'total_handicap_rank'에 순위 저장.
         """
         previous_score = None
         rank = 1
         tied_rank = 1  # 동점자의 랭크를 별도로 관리
 
-        # rank_type 설정: sort_type에 따라 업데이트할 필드를 동적으로 결정
-        rank_field = 'total_rank' if sort_type == 'total_avg_score' else 'total_handicap_rank'
+        # type 설정: type에 따라 업데이트할 필드를 동적으로 결정
+        rank_field = 'total_rank' if type == 'total_avg_score' else 'total_handicap_rank'
 
         for idx, member in enumerate(members):
-            current_score = getattr(member, sort_type)
+            current_score = getattr(member, type)
 
             if current_score == previous_score:
                 setattr(member, rank_field, f"T{tied_rank}")  # 이전 참가자와 동일한 점수라면 T로 표기

@@ -148,7 +148,7 @@ class EventStatisticsSerializer(serializers.ModelSerializer):
     """
     각 이벤트에 대한 참가자 통계를 직렬화하는 시리얼라이저
     """
-    event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    event_id = serializers.PrimaryKeyRelatedField(source='event.id', read_only=True)
     event_name = serializers.CharField(source='event.event_title', read_only=True)
     total_participants = serializers.SerializerMethodField()
 
