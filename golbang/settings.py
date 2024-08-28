@@ -13,6 +13,9 @@ import urllib.parse as urlparse
 
 # 로컬에서 테스트를 원할 시, 아래 두 줄의 주석을 해제하면 됨 (깃허브에 올릴 떄는 주석처리 하기!)
 from pathlib import Path
+
+from celery.schedules import crontab
+
 pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -126,7 +129,24 @@ CHANNEL_LAYERS = {
     },
 }
 
+# Celery
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+# CELERY_TIMEZONE = 'Asia/Seoul'
+CELERY_BEAT_SCHEDULE = {
+    'update-club-rankings-every-day': {
+        'task': 'clubs.tasks.update_all_clubs_periodically',
+        'schedule': crontab(minute=0, hour=0),  # 매일 자정에 실행
+    },
+}
+
+
+
 AUTH_USER_MODEL = 'accounts.User' # Custom User Model
+
 
 # REST framework
 REST_FRAMEWORK = {

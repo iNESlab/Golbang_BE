@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class ClubStatisticsViewSet(ClubViewSet):
     permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['get'], url_path='rank')
+    @action(detail=False, methods=['get'], url_path='ranks')
     def retrieve_statistics(self, request):
         """
         특정 클럽의 통계 및 이벤트 정보를 조회하는 엔드포인트
