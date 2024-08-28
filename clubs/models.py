@@ -33,6 +33,9 @@ class ClubMember(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES_TYPE, default='member')
+    total_points = models.IntegerField(default=0)
+    total_rank = models.CharField("모임 내 전체 랭킹", max_length=10, default="0", null=True, blank=True)
+    total_handicap_rank = models.CharField("모임 내 전체 핸디캡 적용 랭킹", max_length=10, default="0", null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'club')

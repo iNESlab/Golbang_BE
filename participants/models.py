@@ -51,6 +51,7 @@ class Participant(models.Model):
     handicap_score  = models.IntegerField("핸디캡 점수", default=0) #TODO: 웹소켓으로 점수 입력할 때마다 갱신이 어려우면 제거.
     rank            = models.CharField("랭킹", max_length=10, default="0", null=True, blank=True) #TODO: 정렬 방법(sum_score or handicap_Score)에 따라 바뀌므로 없어도 될거 같음
     handicap_rank   = models.CharField("핸디캡 랭킹", max_length=10, default="0", null=True, blank=True)
+    points          = models.IntegerField("포인트", default=0)
     created_at      = models.DateTimeField(auto_now_add=True)
     updated_at      = models.DateTimeField(auto_now=True)
 
