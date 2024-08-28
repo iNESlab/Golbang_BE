@@ -87,7 +87,6 @@ class ClubStatisticsViewSet(ClubViewSet):
             'ranking': ranking_serializer.data,
             'events': event_serializer.data
         }
-        # response_serializer = ClubStatisticsSerializer(data=data)
         return Response({
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved statistics in club',
