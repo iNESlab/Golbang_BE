@@ -38,8 +38,8 @@ class ClubMember(models.Model):
     total_points = models.IntegerField(default=0)
     total_rank = models.CharField("모임 내 전체 랭킹", max_length=10, default="0", null=True, blank=True)
     total_handicap_rank = models.CharField("모임 내 전체 핸디캡 적용 랭킹", max_length=10, default="0", null=True, blank=True)
-    total_sum_score = models.IntegerField("모임 내 이벤트의 스코어 총합", default=0)
-    total_handicap_score = models.IntegerField("모임 내 이벤트의 핸디캡 적용 스코어 총합", default=0)
+    total_avg_score = models.FloatField("모임 내 모든 이벤트의 평균 점수", default=0.0)
+    total_handicap_avg_score = models.FloatField("모임 내 모든 이벤트의 핸디캡 적용 평균 점수", default=0.0)
 
     class Meta:
         unique_together = ('user', 'club')
