@@ -78,6 +78,37 @@ class Participant(models.Model):
     def get_handicap_score(self):
         return self.get_total_score() - self.club_member.user.handicap
 
+    def calculate_points(self):
+        """
+        참가자의 포인트를 계산하여 데이터베이스에 저장한다.
+        포인트 = 스코어 점수 + 출석 점수
+        스코어 점수는 참가자 순위에 따라 부여되고, 출석 시 기본적으로 2점을 추가로 제공한다.
+        """
+        # 기본 출석 점수 (2점)
+        attendance_points = 2
+
+        # 참가자 수를 기준으로 스코어 점수를 계산 (참가자 수가 20명일 때 1등: 20점, 꼴등: 1점)
+        total_participants = Participant.objects.filter(event=self.event).count()
+
+        # 동점 처리와 관련된 랭크 처리
+        score_points = 0
+        if self.rank.startswith('T'):  # 동점자의 경우
+            rank_value = int(self.rank[1:])  # 'T2' -> 2
+        else:
+            rank_value = int(self.rank)
+
+        # 동점자 순위에 해당하는 참가자 수 계산
+        tied_participants = Participant.objects.filter(event=self.event, rank=self.rank).count()
+
+        # 점수 계산: 동점자 수를 고려한 점수 할당
+        score_points = total_participants - rank_value + 1
+
+        # 총 포인트 계산
+        total_points = attendance_points + score_points
+
+        # 포인트 저장
+        self.points = total_points
+        self.save()
    
 class HoleScore(models.Model):
 
