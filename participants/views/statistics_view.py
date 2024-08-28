@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 
 from participants.models import Participant
+from participants.serializers import ParticipantEventStatisticsSerializer
 from participants.utils.statistics import calculate_statistics
 from events.models import Event
 from clubs.models import ClubMember
@@ -136,7 +137,11 @@ class StatisticsViewSet(viewsets.ViewSet):
         for member in club_members:
             member.update_total_points()
 
+        # 포인트 계산 후, 참가자 정보를 시리얼라이즈하여 반환
+        serializer = ParticipantEventStatisticsSerializer(participants, many=True)
+
         return Response({
             'status': status.HTTP_200_OK,
-            'message': 'Successfully calculated points for all participants'
+            'message': 'Successfully calculated points for all participants',
+            'data': serializer.data
         }, status=status.HTTP_200_OK)

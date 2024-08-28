@@ -113,3 +113,21 @@ class HoleScoreSerializer(serializers.ModelSerializer):
     class Meta:
         model  = HoleScore
         fields = ['action', 'participant_id', 'hole_number', 'score']
+
+
+class ParticipantEventStatisticsSerializer(serializers.ModelSerializer):
+    """
+    이벤트 종료 후, 참가자들의 통계 정보를 반환하는 시리얼라이저
+    """
+    participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    total_participants  = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Participant
+        fields = ['participant_id', 'sum_score', 'handicap_score', 'points', 'total_participants', 'rank', 'handicap_rank']
+
+    def get_total_participants(self, obj):
+        """
+        이벤트에 참여한 전체 참가자 수 반환
+        """
+        return Participant.objects.filter(event=obj.event).count()
