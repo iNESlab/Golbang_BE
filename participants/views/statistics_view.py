@@ -5,6 +5,7 @@ participants/views/statistics_view.py
 
 역할: Django Rest Framework(DRF)를 사용하여 참가자의 개인 통계 API 엔드포인트의 로직을 처리
 - 전체 통계, 연도별 통계, 기간별 통계
+- 전체 참가자 포인트 일괄 계산(points, total_points 업데이트)
 '''
 from datetime import datetime, timedelta
 
@@ -16,10 +17,13 @@ from rest_framework import viewsets
 
 from participants.models import Participant
 from participants.utils.statistics import calculate_statistics
+from events.models import Event
+from clubs.models import ClubMember
 
 from datetime import timedelta
 
-from utils.error_handlers import handle_400_bad_request
+from utils.error_handlers import handle_400_bad_request, handle_404_not_found
+
 
 class StatisticsViewSet(viewsets.ViewSet):
     '''
@@ -110,4 +114,29 @@ class StatisticsViewSet(viewsets.ViewSet):
             "status": status.HTTP_200_OK,
             "message": f"Successfully retrieved statistics for the period {start_date} to {end_date}",
             "data": data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='calculate-points')
+    def calculate_points(self, request, pk=None):
+        """
+        특정 이벤트가 종료된 후, 참가자들의 포인트를 계산하고 저장합니다.
+        """
+        try:
+            event = Event.objects.get(pk=pk)
+        except Event.DoesNotExist:
+            return handle_404_not_found('event', pk)
+
+        # 이벤트에 참가한 모든 참가자들을 대상으로 포인트 계산
+        participants = Participant.objects.filter(event=event)
+        for participant in participants:
+            participant.calculate_points()
+
+        # 해당 이벤트의 모든 클럽 멤버의 총 포인트 업데이트
+        club_members = ClubMember.objects.filter(club=event.club)
+        for member in club_members:
+            member.update_total_points()
+
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully calculated points for all participants'
         }, status=status.HTTP_200_OK)
