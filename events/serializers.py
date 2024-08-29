@@ -73,6 +73,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 class EventDetailSerializer(serializers.ModelSerializer):
+    my_participant_id = serializers.SerializerMethodField(read_only=True)
     participants = ParticipantDetailSerializer(source='participant_set', many=True, read_only=True)
     event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     participants_count = serializers.SerializerMethodField(read_only=True)
@@ -88,11 +89,13 @@ class EventDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['event_id', 'participants', 'participants_count', 'party_count','accept_count',
+        fields = ['event_id', 'my_participant_id', 'participants', 'participants_count', 'party_count','accept_count',
                   'deny_count', 'pending_count', 'event_title', 'location', 'start_date_time', 'end_date_time',
                   'repeat_type', 'game_mode', 'alert_date_time', 'member_group',
                   'user_id', 'date', 'status_type']
 
+    def get_my_participant_id(self, obj):
+        return obj.participant_set.filter(club_member__user=self.context['request'].user).first().id
     def get_participants_count(self, obj):
         return obj.participant_set.count()
     def get_party_count(self, obj):
