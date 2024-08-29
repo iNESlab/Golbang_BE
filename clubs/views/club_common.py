@@ -83,8 +83,14 @@ class ClubViewSet(viewsets.ModelViewSet):
             data['name'] = request.data.get('name')
             data['description'] = request.data.get('description')
             data['image'] = request.data.get('image')
-            data['members'] = [int(member) for member in request.data.getlist('members')]
-            data['admins'] = [int(admin) for admin in request.data.getlist('admins')]
+
+            # members와 admins를 쉼표로 구분된 문자열로 받음
+            members_str = request.data.get('members', '')
+            admins_str = request.data.get('admins', '')
+
+            # 쉼표로 구분된 문자열을 리스트로 변환
+            data['members'] = [int(member.strip()) for member in members_str.split(',') if member.strip().isdigit()]
+            data['admins'] = [int(admin.strip()) for admin in admins_str.split(',') if admin.strip().isdigit()]
         else:
             data = request.data.copy()
             data['members'] = [int(member) for member in request.data.get('members', [])]
@@ -103,6 +109,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             # 유효성 검사 실패 시 에러 메시지 반환
             return handle_club_400_invalid_serializer(serializer)
+
 
         club = serializer.save()  # 유효한 데이터인 경우 모임 생성
 
