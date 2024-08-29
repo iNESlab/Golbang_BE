@@ -27,18 +27,19 @@ class UserSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model   = User # 직렬화할 모델
-        fields  = ('id', 'name', 'email') # 직렬화할 모델의 필드 지정
+        fields  = ('id', 'name', 'profile_image', 'email') # 직렬화할 모델의 필드 지정
 
 class ClubMemberSerializer(serializers.ModelSerializer):
     '''
     ClubMember 모델을 직렬화하는 클래스
-    클럽 내의 멤버의 역할에 대한 정보가 담김
+    클럽 내의 멤버의 멤버아이디, 이름, 역할에 대한 정보가 담김
     '''
-    user = UserSerializer()
+    member_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    name = serializers.CharField(source='user.name')
 
     class Meta:
         model = ClubMember
-        fields = ('user', 'role')
+        fields = ('member_id', 'name', 'role')
 
 class ClubSerializer(serializers.ModelSerializer):
     '''
@@ -85,14 +86,16 @@ class ClubRankingSerializer(serializers.ModelSerializer):
     """
     클럽 멤버의 랭킹 정보를 직렬화하는 시리얼라이저
     """
-    club_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    member_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    name = serializers.CharField(source='user.name')
+    profile = serializers.ImageField(source='user.profile_image')
     total_events = serializers.SerializerMethodField()          # 총 이벤트 수
     participation_count = serializers.SerializerMethodField()   # 총 참석한 횟수
     participation_rate = serializers.SerializerMethodField()    # 참석율
 
     class Meta:
         model = ClubMember
-        fields = ['club_id', 'total_rank', 'total_handicap_rank', 'total_points', 'total_events',
+        fields = ['member_id', 'name', 'profile', 'total_rank', 'total_handicap_rank', 'total_points', 'total_events',
                   'participation_count', 'participation_rate']
 
     def get_total_events(self, obj):

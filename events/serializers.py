@@ -36,7 +36,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
         model = Event
         fields = ['event_id', 'club_id', 'participants', 'event_title', 'location',
                   'start_date_time', 'end_date_time', 'repeat_type', 'game_mode', 'alert_date_time']
-        # club_id: param으로 받는 값도 추가해야한다. param -> view (request data에 param 데이터 추가) -> serial
+        #TODO club_id: param으로 받는 값도 추가해야한다. param -> view (request data에 param 데이터 추가) -> serial
 
     def create(self, validated_data):
         with transaction.atomic():
