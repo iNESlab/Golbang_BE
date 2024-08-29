@@ -145,6 +145,7 @@ class EventViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
 
+
         date_str = request.query_params.get('date')
         if not date_str:
             date_str = str(date.today())
