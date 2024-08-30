@@ -36,10 +36,15 @@ class ClubMemberSerializer(serializers.ModelSerializer):
     '''
     member_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     name = serializers.CharField(source='user.name')
+    profile_image = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ClubMember
-        fields = ('member_id', 'name', 'role')
+        fields = ('member_id', 'name', 'role', 'profile_image')
+
+    def get_profile_image(self,obj):
+        profile_image = obj.user.profile_image
+        return profile_image.url if profile_image else None
 
 class ClubSerializer(serializers.ModelSerializer):
     '''
