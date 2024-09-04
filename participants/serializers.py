@@ -53,7 +53,7 @@ class ParticipantDetailSerializer(serializers.ModelSerializer):
     참가자 상세정보를 반환하는 시리얼라이저
     '''
     participant_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
-    member = ClubMemberSerializer(read_only=True)
+    member = ClubMemberSerializer(source='club_member', read_only=True)
     sum_score = serializers.SerializerMethodField(read_only=True)
     handicap_score = serializers.SerializerMethodField(read_only=True)
     hole_number = serializers.SerializerMethodField(read_only=True) # 마지막 홀 번호 반환하는 메서드 필드
