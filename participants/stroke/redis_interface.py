@@ -12,7 +12,7 @@ from asgiref.sync import sync_to_async
 import redis
 
 from participants.models import Participant
-from participants.stroke.data_class import EventData
+from participants.stroke.data_class import EventData, ParticipantResponseData
 
 # Redis 클라이언트 설정
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
@@ -39,6 +39,7 @@ class RedisInterface:
         event_id = participant.event_id
         handicap_score = sum_score - participant.club_member.user.handicap
         redis_key = f'event:{event_id}:participant:{participant.id}'
+        await sync_to_async(redis_client.hset)(redis_key, "user_name", participant.club_member.user.name)
         await sync_to_async(redis_client.hset)(redis_key, "sum_score", sum_score)
         await sync_to_async(redis_client.hset)(redis_key, "handicap_score", handicap_score)
         await sync_to_async(redis_client.hset)(redis_key, "group_type", participant.group_type)
@@ -57,7 +58,7 @@ class RedisInterface:
         self.assign_ranks(sorted_by_handicap_score, 'handicap_rank')
 
         for participant in participants:
-            redis_key = f'event:{event_id}:participant:{participant.id}'
+            redis_key = f'event:{event_id}:participant:{participant.participant_id}'
             await sync_to_async(redis_client.hset)(redis_key, "rank", participant.rank)
             await sync_to_async(redis_client.hset)(redis_key, "handicap_rank", participant.handicap_rank)
             await sync_to_async(redis_client.expire)(redis_key, 172800)
@@ -107,13 +108,15 @@ class RedisInterface:
 
         is_group_win = await sync_to_async(redis_client.hget)(redis_key, "is_group_win")
         is_group_win_handicap = await sync_to_async(redis_client.hget)(redis_key, "is_group_win_handicap")
+        user_name = await sync_to_async(redis_client.hget)(redis_key, "user_name")
 
+        user_name = user_name.decode('utf-8') if user_name else 'unknown'
         sum_score = int(sum_score) if sum_score else 0
         handicap_score = int(handicap_score) if handicap_score else 0
         is_group_win = bool(int(is_group_win)) if is_group_win else False
         is_group_win_handicap = bool(int(is_group_win)) if is_group_win_handicap else False
 
-        return sum_score, handicap_score, is_group_win, is_group_win_handicap
+        return user_name, sum_score, handicap_score, is_group_win, is_group_win_handicap
 
     async def get_participants_from_redis(self, event_id, group_type_filter=None):
         # Redis에서 참가자들을 가져옴
@@ -132,29 +135,34 @@ class RedisInterface:
             participant_data = await sync_to_async(redis_client.hgetall)(participant_key)
 
             # 각 필드를 가져와 변환
+            user_name = participant_data.get(b'user_name', 'unknown')
             sum_score = participant_data.get(b'sum_score', 0)
             handicap_score = participant_data.get(b'handicap_score', 0)
-            team_type = participant_data.get(b'team_type', b'')
+            team_type = participant_data.get(b'team_type', '')
             group_type = participant_data.get(b'group_type', 0)
-            is_group_win = participant_data.get(b'is_group_win', b'0')
-            is_group_win_handicap = participant_data.get(b'is_group_win_handicap', b'0')
+            rank = participant_data.get(b'rank','')
+            handicap_rank = participant_data.get(b'')
+            is_group_win = participant_data.get(b'is_group_win', False)
+            is_group_win_handicap = participant_data.get(b'is_group_win_handicap', False)
 
             logging.info(f'group_type:{int(group_type)}, group_type_filter:{group_type_filter}')
             # 그룹 필터링: group_type이 전달되었고, 가져온 group_type이 동일한지 확인
             if group_type_filter is not None and group_type and int(group_type) != group_type_filter:
                 continue
-
-            participant = Participant(
-                id=participant_id,
-                event_id=event_id,
-                sum_score=int(sum_score) if sum_score else 0,
-                handicap_score=int(handicap_score) if handicap_score else 0,
-                team_type=team_type.decode('utf-8') if team_type else None, # 문자열은 디코딩 해줘야함. 정수는 int로 됨
-                group_type=int(group_type) if group_type else None,
-                is_group_win=bool(int(is_group_win)) if is_group_win else False,
-                is_group_win_handicap=bool(int(is_group_win_handicap)) if is_group_win_handicap else False
+            participant = ParticipantResponseData(
+                participant_id=participant_id,
+                user_name=user_name,
+                group_type=group_type,
+                team_type=team_type,
+                is_group_win=is_group_win,
+                is_group_win_handicap=is_group_win_handicap,
+                hole_number=0,
+                score=0,
+                rank=rank,
+                handicap_rank=handicap_rank,
+                sum_score=sum_score,
+                handicap_score=handicap_score,
             )
-
             participants.append(participant)
 
         return participants
