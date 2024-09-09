@@ -98,10 +98,11 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 await self.update_event_win_team_in_redis(participant.event_id)
 
             # Redis에서 갱신된 sum_score와 handicap_score, is_group_win, is_group_win_handicap을 가져오기
-            sum_score, handicap_score, is_group_win, is_group_win_handicap = await self.get_scores_from_redis(participant)
+            user_name, sum_score, handicap_score, is_group_win, is_group_win_handicap = await self.get_scores_from_redis(participant)
 
             response_data = ParticipantResponseData(
                 participant_id=participant_id,
+                user_name=user_name,
                 hole_number=hole_number,           # 사용자 입력
                 group_type=participant.group_type, # mysql에서 가져옴
                 team_type=participant.team_type,   # mysql에서 가져옴
@@ -135,8 +136,10 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
     async def input_score(self, event):
         try:
+
             response_data = ParticipantResponseData(
                 participant_id=event['participant_id'],
+                user_name='N/A',
                 hole_number=event['hole_number'],
                 group_type=event['group_type'],
                 team_type=event['team_type'],
@@ -149,7 +152,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             await self.send_json(asdict(response_data))
         except Exception as e:
-            await self.send_json({'error': '메시지 전송 실패'})
+            await self.send_json({'error': f'메시지 전송 실패, {e}'})
 
     async def send_scores(self):
         try:
@@ -164,14 +167,15 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             await self.send_json(group_scores)
         except Exception as e:
-            await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
+            await self.send_json({'error': f'스코어 기록을 가져오는 데 실패했습니다.{e}'})
 
     async def process_participant(self, participant):
-        participant_id = participant.id
+        participant_id = participant.participant_id
         hole_scores = await self.get_all_hole_scores_from_redis(participant_id)
         logging.info(f'hole_scores:{hole_scores}')
         return {
             'participant_id': participant_id,
+            'user_name': participant.user_name,
             'group_type': participant.group_type,
             'team_type': participant.team_type,
             'is_group_win': participant.is_group_win,
