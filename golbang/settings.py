@@ -41,6 +41,8 @@ MAIN_DOMAIN = env('MAIN_DOMAIN')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']
+
 # AWS
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
