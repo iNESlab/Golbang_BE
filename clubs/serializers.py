@@ -132,3 +132,11 @@ class ClubStatisticsSerializer(serializers.Serializer):
     """
     ranking = ClubRankingSerializer()
     events = EventStatisticsSerializer(many=True)
+
+class ClubProfileSerializer(serializers.ModelSerializer):
+    """
+    간단한 클럽 프로필(id, 클럽명, 대표 이미지)
+    """
+    class Meta:
+        model = Club  # 직렬화할 모델
+        fields = ('id', 'name', 'image')
