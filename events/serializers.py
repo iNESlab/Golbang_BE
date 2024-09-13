@@ -18,6 +18,7 @@ from rest_framework import serializers
 
 from accounts.models import User
 from clubs.models import Club
+from clubs.serializers import ClubProfileSerializer
 from participants.models import Participant, HoleScore
 from .models import Event
 from participants.serializers import ParticipantCreateUpdateSerializer, ParticipantDetailSerializer
@@ -73,6 +74,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
 
 
 class EventDetailSerializer(serializers.ModelSerializer):
+    club = ClubProfileSerializer(read_only=True)
     my_participant_id = serializers.SerializerMethodField(read_only=True)
     participants = ParticipantDetailSerializer(source='participant_set', many=True, read_only=True)
     event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
@@ -89,7 +91,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['event_id', 'my_participant_id', 'participants', 'participants_count', 'party_count','accept_count',
+        fields = ['club', 'event_id', 'my_participant_id', 'participants', 'participants_count', 'party_count','accept_count',
                   'deny_count', 'pending_count', 'event_title', 'location', 'start_date_time', 'end_date_time',
                   'repeat_type', 'game_mode', 'alert_date_time', 'member_group',
                   'user_id', 'date', 'status_type']
