@@ -97,7 +97,8 @@ class EventDetailSerializer(serializers.ModelSerializer):
                   'user_id', 'date', 'status_type']
 
     def get_my_participant_id(self, obj):
-        return obj.participant_set.filter(club_member__user=self.context['request'].user).first().id
+        self.my_participant_id = obj.participant_set.filter(club_member__user=self.context['request'].user).first().id
+        return self.my_participant_id
     def get_participants_count(self, obj):
         return obj.participant_set.count()
     def get_party_count(self, obj):
@@ -109,7 +110,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
     def get_pending_count(self, obj):
         return obj.participant_set.filter(status_type="PENDING").count()
     def get_member_group(self, obj):
-        return self.context.get('group_type')
+        return obj.participant_set.filter(id=self.my_participant_id).first().group_type
 
 class UserResultSerializer(serializers.ModelSerializer):
     # 사용자의 스트로크와 순위를 계산하여 반환하는 시리얼라이저
