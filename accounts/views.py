@@ -128,7 +128,7 @@ class UserInfoViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         }, status=status.HTTP_200_OK)
 
-    def get(self, request):
+    def retrieve(self, request, *args, **kwargs):
         """
         특정 사용자 정보 조회
         """
