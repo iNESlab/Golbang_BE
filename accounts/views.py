@@ -17,10 +17,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated  # 권한 클�
 from rest_framework.response import Response                        # API 응답 생성
 from rest_framework.views import APIView
 
-from accounts.serializers import UserSerializer, UserInfoSerializer
+from accounts.serializers import UserSerializer, UserInfoSerializer, OtherUserInfoSerializer
 from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
+from django.http import QueryDict
+
 
 User = get_user_model()
 
@@ -113,8 +115,17 @@ class UserInfoViewSet(viewsets.ModelViewSet):
     사용자 정보 조회 및 수정 ViewSet
     """
     queryset = User.objects.all()  # 모든 사용자 조회
-    serializer_class = UserInfoSerializer
+    serializer_class = UserInfoSerializer  # 기본 시리얼라이저는 UserInfoSerializer로 설정
     permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+
+    def get_serializer_class(self):
+        """
+        사용자 목록을 조회할 때는 OtherUserInfoSerializer 사용,
+        특정 사용자 조회나 수정 등에는 UserInfoSerializer 사용
+        """
+        if self.action == 'list':
+            return OtherUserInfoSerializer  # 전체 사용자 목록 조회 시 사용
+        return UserInfoSerializer  # 나머지 경우에 사용
 
     def list(self, request, *args, **kwargs):
         """
@@ -145,6 +156,20 @@ class UserInfoViewSet(viewsets.ModelViewSet):
         특정 사용자 정보 수정
         """
         instance = self.get_object()
+
+        # 프로필 이미지 삭제 로직 추가: 클라이언트가 빈 문자열을 전송한 경우 None(null)로 처리
+        if 'profile_image' in request.data:
+            profile_image = request.data.get('profile_image')
+            if profile_image == '':  # 빈 문자열인 경우
+                # request.data가 QueryDict인지 확인
+                if isinstance(request.data, QueryDict):
+                    request.data._mutable = True  # 수정 가능 상태로 설정
+                    request.data['profile_image'] = None  # 빈 문자열을 None으로 변환
+                    request.data._mutable = False  # 다시 수정 불가 상태로 전환
+                else:
+                    # 일반 딕셔너리인 경우 바로 수정 가능
+                    request.data['profile_image'] = None
+
         serializer = self.get_serializer(instance, data=request.data, partial=True)
 
         if not serializer.is_valid():

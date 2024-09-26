@@ -88,13 +88,15 @@ class ClubViewSet(viewsets.ModelViewSet):
             members_str = request.data.get('members', '')
             admins_str = request.data.get('admins', '')
 
-            # 쉼표로 구분된 문자열을 리스트로 변환
-            data['members'] = [int(member.strip()) for member in members_str.split(',') if member.strip().isdigit()]
-            data['admins'] = [int(admin.strip()) for admin in admins_str.split(',') if admin.strip().isdigit()]
+            # 쉼표로 구분된 문자열을 리스트로 변환 (userId가 들어오므로 나중에 id로 변환 필요)
+            data['members'] = [member.strip() for member in members_str.split(',') if member.strip()]
+            data['admins'] = [admin.strip() for admin in admins_str.split(',') if admin.strip()]
+            print("Processed Data1:", data)
         else:
             data = request.data.copy()
-            data['members'] = [int(member) for member in request.data.get('members', [])]
-            data['admins'] = [int(admin) for admin in request.data.get('admins', [])]
+            data['members'] = [member for member in request.data.get('members', [])]
+            data['admins'] = [admin for admin in request.data.get('admins', [])]
+            print("Processed Data2:", data)
         return data
 
     # 모임 생성 메서드
@@ -103,6 +105,28 @@ class ClubViewSet(viewsets.ModelViewSet):
         data = self.process_request_data(request)
         print("Request Data:", request.data)
         print("Processed Data:", data)
+
+        # 프론트에서 받은 userId 리스트로 유저 검색 후, 그 id를 members 및 admins에 저장
+        members_user_ids = data.get('members', [])
+        admins_user_ids = data.get('admins', [])
+
+        # 유효한 유저인지 확인하고, userId로 User 모델에서 검색하여 id로 변환
+        members = User.objects.filter(user_id__in=members_user_ids)
+        admins = User.objects.filter(user_id__in=admins_user_ids)
+
+        # userId가 유효하지 않은 경우 처리
+        if members.count() != len(members_user_ids):
+            return handle_400_bad_request('Invalid user IDs in members')
+        if admins.count() != len(admins_user_ids):
+            return handle_400_bad_request('Invalid user IDs in admins')
+
+        # 각각의 userId에 대응하는 id 리스트 생성
+        members_ids = list(members.values_list('id', flat=True))
+        admins_ids = list(admins.values_list('id', flat=True))
+
+        # members와 admins 리스트를 id로 변경
+        data['members'] = members_ids
+        data['admins'] = admins_ids
 
         serializer = self.get_serializer(data=data)  # 요청 데이터를 사용해 serializer 초기화
 
