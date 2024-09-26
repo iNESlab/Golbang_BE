@@ -10,6 +10,7 @@ accounts/participants_view.py
 - 회원 전체 조회, 회원정보 조회, 수정
 - 비밀번호 인증, 변경
 '''
+import boto3
 
 from rest_framework import status, viewsets  # HTTP 응답 상태 코드를 제공하는 모듈
 from rest_framework.decorators import api_view, permission_classes, action  # 함수기반 API 뷰, 뷰에 대한 접근 권한
@@ -22,6 +23,8 @@ from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
 from django.http import QueryDict
+
+from golbang import settings
 
 
 User = get_user_model()
@@ -156,19 +159,31 @@ class UserInfoViewSet(viewsets.ModelViewSet):
         특정 사용자 정보 수정
         """
         instance = self.get_object()
+        print(f"request.data: {request.data}")
 
-        # 프로필 이미지 삭제 로직 추가: 클라이언트가 빈 문자열을 전송한 경우 None(null)로 처리
-        if 'profile_image' in request.data:
-            profile_image = request.data.get('profile_image')
-            if profile_image == '':  # 빈 문자열인 경우
-                # request.data가 QueryDict인지 확인
-                if isinstance(request.data, QueryDict):
-                    request.data._mutable = True  # 수정 가능 상태로 설정
-                    request.data['profile_image'] = None  # 빈 문자열을 None으로 변환
-                    request.data._mutable = False  # 다시 수정 불가 상태로 전환
-                else:
-                    # 일반 딕셔너리인 경우 바로 수정 가능
-                    request.data['profile_image'] = None
+        # 프로필 이미지 삭제 요청 처리
+        if 'profile_image' in request.data and request.data['profile_image'] == '':
+            # 기존 S3에 저장된 프로필 이미지가 있는 경우 삭제 처리
+            if instance.profile_image:
+                s3 = boto3.client('s3', region_name='ap-southeast-2')
+                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                image_key = f"static/{instance.profile_image.name}"  # 파일 경로 추출
+                print(f"image_key: {image_key}")
+                try:
+                    s3.delete_object(Bucket=bucket_name, Key=image_key)
+                    instance.profile_image = None  # 프로필 이미지를 None으로 설정
+                    instance.save()
+                    print(f"S3에서 이미지 {image_key} 삭제 완료")
+                except Exception as e:
+                    print(f"S3 이미지 삭제 오류: {e}")
+
+            # 요청 데이터를 수정하여 이미지 필드를 None으로 처리
+            if isinstance(request.data, QueryDict):
+                request.data._mutable = True
+                request.data['profile_image'] = None
+                request.data._mutable = False
+            else:
+                request.data['profile_image'] = None
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
 
