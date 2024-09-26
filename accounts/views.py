@@ -24,8 +24,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
 from django.http import QueryDict
 
-from golbang import settings
-
+from utils.delete_s3_image import delete_s3_image
 
 User = get_user_model()
 
@@ -165,17 +164,12 @@ class UserInfoViewSet(viewsets.ModelViewSet):
         if 'profile_image' in request.data and request.data['profile_image'] == '':
             # 기존 S3에 저장된 프로필 이미지가 있는 경우 삭제 처리
             if instance.profile_image:
-                s3 = boto3.client('s3', region_name='ap-southeast-2')
-                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-                image_key = f"static/{instance.profile_image.name}"  # 파일 경로 추출
-                print(f"image_key: {image_key}")
-                try:
-                    s3.delete_object(Bucket=bucket_name, Key=image_key)
+                print(f"image_key: {instance.profile_image}")
+
+                # S3 이미지 삭제 함수 호출
+                if delete_s3_image(instance.profile_image):
                     instance.profile_image = None  # 프로필 이미지를 None으로 설정
                     instance.save()
-                    print(f"S3에서 이미지 {image_key} 삭제 완료")
-                except Exception as e:
-                    print(f"S3 이미지 삭제 오류: {e}")
 
             # 요청 데이터를 수정하여 이미지 필드를 None으로 처리
             if isinstance(request.data, QueryDict):
