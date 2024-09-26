@@ -19,11 +19,18 @@ class UserSerializer(serializers.ModelSerializer):
         fields  = ('user_id', 'email', 'password', 'name')
 
 
-# 사용자 정보 조회 시리얼라이저
+# 사용자 정보(자기 자신) 조회 시리얼라이저
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = (
             'id', 'user_id', 'profile_image', 'name', 'email', 'phone_number',
             'handicap', 'address', 'date_of_birth', 'student_id'
+        )
+# 다른 사용자 정보 조회 시리얼라이저
+class OtherUserInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            'id', 'user_id', 'profile_image', 'name'
         )

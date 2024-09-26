@@ -17,7 +17,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated  # 권한 클�
 from rest_framework.response import Response                        # API 응답 생성
 from rest_framework.views import APIView
 
-from accounts.serializers import UserSerializer, UserInfoSerializer
+from accounts.serializers import UserSerializer, UserInfoSerializer, OtherUserInfoSerializer
 from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
@@ -115,8 +115,17 @@ class UserInfoViewSet(viewsets.ModelViewSet):
     사용자 정보 조회 및 수정 ViewSet
     """
     queryset = User.objects.all()  # 모든 사용자 조회
-    serializer_class = UserInfoSerializer
+    serializer_class = UserInfoSerializer  # 기본 시리얼라이저는 UserInfoSerializer로 설정
     permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+
+    def get_serializer_class(self):
+        """
+        사용자 목록을 조회할 때는 OtherUserInfoSerializer 사용,
+        특정 사용자 조회나 수정 등에는 UserInfoSerializer 사용
+        """
+        if self.action == 'list':
+            return OtherUserInfoSerializer  # 전체 사용자 목록 조회 시 사용
+        return UserInfoSerializer  # 나머지 경우에 사용
 
     def list(self, request, *args, **kwargs):
         """
