@@ -8,7 +8,7 @@ participa/stroke/stroke_event_consumer.py
 import json
 import logging
 import asyncio
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 
 from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -106,6 +106,9 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
                 self.process_participant(participant) for participant in participants
             ])
 
+            # None이 아닌 값만 필터링하여 ranks 리스트에 포함
+            ranks = [rank for rank in ranks if rank is not None]
+
             # sum_score 기준으로 정렬
             ranks_sorted = sorted(ranks, key=lambda x: x[sort], reverse=False)
             logging.info(f'ranks_sorted: {ranks_sorted}')
@@ -115,7 +118,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
                 'event': {**asdict(event_data)},  # 상단에 Event 정보를 포함
                 'rankings': ranks_sorted  # 그 아래에 랭킹 정보 표시
             }
-
+            print(f'response_data: {response_data}')
             await self.send_json(response_data)
         except Exception as e:
             await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
@@ -125,6 +128,11 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
         participant_id = participant.id
         rank_data = await self.get_event_rank_from_redis(participant.event_id, participant_id)
+
+        # 아직 점수입력이 안된 참가자는 제외
+        if rank_data.sum_score == 0:
+            return None
+
         user = participant.club_member.user
 
         return {
