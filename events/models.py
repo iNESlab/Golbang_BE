@@ -35,7 +35,8 @@ class Event(models.Model):
 
     club            = models.ForeignKey(Club, on_delete=models.CASCADE, related_name='events') # related_name: 역참조
     event_title     = models.CharField("이벤트 제목", max_length=100, default='unknown_event')
-    location        = models.CharField("장소", max_length=255, default='unknown_location')
+    location        = models.CharField("위도/경도", max_length=255, default='unknown_location')
+    site            = models.CharField("장소명", max_length=255, default='unknown_site')
     start_date_time = models.DateTimeField("시작 시간", default=datetime.now)
     end_date_time   = models.DateTimeField("종료 시간", default=datetime.now)
     repeat_type     = models.CharField("반복 타입", max_length=5, choices=RepeatType.choices, default=RepeatType.NONE)
