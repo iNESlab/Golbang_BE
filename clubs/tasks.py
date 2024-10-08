@@ -36,9 +36,13 @@ def calculate_club_ranks_and_points(club_id):
             ClubMember.calculate_handicap_avg_rank(club)
             logger.info(f"Ranks calculated for club: {club}")
 
-            # 참가자 포인트 계산 및 업데이트
+            # 참가자 포인트 계산 및 업데이트 (조건에 맞는 참가자만 계산)
             participants = Participant.objects.filter(club_member__club=club, status_type__in=['ACCEPT', 'PARTY'])
             for participant in participants:
+                # 포인트 계산 전에 조건을 확인
+                if participant.rank == '0' or participant.handicap_rank == '0':
+                    logger.info(f"Skipping points calculation for participant: {participant}")
+                    continue
                 participant.calculate_points()
                 logger.info(f"Points calculated for participant: {participant}")
 
