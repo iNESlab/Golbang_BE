@@ -35,7 +35,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['event_id', 'club_id', 'participants', 'event_title', 'location',
+        fields = ['event_id', 'club_id', 'participants', 'event_title', 'location', 'site',
                   'start_date_time', 'end_date_time', 'repeat_type', 'game_mode', 'alert_date_time']
         #TODO club_id: param으로 받는 값도 추가해야한다. param -> view (request data에 param 데이터 추가) -> serial
 
@@ -92,7 +92,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ['club', 'event_id', 'my_participant_id', 'participants', 'participants_count', 'party_count','accept_count',
-                  'deny_count', 'pending_count', 'event_title', 'location', 'start_date_time', 'end_date_time',
+                  'deny_count', 'pending_count', 'event_title', 'location', 'site', 'start_date_time', 'end_date_time',
                   'repeat_type', 'game_mode', 'alert_date_time', 'member_group',
                   'user_id', 'date', 'status_type']
 
@@ -172,7 +172,7 @@ class EventResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = ['user', 'event_id', 'event_title', 'location', 'start_date_time', 'end_date_time', 'game_mode', 'participants']
+        fields = ['user', 'event_id', 'event_title', 'location', 'site', 'start_date_time', 'end_date_time', 'game_mode', 'participants']
 
     def get_participants(self, obj):
         # 컨텍스트에서 참가자 리스트를 가져와 정렬
