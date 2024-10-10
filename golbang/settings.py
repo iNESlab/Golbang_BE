@@ -10,6 +10,8 @@ import environ
 import pymysql
 import redis
 import urllib.parse as urlparse
+import firebase_admin                   # FCM
+from firebase_admin import credentials  # FCM
 
 # 로컬에서 테스트를 원할 시, 아래 두 줄의 주석을 해제하면 됨 (깃허브에 올릴 떄는 주석처리 하기!)
 from pathlib import Path
@@ -42,6 +44,12 @@ MAIN_DOMAIN = env('MAIN_DOMAIN')
 DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']
+
+# FCM
+cred_path = os.path.join(BASE_DIR, "serviceAccountKey.json")
+cred = credentials.Certificate(cred_path)
+firebase_admin.initialize_app(cred)
+
 
 # AWS
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
