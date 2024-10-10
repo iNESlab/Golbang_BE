@@ -16,11 +16,12 @@ class CustomUserAdmin(BaseUserAdmin):
     add_form = UserCreationFirstStepForm
 
 
-    list_display        = ('user_id', 'email', 'name', 'phone_number', 'date_of_birth', 'is_admin')
+    list_display        = ('user_id', 'email', 'name', 'phone_number', 'handicap', 'date_of_birth', 'is_admin')
     list_filter         = ('is_admin',)
     fieldsets           = (
                             (None, {'fields': ('user_id', 'email', 'password')}),
                             ('Personal info', {'fields': ('name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id')}),
+                            ('FCM token', {'fields': ('fcm_token',)}),
                             ('Permissions', {'fields': ('is_admin', 'is_active')}),
     )
     add_fieldsets       = (
