@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     'clubs',
     'events',
     'participants',
+    'push_notification',
 
     # ==========
     # DRF (Django Rest Framework)
