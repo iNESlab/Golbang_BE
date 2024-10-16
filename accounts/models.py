@@ -58,6 +58,7 @@ class User(AbstractBaseUser):
     created_at = models.DateTimeField("가입일", auto_now_add=True)
     updated_at = models.DateTimeField("계정 수정일", auto_now=True)
     last_login = models.DateTimeField("최근 접속일", auto_now=True)
+    fcm_token = models.CharField("FCM 토큰 저장 필드", max_length=255, null=True, blank=True)
 
     # manage
     is_admin    = models.BooleanField(default=False) # 관리자

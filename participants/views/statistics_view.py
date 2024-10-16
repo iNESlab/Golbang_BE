@@ -76,6 +76,9 @@ class StatisticsViewSet(viewsets.ViewSet):
         participants = Participant.objects.filter(club_member__user=user,
                                                   event__start_date_time__year=year)  # 특정 연도의 참가 데이터
 
+        if not participants.exists():  # 해당 연도의 데이터가 없을 경우
+            return handle_404_not_found('Statistics', f"for the year {year}")
+
         data = calculate_statistics(participants, year=year)
 
         return Response({
@@ -108,6 +111,9 @@ class StatisticsViewSet(viewsets.ViewSet):
             club_member__user=user,
             event__start_date_time__range=[start_date, end_date + timedelta(days=1)] # 범위 지정할 때에 2번째 인자는 미만으로 처리되므로 end_date에 +1
         )
+
+        if not participants.exists():  # 기간에 해당하는 데이터가 없을 경우
+            return handle_404_not_found('Statistics', f"for the period {start_date} to {end_date}")
 
         data = calculate_statistics(participants, start_date=start_date, end_date=end_date)
         return Response({
