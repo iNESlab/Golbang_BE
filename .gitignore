@@ -10,3 +10,4 @@ gb_env
 gbvenv
 /venv/
 golbang-venv
+serviceAccountKey.json
