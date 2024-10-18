@@ -84,6 +84,11 @@ class Participant(models.Model):
         포인트 = 스코어 점수 + 출석 점수
         스코어 점수는 참가자 순위에 따라 부여되고, 출석 시 기본적으로 2점을 추가로 제공한다.
         """
+
+        # total_score와 handicap_score가 모두 0이면 함수를 종료
+        if self.rank == '0' or self.handicap_rank == '0':
+            return
+
         # 기본 출석 점수 (2점)
         attendance_points = 2
 
