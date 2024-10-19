@@ -46,7 +46,7 @@ class UserCreationSecondStepForm(forms.ModelForm):
     class Meta:
          # 폼에 포함할 모델과 필드
         model   = User
-        fields  = ['name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id', 'fcm_token']
+        fields  = ['name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id']
 
 '''
 사용자 수정 폼

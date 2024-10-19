@@ -11,3 +11,4 @@ gbvenv
 /venv/
 golbang-venv
 serviceAccountKey.json
+golbang_firebase_sdk.json

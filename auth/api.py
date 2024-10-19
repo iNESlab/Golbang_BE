@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.4
-2024.07.27
+MVP demo ver 0.0.5
+2024.10.21
 auth/api.py
 
 역할: DRF REST API
@@ -38,6 +38,7 @@ class LoginApi(APIView):
         # 요청 데이터로부터 이메일 또는 아이디가 들어간 username필드와 비밀번호 가져옴
         username_or_email   = request.data.get('username')
         password            = request.data.get('password')
+        fcm_token           = request.data.get('fcm_token')
 
         # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
         if (username_or_email is None) or (password is None):
@@ -61,6 +62,12 @@ class LoginApi(APIView):
                 "status" : status.HTTP_400_BAD_REQUEST,
                 "message": "Passwords do not match"
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        # FCM 토큰이 비어 있거나 다르면 업데이트
+        if fcm_token:
+            if user.fcm_token != fcm_token:
+                user.fcm_token = fcm_token
+                user.save()
 
         refresh         = RefreshToken.for_user(user)
         access_token    = str(refresh.access_token)
