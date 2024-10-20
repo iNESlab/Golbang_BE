@@ -46,7 +46,7 @@ DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']
 
 # FCM
-cred_path = os.path.join(BASE_DIR, "serviceAccountKey.json")
+cred_path = os.path.join(BASE_DIR, "golbang_firebase_sdk.json")
 cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 
@@ -372,3 +372,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# https://hyun-am-coding.tistory.com/entry/Django-FCM-개발DRF
+# DOCKER 사용시 FCM key 설정 방법
+
+# service_account_key = {
+#     "type": env("TYPE"),
+#     "project_id": env("PROJECT_ID"),
+#     "private_key_id": env("PRIVATE_KEY_ID"),
+#     "private_key": env("PRIVATE_KEY").replace("\\\\n", "\\n"),
+#     "client_email": env("CLIENT_EMAIL"),
+#     "client_id": env("CLIENT_ID"),
+#     "auth_uri": env("AUTH_URI"),
+#     "token_uri": env("TOKEN_URI"),
+#     "auth_provider_x509_cert_url": env("AUTH_PROVIDER_X509_CERT_URL"),
+#     "client_x509_cert_url": env("CLIENT_X_509_CERT_URL"),
+# }
+
+# cred = credentials.Certificate(service_account_key)
+# firebase_admin.initialize_app(cred)
