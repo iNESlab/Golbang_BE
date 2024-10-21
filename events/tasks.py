@@ -8,6 +8,9 @@ Cerly 작업 큐
 
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
+
+from datetime import timezone, timedelta
+
 from events.models import Event
 from utils.push_fcm_notification import get_fcm_tokens_for_club_members, send_fcm_notifications
 
@@ -63,3 +66,66 @@ def send_event_update_notification(event_id):
         logger.error(f"Error finding event {event_id}: {e}")
     except Exception as e:
         logger.error(f"Error sending FCM notifications for event {event_id}: {e}")
+
+
+@shared_task
+def send_event_notification_2_days_before():
+    """
+    이벤트 시작 이틀 전에 알림을 보내는 작업
+    """
+    now = timezone.now()
+    events = Event.objects.filter(start_date_time__date=now + timedelta(days=2))
+
+    for event in events:
+        club = event.club
+        fcm_tokens = get_fcm_tokens_for_club_members(club)
+        message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 이틀 전입니다."
+        message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
+
+        if fcm_tokens:
+            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            logger.info(f"이틀 전 알림 전송 성공: {event.event_title}")
+        else:
+            logger.info(f"No FCM tokens found for club members in club: {club}")
+
+
+@shared_task
+def send_event_notification_1_hour_before():
+    """
+    이벤트 시작 1시간 전에 알림을 보내는 작업
+    """
+    now = timezone.now()
+    events = Event.objects.filter(start_date_time__lte=now + timedelta(hours=1), start_date_time__gt=now)
+
+    for event in events:
+        club = event.club
+        fcm_tokens = get_fcm_tokens_for_club_members(club)
+        message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 1시간 전입니다."
+        message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
+
+        if fcm_tokens:
+            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            logger.info(f"1시간 전 알림 전송 성공: {event.event_title}")
+        else:
+            logger.info(f"No FCM tokens found for club members in club: {club}")
+
+
+@shared_task
+def send_event_notification_event_ended():
+    """
+    이벤트 종료 후 알림을 보내는 작업
+    """
+    now = timezone.now()
+    events = Event.objects.filter(end_date_time__lte=now, end_date_time__gt=now - timedelta(hours=1))
+
+    for event in events:
+        club = event.club
+        fcm_tokens = get_fcm_tokens_for_club_members(club)
+        message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 종료되었습니다."
+        message_body = f"이벤트 결과를 확인해주세요. (스코어 점수 수정은 이벤트 종료 2일 후까지만 가능합니다)"
+
+        if fcm_tokens:
+            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            logger.info(f"이벤트 종료 알림 전송 성공: {event.event_title}")
+        else:
+            logger.info(f"No FCM tokens found for club members in club: {club}")
