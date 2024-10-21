@@ -172,8 +172,6 @@ class ClubViewSet(viewsets.ModelViewSet):
                 continue  # 중복 멤버는 추가하지 않음 (또는 이미 관리자로 추가되어 있는 경우)
             ClubMember.objects.create(club=club, user_id=member_id, role='member')
 
-        club = serializer.save()  # 유효한 데이터인 경우 모임 생성
-
         # 응답 반환 후 비동기적으로 FCM 알림 전송
         send_club_creation_notification.delay(club.id)
 
