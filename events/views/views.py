@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
 
-from events.tasks import send_event_creation_notification
+from events.tasks import send_event_creation_notification, send_event_update_notification
 from clubs.models import ClubMember, Club
 from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
 from participants.models import Participant
@@ -81,6 +81,9 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
+        """
+        PUT 요청 시 이벤트(Event) 수정
+        """
         event_id = self.kwargs.get('pk')
 
         try:
@@ -95,6 +98,9 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(event, data=request.data, partial=True)  # 여기서 partial=True
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # 비동기적으로 이벤트 수정 알림 전송
+        send_event_update_notification.delay(event.event_id)
 
         response_data = {
             'status': status.HTTP_200_OK,
