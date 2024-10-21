@@ -150,18 +150,6 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'clubs.tasks.update_all_clubs_periodically',
         'schedule': crontab(minute=0, hour=0),  # 매일 자정에 실행
     },
-    'send_event_notification_2_days_before': {
-        'task': 'events.tasks.send_event_notification_2_days_before',
-        'schedule': crontab(minute=0, hour=0),  # 매일 자정에 실행
-    },
-    'send_event_notification_1_hour_before': {
-        'task': 'events.tasks.send_event_notification_1_hour_before',
-        'schedule': crontab(minute='*/30'),  # 매 30분마다 실행
-    },
-    'send_event_notification_event_ended': {
-        'task': 'events.tasks.send_event_notification_event_ended',
-        'schedule': crontab(minute='*/30'),  # 매 30분마다 실행
-    },
 }
 
 

@@ -67,6 +67,36 @@ def send_event_update_notification(event_id):
     except Exception as e:
         logger.error(f"Error sending FCM notifications for event {event_id}: {e}")
 
+@shared_task
+def schedule_event_notifications(event_id):
+    """
+    이벤트 생성/수정 시 이틀 전, 1시간 전, 종료 후 알림 예약하는 작업
+    """
+    try:
+        event = Event.objects.get(id=event_id)
+        now = timezone.now()
+
+        # 이틀 전 알림 예약
+        two_days_before = event.start_date_time - timedelta(days=2)
+        if two_days_before > now:
+            countdown_until_2_days = (two_days_before - now).total_seconds()
+            send_event_notification_2_days_before.apply_async((event_id,), countdown=countdown_until_2_days)
+
+        # 1시간 전 알림 예약
+        one_hour_before = event.start_date_time - timedelta(hours=1)
+        if one_hour_before > now:
+            countdown_until_1_hour = (one_hour_before - now).total_seconds()
+            send_event_notification_1_hour_before.apply_async((event_id,), countdown=countdown_until_1_hour)
+
+        # 종료 후 알림 예약
+        if event.end_date_time > now:
+            countdown_until_end = (event.end_date_time - now).total_seconds()
+            send_event_notification_event_ended.apply_async((event_id,), countdown=countdown_until_end)
+
+    except Event.DoesNotExist:
+        logger.error(f"Event {event_id} does not exist")
+    except Exception as e:
+        logger.error(f"Error scheduling event notifications for event {event_id}: {e}")
 
 @shared_task
 def send_event_notification_2_days_before():

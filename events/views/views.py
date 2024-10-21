@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
 
-from events.tasks import send_event_creation_notification, send_event_update_notification
+from events.tasks import send_event_creation_notification, send_event_update_notification, schedule_event_notifications
 from clubs.models import ClubMember, Club
 from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
 from participants.models import Participant
@@ -73,6 +73,9 @@ class EventViewSet(viewsets.ModelViewSet):
         # 비동기적으로 이벤트 생성 알림 전송
         send_event_creation_notification.delay(data.event_id)
 
+        # 이틀 전, 1시간 전, 종료 후 알림 예약
+        schedule_event_notifications.delay(data.event_id)
+
         response_data = {
             'code': status.HTTP_201_CREATED,
             'message': 'successfully Event created',
@@ -101,6 +104,9 @@ class EventViewSet(viewsets.ModelViewSet):
 
         # 비동기적으로 이벤트 수정 알림 전송
         send_event_update_notification.delay(event.event_id)
+
+        # 이틀 전, 1시간 전, 종료 후 알림 예약
+        schedule_event_notifications.delay(event.id)
 
         response_data = {
             'status': status.HTTP_200_OK,
