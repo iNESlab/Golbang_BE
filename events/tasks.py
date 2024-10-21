@@ -6,8 +6,9 @@ MVP demo ver 0.0.1
 Cerly 작업 큐
 '''
 
-from celery import shared_task
+from celery import shared_task, current_app
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.cache import cache
 
 from datetime import timezone, timedelta
 
@@ -80,18 +81,25 @@ def schedule_event_notifications(event_id):
         two_days_before = event.start_date_time - timedelta(days=2)
         if two_days_before > now:
             countdown_until_2_days = (two_days_before - now).total_seconds()
-            send_event_notification_2_days_before.apply_async((event_id,), countdown=countdown_until_2_days)
+            two_days_task = send_event_notification_2_days_before.apply_async((event_id,), countdown=countdown_until_2_days)
 
         # 1시간 전 알림 예약
         one_hour_before = event.start_date_time - timedelta(hours=1)
         if one_hour_before > now:
             countdown_until_1_hour = (one_hour_before - now).total_seconds()
-            send_event_notification_1_hour_before.apply_async((event_id,), countdown=countdown_until_1_hour)
+            one_hour_task = send_event_notification_1_hour_before.apply_async((event_id,), countdown=countdown_until_1_hour)
 
         # 종료 후 알림 예약
         if event.end_date_time > now:
             countdown_until_end = (event.end_date_time - now).total_seconds()
-            send_event_notification_event_ended.apply_async((event_id,), countdown=countdown_until_end)
+            end_task = send_event_notification_event_ended.apply_async((event_id,), countdown=countdown_until_end)
+
+        # task_ids를 캐시에 저장
+        cache.set(f'event_{event_id}_task_ids', {
+            'two_days_task_id': two_days_task.id,
+            'one_hour_task_id': one_hour_task.id,
+            'end_task_id': end_task.id
+        }, timeout=None)
 
     except Event.DoesNotExist:
         logger.error(f"Event {event_id} does not exist")
@@ -159,3 +167,27 @@ def send_event_notification_event_ended():
             logger.info(f"이벤트 종료 알림 전송 성공: {event.event_title}")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
+
+def revoke_event_notifications(event_id):
+    """
+    기존 예약된 이벤트 알림 작업을 취소하는 함수
+    """
+    task_ids = cache.get(f'event_{event_id}_task_ids')
+
+    if not task_ids:
+        logger.info(f"No task IDs found for event {event_id}")
+        return
+
+    try:
+        if task_ids.get('two_days_task_id'):
+            current_app.control.revoke(task_ids['two_days_task_id'], terminate=True)
+        if task_ids.get('one_hour_task_id'):
+            current_app.control.revoke(task_ids['one_hour_task_id'], terminate=True)
+        if task_ids.get('end_task_id'):
+            current_app.control.revoke(task_ids['end_task_id'], terminate=True)
+
+        # 작업 취소 후 캐시에서 제거
+        cache.delete(f'event_{event_id}_task_ids')
+
+    except Exception as e:
+        logger.error(f"Error revoking event notification tasks for event {event_id}: {e}")
