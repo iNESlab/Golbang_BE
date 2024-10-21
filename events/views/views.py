@@ -1,13 +1,12 @@
 '''
-MVP demo ver 0.0.9
-2024.08.27
-events/views/participants_view.py
+MVP demo ver 0.1.0
+2024.10.22
+events/views/views.py
 
 역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
 - 모임 관리자 : 멤버 핸디캡 자동 매칭 기능(팀전/개인전)
 '''
 from datetime import date, datetime
-from django.db.models import Sum
 
 from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
@@ -15,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
 
+from events.tasks import send_event_creation_notification
 from clubs.models import ClubMember, Club
 from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
 from participants.models import Participant
@@ -69,6 +69,9 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # 비동기적으로 이벤트 생성 알림 전송
+        send_event_creation_notification.delay(data.event_id)
 
         response_data = {
             'code': status.HTTP_201_CREATED,
