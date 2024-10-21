@@ -25,7 +25,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
         model = get_user_model()
         fields = (
             'id', 'user_id', 'profile_image', 'name', 'email', 'phone_number',
-            'handicap', 'address', 'date_of_birth', 'student_id'
+            'handicap', 'address', 'date_of_birth', 'student_id', 'fcm_token'
         )
 # 다른 사용자 정보 조회 시리얼라이저
 class OtherUserInfoSerializer(serializers.ModelSerializer):
