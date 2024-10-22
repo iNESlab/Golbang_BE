@@ -48,7 +48,11 @@ def signup_first_step(request):
             }
         }, status=status.HTTP_201_CREATED)
     else:
-        return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "status": status.HTTP_400_BAD_REQUEST,
+            "message": "There were errors in the form submission",
+            "errors": form.errors  # 여기에 form errors 포함
+        }, status=status.HTTP_400_BAD_REQUEST)
 # def signup(request):
 #     serializer = UserSerializer(data=request.data) # 요청 데이터를 이용해 UserSerializer 객체 생성
     
