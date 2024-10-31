@@ -68,14 +68,14 @@ class EventViewSet(viewsets.ModelViewSet):
         data['club_id'] = club.id
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        event = serializer.save()
 
         # 비동기적으로 이벤트 생성 알림 전송
-        send_event_creation_notification.delay(serializer.data.id)
-        print(f"-======={serializer.data}------")
+        send_event_creation_notification.delay(event.id)
+        print(f"===== event id {event.id}")
 
         # 이틀 전, 1시간 전, 종료 후 알림 예약
-        schedule_event_notifications.delay(serializer.data.id)
+        schedule_event_notifications.delay(event.id)
 
         response_data = {
             'code': status.HTTP_201_CREATED,
@@ -101,13 +101,13 @@ class EventViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(event, data=request.data, partial=True)  # 여기서 partial=True
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        event = serializer.save()
 
         # 비동기적으로 이벤트 수정 알림 전송
-        send_event_update_notification.delay(event.event_id)
+        send_event_update_notification.delay(event.id)
 
         # 이틀 전, 1시간 전, 종료 후 알림 예약
-        schedule_event_notifications.delay(event.event_id)
+        schedule_event_notifications.delay(event.id)
 
         response_data = {
             'status': status.HTTP_200_OK,
