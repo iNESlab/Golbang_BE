@@ -1,6 +1,9 @@
 # utils/delete_s3_image.py
 import boto3
+import logging
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 def delete_s3_image(image_key):
     """
@@ -15,7 +18,9 @@ def delete_s3_image(image_key):
     try:
         s3.delete_object(Bucket=bucket_name, Key=image_key)
         print(f"S3에서 이미지 {image_key} 삭제 완료")
+        logger.info(f"S3에서 이미지 {image_key} 삭제 완료")
         return True
     except Exception as e:
         print(f"S3 이미지 삭제 오류: {e}")
+        logger.error(f"S3 이미지 삭제 오류: {e}")
         return False

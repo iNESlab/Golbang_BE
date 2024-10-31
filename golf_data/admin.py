@@ -6,9 +6,15 @@ golf_data/admin.py
 역할: admin 페이지에서 엑셀 파일을 업로드하면 기능이 동작됨
 '''
 # golf_data/admin.py
+import logging
+
 from django.contrib import admin
 from .models import GolfClub, GolfCourse, Tee, ExcelFileUpload
 from .data_import import import_excel_data
+
+from utils.delete_s3_image import delete_s3_image
+
+logger = logging.getLogger(__name__)
 
 class ExcelFileUploadAdmin(admin.ModelAdmin):
     list_display = ('file', 'uploaded_at')
@@ -25,8 +31,16 @@ class ExcelFileUploadAdmin(admin.ModelAdmin):
 
     def delete_model(self, request, obj):
         """파일 삭제 시 관련 데이터도 함께 삭제하도록 구현"""
-        obj.file.delete(save=False)  # S3에 저장된 파일 삭제
-        super().delete_model(request, obj)
+        # 파일이 존재하는지 확인
+        if obj.file:
+            if delete_s3_image(obj.file):
+                obj.file.delete(save=False)  # S3에 저장된 파일 삭제
+                super().delete_model(request, obj)
+            else:
+                logger.error(f"S3에서 파일 삭제 실패: {obj.file.name}")
+        else:
+            logger.warning("삭제 요청 시 파일이 존재하지 않습니다.")
+            super().delete_model(request, obj)
 
 admin.site.register(GolfClub)
 admin.site.register(GolfCourse)
