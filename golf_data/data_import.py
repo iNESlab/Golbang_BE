@@ -1,5 +1,5 @@
 '''
-MVP demo ver 0.0.1
+MVP demo ver 0.0.2
 2024.10.31
 golf_data/data_import.py
 
@@ -19,40 +19,60 @@ def import_excel_data(file_url):
 
     excel_file = BytesIO(response.content)
 
-    clubs_df = pd.read_excel(excel_file, sheet_name='Golf Clubs')
-    courses_df = pd.read_excel(excel_file, sheet_name='Golf Courses')
-    tees_df = pd.read_excel(excel_file, sheet_name='Tees')
+    # 각 시트를 데이터프레임으로 로드하고 `~` 값을 None으로 변환
+    clubs_df = pd.read_excel(excel_file, sheet_name='Golf Clubs').replace('~', None)
+    courses_df = pd.read_excel(excel_file, sheet_name='Golf Courses').replace('~', None)
+    tees_df = pd.read_excel(excel_file, sheet_name='Tees').replace('~', None)
 
-    # 열 이름 확인
-    print("Tees DataFrame Columns:", tees_df.columns)
-
+    # GolfClub 데이터를 데이터베이스에 저장
     for _, row in clubs_df.iterrows():
-        GolfClub.objects.get_or_create(
+        print("import clubs")
+
+        GolfClub.objects.update_or_create(
             facility_id=row['Facility ID'],
-            defaults={'club_name': row['Club Name'], 'address': row['Address']}
+            defaults={'club_name': row['Club Name'] or '', 'address': row['Address'] or ''}
         )
 
+    # GolfCourse 데이터를 데이터베이스에 저장
     for _, row in courses_df.iterrows():
+        print("import courses")
+
         club = GolfClub.objects.get(facility_id=row['Facility ID'])
-        GolfCourse.objects.get_or_create(
+        GolfCourse.objects.update_or_create(
             course_id=row['Course ID'],
-            club=club,
-            course_name=row['Course Name'],
-            defaults={'holes': row['Holes'], 'par': row['Par']}
+            defaults={
+                'club': club,
+                'course_name': row['Course Name'] or '',
+                'holes': row['Holes'] or 0,
+                'par': row['Par'] or 0
+            }
         )
 
+    # Tee 데이터를 데이터베이스에 저장
     for _, row in tees_df.iterrows():
+        print("import tees")
         course = GolfCourse.objects.get(course_id=row['Course ID'])
-        tee = Tee(course=course)
 
-        for hole_num in range(1, 19):
-            par_field = f'hole_{hole_num}_par'
-            handicap_field = f'hole_{hole_num}_handicap'
+        # 특정 조건으로 Tee 객체들 필터링
+        tees = Tee.objects.filter(course=course)
 
-            # 열 이름이 있는지 확인 후, 존재할 경우에만 설정
-            if f'Hole {hole_num} Par' in tees_df.columns:
-                setattr(tee, par_field, row[f'Hole {hole_num} Par'])
-            if f'Hole {hole_num} Handicap' in tees_df.columns:
-                setattr(tee, handicap_field, row[f'Hole {hole_num} Handicap'])
+        # 각 Tee 객체에 대해 반복문을 실행하여 필드를 설정
+        for tee in tees:
+            for hole_num in range(1, 19):
+                par_field = f'hole_{hole_num}_par'
+                handicap_field = f'hole_{hole_num}_handicap'
 
-        tee.save()
+                # 'Hole {x} Par'과 'Hole {x} Handicap' 컬럼 값 가져오기
+                par_value = row.get(f'Hole{hole_num} Par', 0)
+                handicap_value = row.get(f'Hole{hole_num} Handicap', 0)
+
+                # None, '~', 'N/D' 값을 0으로 대체
+                par_value = 0 if par_value in [None, '~', 'N/D'] else int(par_value)
+                handicap_value = 0 if handicap_value in [None, '~', 'N/D'] else int(handicap_value)
+
+                # 필드에 값 설정
+                setattr(tee, par_field, par_value)
+                setattr(tee, handicap_field, handicap_value)
+
+            # Tee 객체 저장
+            tee.save()
