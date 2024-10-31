@@ -101,7 +101,6 @@ INSTALLED_APPS = [
     'clubs',
     'events',
     'participants',
-    'push_notification',
     'golf_data',
 
     # ==========
