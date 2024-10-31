@@ -11,7 +11,7 @@ from rest_framework.routers import DefaultRouter
 from .views import GolfCourseViewSet
 
 router = DefaultRouter()
-router.register('', GolfCourseViewSet, basename='golfcourse')
+router.register(r'', GolfCourseViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

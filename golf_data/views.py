@@ -14,14 +14,15 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import GolfClub
 from .serializers import GolfClubSerializer
-from rest_framework.decorators import permission_classes
+from rest_framework.decorators import permission_classes, action
+
 
 @permission_classes([IsAuthenticated])
 class GolfCourseViewSet(viewsets.ReadOnlyModelViewSet):
     """
     GolfClub 및 GolfCourse 정보 조회를 위한 ViewSet
     - 전체 골프장 코스 정보 조회 (list)
-    - 특정 골프장 코스 정보 조회 (retrieve)
+    - 특정 골프장 코스 정보 조회 (retrieve_golfclub)
     """
     queryset = GolfClub.objects.all()
     serializer_class = GolfClubSerializer
@@ -45,12 +46,12 @@ class GolfCourseViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def retrieve(self, request, *args, **kwargs):
+    @action(detail=True, methods=['get'], url_path=r'(?P<facility_id>[^/.]+)')
+    def retrieve_golfclub(self, request, facility_id=None):
         """
-        특정 골프장 이름으로 조회하여 관련 코스 정보 반환
+        특정 골프장의 facility_id로 조회하여 관련 코스 정보 반환
         """
-        club_name = self.kwargs.get('club_name')
-        golf_club = GolfClub.objects.filter(club_name=club_name).first()
+        golf_club = GolfClub.objects.filter(facility_id=facility_id).first()  # facility_id로 필터링
 
         if golf_club:
             serializer = self.get_serializer(golf_club)
