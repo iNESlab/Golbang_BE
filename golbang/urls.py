@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/v1/clubs/', include('clubs.urls')),       # clubs 앱의 URL
     path('api/v1/events/', include('events.urls')),     # events 앱의 URL
     path('api/v1/participants/', include('participants.urls')), # participatns 앱의 URL
+    path('api/v1/golfcourses/', include('golf_data.urls')),  # golf_data 앱의 URL
 
     path('auth/', include('drf_social_oauth2.urls', namespace='drf')),
 
