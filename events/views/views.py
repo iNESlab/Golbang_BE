@@ -71,10 +71,11 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer.save()
 
         # 비동기적으로 이벤트 생성 알림 전송
-        send_event_creation_notification.delay(data.event_id)
+        send_event_creation_notification.delay(serializer.data.id)
+        print(f"-======={serializer.data}------")
 
         # 이틀 전, 1시간 전, 종료 후 알림 예약
-        schedule_event_notifications.delay(data.event_id)
+        schedule_event_notifications.delay(serializer.data.id)
 
         response_data = {
             'code': status.HTTP_201_CREATED,
@@ -106,7 +107,7 @@ class EventViewSet(viewsets.ModelViewSet):
         send_event_update_notification.delay(event.event_id)
 
         # 이틀 전, 1시간 전, 종료 후 알림 예약
-        schedule_event_notifications.delay(event.id)
+        schedule_event_notifications.delay(event.event_id)
 
         response_data = {
             'status': status.HTTP_200_OK,
