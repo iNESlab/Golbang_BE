@@ -24,7 +24,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
 from django.http import QueryDict
 
-from utils.delete_s3_image import delete_s3_image
+from utils.delete_s3_image import delete_s3_file
 
 User = get_user_model()
 
@@ -167,7 +167,7 @@ class UserInfoViewSet(viewsets.ModelViewSet):
                 print(f"image_key: {instance.profile_image}")
 
                 # S3 이미지 삭제 함수 호출
-                if delete_s3_image(instance.profile_image):
+                if delete_s3_file(instance.profile_image):
                     instance.profile_image = None  # 프로필 이미지를 None으로 설정
                     instance.save()
 

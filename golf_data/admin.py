@@ -12,7 +12,7 @@ from django.contrib import admin
 from .models import GolfClub, GolfCourse, Tee, ExcelFileUpload
 from .data_import import import_excel_data
 
-from utils.delete_s3_image import delete_s3_image
+from utils.delete_s3_image import delete_s3_file
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +20,13 @@ class ExcelFileUploadAdmin(admin.ModelAdmin):
     list_display = ('file', 'uploaded_at')
 
     def save_model(self, request, obj, form, change):
-        # 새로운 파일 업로드 전에 기존 파일 삭제
-        ExcelFileUpload.objects.all().delete()
+        # 기존 파일을 삭제하기 전에 S3 이미지 삭제 함수 호출
+        existing_files = ExcelFileUpload.objects.all()
+        for existing_file in existing_files:
+            if existing_file.file and delete_s3_file(existing_file.file):
+                print(f"=====기존 파일이 존재한다면 s3도 삭제!!!!")
+                # S3에서 파일 삭제 성공 시 기존 데이터 삭제
+                existing_file.delete()
 
         # 새로 업로드된 파일 저장
         super().save_model(request, obj, form, change)
@@ -29,18 +34,6 @@ class ExcelFileUploadAdmin(admin.ModelAdmin):
         # S3 URL을 import_excel_data 함수에 전달하여 데이터 처리
         import_excel_data(obj.file.url)
 
-    def delete_model(self, request, obj):
-        """파일 삭제 시 관련 데이터도 함께 삭제하도록 구현"""
-        # 파일이 존재하는지 확인
-        if obj.file:
-            if delete_s3_image(obj.file):
-                obj.file.delete(save=False)  # S3에 저장된 파일 삭제
-                super().delete_model(request, obj)
-            else:
-                logger.error(f"S3에서 파일 삭제 실패: {obj.file.name}")
-        else:
-            logger.warning("삭제 요청 시 파일이 존재하지 않습니다.")
-            super().delete_model(request, obj)
 
 admin.site.register(GolfClub)
 admin.site.register(GolfCourse)
