@@ -37,7 +37,7 @@ jobs:
           done < .env
 
       - name: Upload Docker Compose and .env as artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-files
           path: |
@@ -60,7 +60,7 @@ jobs:
           rm -f .env docker-compose.prod.yml  # 기존 파일 삭제
 
       - name: Download deployment artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: deployment-files
 
