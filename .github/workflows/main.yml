@@ -19,6 +19,11 @@ jobs:
             export "$line"
           done
 
+      - name: Verify environment variables
+        run: |
+          echo "DOCKER_USERNAME: $DOCKER_USERNAME"
+          echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}"  # 비밀번호 길이만 출력
+
       - name: Log in to Docker Hub
         env:
           DOCKER_USERNAME: $DOCKER_USERNAME
