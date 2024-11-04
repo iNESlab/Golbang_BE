@@ -12,20 +12,17 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v2
 
-      - name: Create .env file from SERVER_ENV_FILE secret
+      - name: Set environment variables from SERVER_ENV_FILE
         run: |
-          # SECRET_KEY에만 작은따옴표 추가
-          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
-          echo "Generated .env file:"
-
-      - name: Load environment variables from .env file
-        run: |
-          set -a
-          source .env
-          set +a
-          echo "Loaded DOCKER_USERNAME: $DOCKER_USERNAME"  # 환경 변수 로드 확인
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' | while IFS= read -r line
+          do
+            export "$line"
+          done
 
       - name: Log in to Docker Hub
+        env:
+          DOCKER_USERNAME: $DOCKER_USERNAME
+          DOCKER_PASSWORD: $DOCKER_PASSWORD
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
 
       - name: Build and push Docker image
