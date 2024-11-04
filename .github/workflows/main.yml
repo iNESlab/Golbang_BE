@@ -36,6 +36,14 @@ jobs:
             fi
           done < .env
 
+      - name: Upload Docker Compose and .env as artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: deployment-files
+          path: |
+            docker-compose.prod.yml  # GitHub에 포함된 Docker Compose 파일
+            .env                     # .env 파일
+
       - name: Log in to Docker Hub
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
 
@@ -43,3 +51,24 @@ jobs:
         run: |
           docker-compose -f docker-compose.prod.yml build
           docker-compose -f docker-compose.prod.yml push
+  deploy:
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Remove existing .env and docker-compose files
+        run: |
+          rm -f .env docker-compose.prod.yml  # 기존 파일 삭제
+
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: deployment-files
+
+      - name: Stop and remove existing containers
+        run: |
+          docker-compose -f docker-compose.prod.yml down
+
+      - name: Pull and run Docker container
+        run: |
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
