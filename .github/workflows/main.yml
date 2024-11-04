@@ -18,7 +18,7 @@ jobs:
           export SECRET_KEY="'${SECRET_KEY}'"
           
           # .env 파일 생성 (SECRET_KEY 제외)
-          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
+          echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > .env
 
       - name: Load environment variables from .env file
         run: |
