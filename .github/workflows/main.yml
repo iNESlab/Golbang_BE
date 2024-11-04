@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Create .env file from secret
-        run: echo "${{ secrets.SERVER_ENV_FILE }}" > .env
+        run: echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
 
       - name: Log in to Docker Hub
         env:
