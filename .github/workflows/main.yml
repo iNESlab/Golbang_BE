@@ -15,7 +15,7 @@ jobs:
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' | awk -F= '{print $1 "='\''" $2 "'\''"}' > .env
-
+         echo "DOCKER_USERNAME=$DOCKER_USERNAME"  # 환경 변수 출력 확인 (보안상 실제 액세스 키는 출력되지 않도록 주의)
       - name: Load environment variables from .env file
         run: |
           set -a
