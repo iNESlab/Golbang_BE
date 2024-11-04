@@ -8,23 +8,27 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}  # SECRET_KEY를 직접 설정
     steps:
       - name: Check out the repository
         uses: actions/checkout@v2
 
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
-          # SECRET_KEY 환경 변수 설정
-          export SECRET_KEY="'${SECRET_KEY}'"
-          
-          # .env 파일 생성 (SECRET_KEY 제외)
+          # .env 파일 생성
           echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > .env
 
-      - name: Load environment variables from .env file
+      - name: Export environment variables from .env file
         run: |
-          set -a
-          source .env
-          set +a
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then  # 빈 줄이 아닌 경우만 처리
+              key=$(echo "$line" | cut -d '=' -f 1)
+              value=$(echo "$line" | cut -d '=' -f 2-)
+              echo "Exporting $key"
+              export "$key=$value"
+            fi
+          done < .env
 
       - name: Verify environment variables
         run: |
