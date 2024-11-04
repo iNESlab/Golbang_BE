@@ -14,6 +14,12 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v2
 
+      - name: Set up Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version  # 설치 확인
+
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
           # .env 파일 생성
@@ -29,11 +35,6 @@ jobs:
               echo "$key=$value" >> $GITHUB_ENV  # 환경 변수를 GITHUB_ENV에 저장
             fi
           done < .env
-
-      - name: Verify environment variables
-        run: |
-          echo "DOCKER_USERNAME: $DOCKER_USERNAME"
-          echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}"  # 비밀번호 길이만 출력
 
       - name: Log in to Docker Hub
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
