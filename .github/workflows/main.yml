@@ -15,7 +15,6 @@ jobs:
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
           echo "'${{ secrets.SERVER_ENV_FILE }}'" | sed 's/\r$//' > .env
-          echo "SECRET_KEY='${{ secrets.SECRET_KEY }}'" >> .env
 
       - name: Load environment variables from .env file
         run: |
