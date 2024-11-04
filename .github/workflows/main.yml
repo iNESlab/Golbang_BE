@@ -12,12 +12,15 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v2
 
-      - name: Set environment variables from SERVER_ENV_FILE
+      - name: Create .env file from SERVER_ENV_FILE secret
         run: |
-          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' | while IFS= read -r line
-          do
-            export "$line"
-          done
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
+
+      - name: Load environment variables from .env file
+        run: |
+          set -a
+          source .env
+          set +a
 
       - name: Verify environment variables
         run: |
@@ -25,9 +28,6 @@ jobs:
           echo "DOCKER_PASSWORD length: ${#DOCKER_PASSWORD}"  # 비밀번호 길이만 출력
 
       - name: Log in to Docker Hub
-        env:
-          DOCKER_USERNAME: $DOCKER_USERNAME
-          DOCKER_PASSWORD: $DOCKER_PASSWORD
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
 
       - name: Build and push Docker image
