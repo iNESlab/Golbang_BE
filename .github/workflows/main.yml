@@ -14,6 +14,10 @@ jobs:
 
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
+          # SECRET_KEY 환경 변수 설정
+          export SECRET_KEY="'${SECRET_KEY}'"
+          
+          # .env 파일 생성 (SECRET_KEY 제외)
           echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
 
       - name: Load environment variables from .env file
