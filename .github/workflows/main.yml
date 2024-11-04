@@ -26,7 +26,7 @@ jobs:
               key=$(echo "$line" | cut -d '=' -f 1)
               value=$(echo "$line" | cut -d '=' -f 2-)
               echo "Exporting $key"
-              export "$key=$value"
+              echo "$key=$value" >> $GITHUB_ENV  # 환경 변수를 GITHUB_ENV에 저장
             fi
           done < .env
 
