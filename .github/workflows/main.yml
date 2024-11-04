@@ -15,14 +15,7 @@ jobs:
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
           # SECRET_KEY에만 작은따옴표 추가
-          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' | awk '
-          /SECRET_KEY/ {
-            print $1 "='\''" $2 "'\''"
-          }
-          !/SECRET_KEY/ {
-            print
-          }
-          ' > .env
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
           echo "Generated .env file:"
           cat .env  # .env 파일 내용 출력 (보안 허용 시에만 사용)
 
