@@ -87,6 +87,17 @@ jobs:
           echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
 
+      - name: Export environment variables from .env file to GITHUB_ENV
+        run: |
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              key=$(echo "$line" | cut -d '=' -f 1)
+              value=$(echo "$line" | cut -d '=' -f 2-)
+              echo "$key=$value" >> $GITHUB_ENV
+              echo "$key" >> vars_to_include.txt  # 변수 이름을 저장
+            fi
+          done < .env
+
       - name: Download deployment artifacts
         uses: actions/download-artifact@v4
         with:
