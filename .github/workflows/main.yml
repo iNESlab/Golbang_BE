@@ -92,15 +92,6 @@ jobs:
         with:
           name: deployment-files
 
-      - name: Create .env file with only the required environment variables
-        run: |
-          # 변수 이름 리스트를 읽고, 해당 변수만 .env 파일로 생성
-          while IFS= read -r var_name; do
-            if [ -n "$var_name" ]; then
-              echo "$var_name=${!var_name}" >> .env
-            fi
-          done < vars_to_include.txt
-
       - name: Check artifact content and location
         run: |
           echo "Checking downloaded files..."
