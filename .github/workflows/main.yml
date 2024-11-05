@@ -24,6 +24,8 @@ jobs:
         run: |
           # .env 파일 생성
           echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > .env
+          # SECRET_KEY 추가
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
 
       - name: Export environment variables from .env file to GITHUB_ENV
         run: |
