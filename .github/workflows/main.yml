@@ -96,10 +96,8 @@ jobs:
           echo "Checking downloaded files..."
           ls -R  # 모든 파일과 디렉토리 출력하여 위치 확인
 
-      - name: Check artifact content and location
-        run: |
-          echo "Checking downloaded files..."
-          ls -R  # 모든 파일과 디렉토리 출력하여 위치 확인
+      - name: Log in to Docker Hub
+        run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
 
       - name: Pull and run Docker container
         run: |
