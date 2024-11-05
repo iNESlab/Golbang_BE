@@ -25,14 +25,14 @@ jobs:
           # .env 파일 생성
           echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > .env
 
-      - name: Export environment variables from .env file
+      - name: Export environment variables from .env file to GITHUB_ENV
         run: |
           while IFS= read -r line; do
-            if [ -n "$line" ]; then  # 빈 줄이 아닌 경우만 처리
+            if [ -n "$line" ]; then
               key=$(echo "$line" | cut -d '=' -f 1)
               value=$(echo "$line" | cut -d '=' -f 2-)
-              echo "Exporting $key"
-              echo "$key=$value" >> $GITHUB_ENV  # 환경 변수를 GITHUB_ENV에 저장
+              echo "$key=$value" >> $GITHUB_ENV
+              echo "$key" >> vars_to_include.txt  # 변수 이름을 저장
             fi
           done < .env
 
@@ -42,12 +42,13 @@ jobs:
           ls -la ${{ github.workspace }}/docker-compose.prod.yml
           ls -la ${{ github.workspace }}/.env
 
-      - name: Upload Docker Compose and .env as artifacts
+      - name: Upload Docker Compose and list of variables as artifacts
         uses: actions/upload-artifact@v4
         with:
           name: deployment-files
           path: |
             ${{ github.workspace }}/docker-compose.prod.yml
+            vars_to_include.txt
 
       - name: Log in to Docker Hub
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
@@ -81,10 +82,19 @@ jobs:
         with:
           name: deployment-files
 
-      - name: Create .env file from all environment variables
+      - name: Create .env file with only the required environment variables
         run: |
-          # 시스템 변수 제외하고 유효한 환경 변수만 저장
-          printenv | grep -E '^[A-Za-z_][A-Za-z0-9_]*=' > .env
+          # 변수 이름 리스트를 읽고, 해당 변수만 .env 파일로 생성
+          while IFS= read -r var_name; do
+            if [ -n "$var_name" ]; then
+              echo "$var_name=${!var_name}" >> .env
+            fi
+          done < vars_to_include.txt
+          
+      - name: Check artifact content and location
+        run: |
+          echo "Checking downloaded files..."
+          ls -R  # 모든 파일과 디렉토리 출력하여 위치 확인
 
       - name: Check artifact content and location
         run: |
