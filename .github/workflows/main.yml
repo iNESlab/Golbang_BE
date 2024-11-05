@@ -57,12 +57,22 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker-compose -f docker-compose.prod.yml build
-          docker-compose -f docker-compose.prod.yml push
+          docker-compose -f docker-compose.ci.yml build
+          docker-compose -f docker-compose.ci.yml push
   deploy:
     runs-on: self-hosted
     needs: build
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}  # SECRET_KEY를 직접 설정
     steps:
+
+      - name: Create .env file from SERVER_ENV_FILE secret
+        run: |
+          # .env 파일 생성
+          echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
+          # SECRET_KEY 추가
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
+
       - name: Stop and remove existing containers (if docker-compose.prod.yml exists)
         run: |
           if [ -f docker-compose.prod.yml ] && [ -f .env ]; then
