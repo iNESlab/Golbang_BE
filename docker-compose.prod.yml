@@ -4,7 +4,7 @@ services:     # 컨테이너 지정
 
   web:
     container_name: web
-    build: .  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
+    image: tinywhale1031/web:latest  # CI에서 빌드할 이미지 이름
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
       REDIS_URL: redis://redis:6379/0  # Redis URL 환경 변수 설정
@@ -18,22 +18,6 @@ services:     # 컨테이너 지정
       - .env
       # - ./golbang_firebase_sdk.json # Firebase Admin SDK 키 파일
 
-  db:
-    container_name: db
-    image: mariadb:latest
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_DB_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DB_NAME}
-      MYSQL_USER: ${MYSQL_DB_USER}
-      MYSQL_PASSWORD: ${MYSQL_DB_PASSWORD}
-    ports:  # 포트포워딩 - 로컬의 호스트가 3306포트를 사용 중일 수 있으므로 3307 포트를 도커 컨테이너의 3306 포트로 포워딩해줌
-      - "3307:3306"
-    env_file: # 설정은 .env 파일에 의존
-      - .env
-    volumes:  # 파일 시스템 정의
-      - dbdata:/var/lib/mysql
-
   redis:
     container_name: redis
     image: redis:latest
@@ -45,7 +29,7 @@ services:     # 컨테이너 지정
 
   celery:   # celery 작업자
     container_name: celery
-    build: .
+    image: tinywhale1031/celery:latest
     command: celery -A golbang worker -l info
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
@@ -58,7 +42,7 @@ services:     # 컨테이너 지정
 
   celery-beat:   # 주기적으로 업데이트
     container_name: celery-beat
-    build: .
+    image: tinywhale1031/celery-beat
     command: celery -A golbang beat -l info
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
@@ -70,5 +54,4 @@ services:     # 컨테이너 지정
       - .env
 
 volumes:
-  dbdata:
   redisdata:
