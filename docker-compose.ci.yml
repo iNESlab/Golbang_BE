@@ -10,12 +10,9 @@ services:     # 컨테이너 지정
       dockerfile: Dockerfile.prod  # 배포용 Dockerfile 지정
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
-      MYSQL_DB_HOST: ${MYSQL_DB_HOST}
       REDIS_URL: redis://redis:6379/0  # Redis URL 환경 변수 설정
       REDIS_HOST: redis
     restart: always
-    volumes:  # 파일 시스템 정의
-      - .:/app
     ports:
       - "8000:8000"
     env_file: #
@@ -28,8 +25,6 @@ services:     # 컨테이너 지정
     restart: always
     ports: # 포트포워딩 - 로컬의 호스트가 6379 포트를 사용 중일 수 있으므로 6379 포트를 도커 컨테이너의 6379 포트로 포워딩해줌
       - "6379:6379"
-    volumes: # 파일 시스템 정의
-      - redisdata:/data
 
   celery:   # celery 작업자
     container_name: celery
@@ -40,8 +35,6 @@ services:     # 컨테이너 지정
       DJANGO_SETTINGS_MODULE: golbang.settings
       REDIS_URL: redis://redis:6380/0
       REDIS_HOST: redis
-    volumes:
-      - .:/app
     env_file:
       - .env
 
@@ -54,11 +47,5 @@ services:     # 컨테이너 지정
       DJANGO_SETTINGS_MODULE: golbang.settings
       REDIS_URL: redis://redis:6380/0
       REDIS_HOST: redis
-    volumes:
-      - .:/app
     env_file:
       - .env
-
-volumes:
-  dbdata:
-  redisdata:
