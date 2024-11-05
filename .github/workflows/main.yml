@@ -81,6 +81,11 @@ jobs:
         with:
           name: deployment-files
 
+      - name: Move .env and docker-compose files to correct location
+        run: |
+          mv deployment-files/.env .env
+          mv deployment-files/docker-compose.prod.yml docker-compose.prod.yml
+
       - name: Pull and run Docker container
         run: |
           docker-compose -f docker-compose.prod.yml pull
