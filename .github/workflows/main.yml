@@ -66,13 +66,6 @@ jobs:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}  # SECRET_KEY를 직접 설정
     steps:
 
-      - name: Create .env file from SERVER_ENV_FILE secret
-        run: |
-          # .env 파일 생성
-          echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
-          # SECRET_KEY 추가
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
-
       - name: Stop and remove existing containers (if docker-compose.prod.yml exists)
         run: |
           if [ -f docker-compose.prod.yml ] && [ -f .env ]; then
@@ -88,6 +81,11 @@ jobs:
       - name: Remove existing .env and docker-compose files
         run: |
           rm -f .env docker-compose.prod.yml  # 기존 파일 삭제
+
+      - name: Create .env file from SERVER_ENV_FILE secret
+        run: |
+          echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
 
       - name: Download deployment artifacts
         uses: actions/download-artifact@v4
