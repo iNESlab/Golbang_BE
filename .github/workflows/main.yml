@@ -63,10 +63,10 @@ jobs:
     steps:
       - name: Stop and remove existing containers (if docker-compose.prod.yml exists)
         run: |
-          if [ -f docker-compose.prod.yml ]; then
+          if [ -f docker-compose.prod.yml ] && [ -f .env ]; then
             docker-compose --env-file .env -f docker-compose.prod.yml down
           else
-            echo "docker-compose.prod.yml not found. Skipping container shutdown."
+            echo "docker-compose.prod.yml or .env not found. Skipping container shutdown."
           fi
       - name: Remove existing images
         run: |
