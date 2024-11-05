@@ -3,7 +3,8 @@
 services:     # 컨테이너 지정
 
   web:
-    container_name: "${DOCKER_USERNAME}/web:${VERSION}"
+    container_name: web
+    image: "${DOCKER_USERNAME}/web:${VERSION}"
     build: .  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
@@ -19,7 +20,7 @@ services:     # 컨테이너 지정
       # - ./golbang_firebase_sdk.json # Firebase Admin SDK 키 파일
 
   redis:
-    container_name: "${DOCKER_USERNAME}/redis:${VERSION}"
+    container_name: redis
     image: redis:latest
     restart: always
     ports: # 포트포워딩 - 로컬의 호스트가 6379 포트를 사용 중일 수 있으므로 6379 포트를 도커 컨테이너의 6379 포트로 포워딩해줌
