@@ -61,6 +61,17 @@ jobs:
     runs-on: self-hosted
     needs: build
     steps:
+      - name: Stop and remove existing containers (if docker-compose.prod.yml exists)
+        run: |
+          if [ -f docker-compose.prod.yml ]; then
+            docker-compose --env-file .env -f docker-compose.prod.yml down
+          else
+            echo "docker-compose.prod.yml not found. Skipping container shutdown."
+          fi
+      - name: Remove existing images
+        run: |
+          docker image prune -af  # 모든 사용하지 않는 이미지를 강제 삭제
+
       - name: Remove existing .env and docker-compose files
         run: |
           rm -f .env docker-compose.prod.yml  # 기존 파일 삭제
@@ -69,10 +80,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: deployment-files
-
-      - name: Stop and remove existing containers
-        run: |
-          docker-compose -f docker-compose.prod.yml down
 
       - name: Pull and run Docker container
         run: |
