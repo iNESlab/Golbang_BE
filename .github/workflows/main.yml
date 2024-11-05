@@ -52,7 +52,7 @@ jobs:
           docker-compose -f docker-compose.prod.yml build
           docker-compose -f docker-compose.prod.yml push
   deploy:
-    runs-on: [self-hosted, label-go]
+    runs-on: self-hosted
     needs: build
     steps:
       - name: Remove existing .env and docker-compose files
