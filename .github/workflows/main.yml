@@ -48,7 +48,7 @@ jobs:
           name: deployment-files
           path: |
             ${{ github.workspace }}/docker-compose.prod.yml
-            ${{ github.workspace }}/.env
+            .env
 
       - name: Log in to Docker Hub
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
