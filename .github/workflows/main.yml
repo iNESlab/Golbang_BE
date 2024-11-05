@@ -77,7 +77,7 @@ jobs:
 
       - name: Remove existing images
         run: |
-          docker image prune -af  # 모든 사용하지 않는 이미지를 강제 삭제
+          sudo docker image prune -af  # 모든 사용하지 않는 이미지를 강제 삭제
 
       - name: Remove existing .env and docker-compose files
         run: |
