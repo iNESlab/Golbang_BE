@@ -48,7 +48,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: deployment-files
-          path: ${{ github.workspace }}/docker-compose.prod.yml
+          path: |
+            ${{ github.workspace }}/docker-compose.prod.yml
+            ${{ github.workspace }}/manage.py
 
       - name: Log in to Docker Hub
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
