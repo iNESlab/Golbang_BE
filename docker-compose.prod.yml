@@ -4,7 +4,7 @@ services:     # 컨테이너 지정
 
   web:
     container_name: web
-    image: tinywhale1031/web:latest  # CI에서 빌드할 이미지 이름
+    image: "${DOCKER_USERNAME}/web"  # CI에서 빌드할 이미지 이름
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
       REDIS_URL: redis://redis:6379/0  # Redis URL 환경 변수 설정
@@ -20,7 +20,7 @@ services:     # 컨테이너 지정
 
   redis:
     container_name: redis
-    image: redis:latest
+    image: "${DOCKER_USERNAME}/redis"
     restart: always
     ports: # 포트포워딩 - 로컬의 호스트가 6379 포트를 사용 중일 수 있으므로 6379 포트를 도커 컨테이너의 6379 포트로 포워딩해줌
       - "6380:6379"
@@ -29,7 +29,7 @@ services:     # 컨테이너 지정
 
   celery:   # celery 작업자
     container_name: celery
-    image: tinywhale1031/celery:latest
+    image: "${DOCKER_USERNAME}/celery"
     command: celery -A golbang worker -l info
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
@@ -42,7 +42,7 @@ services:     # 컨테이너 지정
 
   celery-beat:   # 주기적으로 업데이트
     container_name: celery-beat
-    image: tinywhale1031/celery-beat
+    image: "${DOCKER_USERNAME}/celery-beat"
     command: celery -A golbang beat -l info
     environment:
       DJANGO_SETTINGS_MODULE: golbang.settings
