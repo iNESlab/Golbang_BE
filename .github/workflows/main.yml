@@ -35,7 +35,6 @@ jobs:
               key=$(echo "$line" | cut -d '=' -f 1)
               value=$(echo "$line" | cut -d '=' -f 2-)
               echo "$key=$value" >> $GITHUB_ENV
-              echo "$key" >> vars_to_include.txt  # 변수 이름을 저장
             fi
           done < .env
 
@@ -49,9 +48,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: deployment-files
-          path: |
-            ${{ github.workspace }}/docker-compose.prod.yml
-            vars_to_include.txt
+          path: ${{ github.workspace }}/docker-compose.prod.yml
 
       - name: Log in to Docker Hub
         run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
@@ -96,7 +93,6 @@ jobs:
               key=$(echo "$line" | cut -d '=' -f 1)
               value=$(echo "$line" | cut -d '=' -f 2-)
               echo "$key=$value" >> $GITHUB_ENV
-              echo "$key" >> vars_to_include.txt  # 변수 이름을 저장
             fi
           done < .env
 
