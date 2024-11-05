@@ -1,0 +1,118 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    if: github.repository == 'iNESlab/Golbang_BE'  # 특정 레포지토리에서만 실행
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}  # SECRET_KEY를 직접 설정
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version  # 설치 확인
+
+      - name: Create .env file from SERVER_ENV_FILE secret
+        run: |
+          # .env 파일 생성
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
+          # SECRET_KEY 추가
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "VERSION=${{ github.sha }}" >> .env
+
+      - name: Export environment variables from .env file to GITHUB_ENV
+        run: |
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              key=$(echo "$line" | cut -d '=' -f 1)
+              value=$(echo "$line" | cut -d '=' -f 2-)
+              echo "$key=$value" >> $GITHUB_ENV
+            fi
+          done < .env
+
+      - name: Check if files exist before upload
+        run: |
+          ls -la ${{ github.workspace }}  # 프로젝트 루트 디렉토리 확인
+          ls -la ${{ github.workspace }}/docker-compose.prod.yml
+          ls -la ${{ github.workspace }}/.env
+
+      - name: Upload Docker Compose and list of variables as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-files
+          path: |
+            ${{ github.workspace }}/docker-compose.prod.yml
+
+      - name: Log in to Docker Hub
+        run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          docker-compose -f docker-compose.ci.yml build
+          docker-compose -f docker-compose.ci.yml push
+  deploy:
+    if: github.repository == 'iNESlab/Golbang_BE'  # 특정 레포지토리에서만 실행
+    runs-on: self-hosted
+    needs: build
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}  # SECRET_KEY를 직접 설정
+    steps:
+
+      - name: Stop and remove existing containers (if docker-compose.prod.yml exists)
+        run: |
+          if [ -f docker-compose.prod.yml ] && [ -f .env ]; then
+            docker-compose --env-file .env -f docker-compose.prod.yml down
+          else
+            echo "docker-compose.prod.yml or .env not found. Skipping container shutdown."
+          fi
+
+      - name: Remove existing images
+        run: |
+          docker image prune -af  # 모든 사용하지 않는 이미지를 강제 삭제
+
+      - name: Remove existing .env and docker-compose files
+        run: |
+          rm -f .env docker-compose.prod.yml  # 기존 파일 삭제
+
+      - name: Create .env file from SERVER_ENV_FILE secret
+        run: |
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
+          echo "VERSION=${{ github.sha }}" >> .env
+
+      - name: Export environment variables from .env file to GITHUB_ENV
+        run: |
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              key=$(echo "$line" | cut -d '=' -f 1)
+              value=$(echo "$line" | cut -d '=' -f 2-)
+              echo "$key=$value" >> $GITHUB_ENV
+            fi
+          done < .env
+
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-files
+
+      - name: Check artifact content and location
+        run: |
+          echo "Checking downloaded files..."
+          ls -R  # 모든 파일과 디렉토리 출력하여 위치 확인
+
+      - name: Log in to Docker Hub
+        run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+
+      - name: Pull and run Docker container
+        run: |
+          docker-compose --env-file .env -f docker-compose.prod.yml pull
+          docker-compose --env-file .env -f docker-compose.prod.yml up -d
