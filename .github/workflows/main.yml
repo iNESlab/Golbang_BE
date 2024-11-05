@@ -24,7 +24,7 @@ jobs:
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
           # .env 파일 생성
-          echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > .env
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
           # SECRET_KEY 추가
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
           echo "VERSION=${{ github.sha }}" >> .env
@@ -85,7 +85,7 @@ jobs:
 
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
-          echo "${{ secrets.SERVER_ENV_FILE_2 }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
           echo "VERSION=${{ github.sha }}" >> .env
 
