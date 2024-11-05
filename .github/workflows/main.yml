@@ -90,7 +90,7 @@ jobs:
               echo "$var_name=${!var_name}" >> .env
             fi
           done < vars_to_include.txt
-          
+
       - name: Check artifact content and location
         run: |
           echo "Checking downloaded files..."
