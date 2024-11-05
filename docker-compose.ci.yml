@@ -29,7 +29,8 @@ services:     # 컨테이너 지정
       - redisdata:/data
 
   celery:   # celery 작업자
-    container_name: "${DOCKER_USERNAME}/celery:${VERSION}"
+    container_name: celery
+    image: "${DOCKER_USERNAME}/celery:${VERSION}"
     build: .
     command: celery -A golbang worker -l info
     environment:
@@ -42,7 +43,8 @@ services:     # 컨테이너 지정
       - .env
 
   celery-beat:   # 주기적으로 업데이트
-    container_name: "${DOCKER_USERNAME}/celery-beat:${VERSION}"
+    container_name: celery-beat
+    image: "${DOCKER_USERNAME}/celery-beat:${VERSION}"
     build: .
     command: celery -A golbang beat -l info
     environment:
