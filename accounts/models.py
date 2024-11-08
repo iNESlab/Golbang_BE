@@ -13,7 +13,7 @@ from django.contrib.auth.models import (BaseUserManager, AbstractBaseUser)
 # AbstractBaseUser: 실제 모델은 상속받아 생성
 class UserManager(BaseUserManager):
 
-    def create_user(self, email, user_id, password=None, **extra_fields):
+    def create_user(self, user_id, email,  password=None, **extra_fields):
         if not email:
             raise ValueError('Users must have an email address')
         if not user_id:
@@ -30,18 +30,18 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, user_id, password=None, **extra_fields):
+    def create_superuser(self, user_id, email, password=None, **extra_fields):
         extra_fields.setdefault('is_admin', True)
         extra_fields.setdefault('is_active', True)
 
-        return self.create_user(email, user_id, password, **extra_fields)
+        return self.create_user(user_id, email, password, **extra_fields)
 
 
 class User(AbstractBaseUser):
     # step 1
     user_id     = models.CharField("사용자 아이디", unique=True, max_length=150, default='unknown_user')
-    password    = models.CharField("비밀번호", max_length=256, null=True, blank=True) # # Oauth 로그인을 위해 비밀번호 빈 값 허용
     email       = models.EmailField("이메일", unique=True)
+    password    = models.CharField("비밀번호", max_length=256, null=True, blank=True) # # Oauth 로그인을 위해 비밀번호 빈 값 허용
     login_type  = models.CharField(max_length=10, choices=[('general', 'General'), ('social', 'Social')], default='general')
     provider    = models.CharField(max_length=50, null=True, blank=True)
     
