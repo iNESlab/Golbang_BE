@@ -38,5 +38,5 @@ EXPOSE 8000
 CMD ["/wait-for-it.sh", "db:3306", "--", "/wait-for-it.sh", "redis:6379", "--", "sh", "-c", "\
     python manage.py makemigrations && \
     python manage.py migrate && \
-    python manage.py runserver 0.0.0.0:8000 && \
-    python create-superuser.py"]
+    python create-superuser.py && \
+    python manage.py runserver 0.0.0.0:8000"]
