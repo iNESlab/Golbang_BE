@@ -35,4 +35,8 @@ ENV DJANGO_SETTINGS_MODULE=golbang.settings
 EXPOSE 8000
 
 # 명령어 설정
-CMD ["/wait-for-it.sh", "redis:6379", "--", "sh", "-c", "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+CMD ["/wait-for-it.sh", "redis:6379", "--", "sh", "-c", "\
+    python manage.py makemigrations && \
+    python manage.py migrate && \
+    python create-superuser.py && \
+    python manage.py runserver 0.0.0.0:8000"]
