@@ -29,6 +29,9 @@ def send_event_creation_notification(event_id):
         club = event.club
         fcm_tokens = get_fcm_tokens_for_club_members(club)
 
+        # 토큰 리스트 확인을 위한 로그 출력
+        logger.info(f"Retrieved FCM tokens for event creation: {fcm_tokens}")
+
         message_title = f"{club.name} 모임에서 이벤트가 생성되었습니다."
         message_body = f"{event.event_title} 이벤트의 날짜는 {event.start_date_time.strftime('%Y-%m-%d')}이며, 장소는 {event.site}입니다. 참석 여부를 체크해주세요."
 
@@ -53,6 +56,10 @@ def send_event_update_notification(event_id):
         event = Event.objects.get(id=event_id)
         club = event.club
         fcm_tokens = get_fcm_tokens_for_club_members(club)
+
+
+        logger.info(f"Retrieved FCM tokens for event creation: {fcm_tokens}")
+
 
         message_title = f"{club.name} 모임에서 이벤트가 수정되었습니다."
         message_body = f"수정된 {event.event_title} 이벤트의 날짜는 {event.start_date_time.strftime('%Y-%m-%d')}이며, 장소는 {event.site}입니다. 다시 참석 여부를 체크해주세요."
