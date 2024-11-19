@@ -1,13 +1,25 @@
 # utils/push_fcm_notification.py
+import os
 
 import firebase_admin
-from firebase_admin import messaging
+from firebase_admin import credentials, messaging
 import logging
 
 from clubs.models import ClubMember
+from golbang.settings import BASE_DIR
 from participants.models import Participant
 
 logger = logging.getLogger(__name__)
+
+cred_path = os.path.join(BASE_DIR, "golbang-test-31a73-firebase-adminsdk-wqtgg-f611444c79.json")
+
+# Firebase 앱 초기화
+if not firebase_admin._apps:
+    try:
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        logger.error(f'Firebase 초기화 중 오류 발생: {e}')
 
 def get_fcm_tokens_for_club_members(club):
     '''
@@ -16,7 +28,9 @@ def get_fcm_tokens_for_club_members(club):
     :param club: 클럽(모임) 객체
     :return: 클럽(모임) 멤버들의 FCM 토큰 리스트
     '''
-    return list(ClubMember.objects.filter(club=club).values_list('user__fcm_token', flat=True))
+    tokens = ClubMember.objects.filter(club=club).values_list('user__fcm_token', flat=True)
+    return [token for token in tokens if token]
+
 
 def get_fcm_tokens_for_event_participants(event):
     '''
@@ -39,21 +53,22 @@ def send_fcm_notifications(tokens, title, body):
     if not tokens:
         logger.warning("FCM 토큰이 없습니다. 알림을 전송하지 않습니다.")
         return
+    logger.info(f"send_fcm_notifications 전송할 FCM 토큰: {tokens}")  # 토큰 리스트 출력
 
-    # 메시지 목록 생성
-    messages = [
-        messaging.Message(
+    for token in tokens:
+        print(f"token: {token}, type: {type(tokens)}")
+
+    for token in tokens:
+        # 개별 메시지 객체 생성
+        message = messaging.Message(
             notification=messaging.Notification(title=title, body=body),
             token=token,
         )
-        for token in tokens
-    ]
 
-    try:
-        # 일괄 메시지 전송
-        response = messaging.send_all(messages)
-        logger.info(f'{response.success_count}개의 메시지가 성공적으로 전송되었습니다.')
-        if response.failure_count > 0:
-            logger.warning(f'{response.failure_count}개의 메시지 전송에 실패했습니다.')
-    except Exception as e:
-        logger.error(f'FCM 메시지 전송 중 오류 발생: {e}')
+        try:
+            # 메시지 전송
+            response = messaging.send(message)
+            logger.info(f'{token}에 메시지가 성공적으로 전송되었습니다.')
+        except Exception as e:
+            logger.error(f'FCM 메시지 전송 실패: 토큰={token}, 오류={e}')
+            print(f'FCM 메시지 전송 중 오류 발생: {e}')
