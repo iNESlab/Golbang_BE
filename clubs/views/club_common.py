@@ -1,6 +1,6 @@
 '''
-MVP demo ver 0.0.8
-2024.07.27
+MVP demo ver 0.0.9
+2024.10.22
 clubs/views/club_common.py
 
 역할: Django Rest Framework(DRF)를 사용하여 모임 API 엔드포인트의 로직을 처리
@@ -14,13 +14,18 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
-
 from django.http import Http404, QueryDict
+import logging
+
 
 from ..models import Club, ClubMember, User
 from ..serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
     ClubMemberSerializer
+from clubs.tasks import send_club_creation_notification
+
 from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
+
+logger = logging.getLogger(__name__)
 
 class IsMemberOfClub(BasePermission):
     '''
@@ -167,12 +172,16 @@ class ClubViewSet(viewsets.ModelViewSet):
                 continue  # 중복 멤버는 추가하지 않음 (또는 이미 관리자로 추가되어 있는 경우)
             ClubMember.objects.create(club=club, user_id=member_id, role='member')
 
+        # 응답 반환 후 비동기적으로 FCM 알림 전송
+        send_club_creation_notification.delay(club.id)
+
         read_serializer = ClubSerializer(club)
         response_data   = {
             'code': status.HTTP_201_CREATED,
             'message': 'successfully Club created',
             'data': read_serializer.data
         }
+
         return Response(response_data, status=status.HTTP_201_CREATED)
 
     # 특정 모임 조회 메서드

@@ -46,10 +46,9 @@ DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2', os.getenv("AWS_HOST_IP")]
 
 # FCM
-# cred_path = os.path.join(BASE_DIR, "golbang_firebase_sdk.json")
-# cred = credentials.Certificate(cred_path)
-# firebase_admin.initialize_app(cred)
-
+cred_path = os.path.join(BASE_DIR, "golbang-test-31a73-firebase-adminsdk-wqtgg-f611444c79.json")
+cred = credentials.Certificate(cred_path)
+firebase_admin.initialize_app(cred)
 
 # AWS
 AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
@@ -101,7 +100,7 @@ INSTALLED_APPS = [
     'clubs',
     'events',
     'participants',
-    'push_notification',
+    'golf_data',
 
     # ==========
     # DRF (Django Rest Framework)
@@ -144,13 +143,16 @@ CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
-# CELERY_TIMEZONE = 'Asia/Seoul'
+CELERY_TIMEZONE = 'Asia/Seoul'
 CELERY_BEAT_SCHEDULE = {
     'update-club-rankings-every-day': {
         'task': 'clubs.tasks.update_all_clubs_periodically',
         'schedule': crontab(minute=0, hour=0),  # 매일 자정에 실행
     },
 }
+# settings.py (테스트 환경에서만 사용)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
 
 
 

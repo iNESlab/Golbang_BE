@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class PushNotificationConfig(AppConfig):
+class GolfDataConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "push_notification"
+    name = "golf_data"

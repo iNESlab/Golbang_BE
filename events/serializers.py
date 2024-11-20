@@ -19,6 +19,8 @@ from rest_framework import serializers
 from accounts.models import User
 from clubs.models import Club
 from clubs.serializers import ClubProfileSerializer
+from golf_data.models import GolfClub
+from golf_data.serializers import GolfClubSerializer
 from participants.models import Participant, HoleScore
 from .models import Event
 from participants.serializers import ParticipantCreateUpdateSerializer, ParticipantDetailSerializer
@@ -75,6 +77,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
 
 class EventDetailSerializer(serializers.ModelSerializer):
     club = ClubProfileSerializer(read_only=True)
+    golf_club = serializers.SerializerMethodField()  # GolfClub 상세 정보를 위한 필드
     my_participant_id = serializers.SerializerMethodField(read_only=True)
     participants = ParticipantDetailSerializer(source='participant_set', many=True, read_only=True)
     event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
@@ -92,9 +95,16 @@ class EventDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ['club', 'event_id', 'my_participant_id', 'participants', 'participants_count', 'party_count','accept_count',
-                  'deny_count', 'pending_count', 'event_title', 'location', 'site', 'start_date_time', 'end_date_time',
+                  'deny_count', 'pending_count', 'event_title', 'location', 'site', 'golf_club', 'start_date_time', 'end_date_time',
                   'repeat_type', 'game_mode', 'alert_date_time', 'member_group',
                   'user_id', 'date', 'status_type']
+
+    def get_golf_club(self, obj):
+        # site 필드와 club_name이 일치하는 GolfClub 객체를 직렬화하여 반환
+        golf_club = GolfClub.objects.filter(club_name=obj.site).first()
+        if golf_club:
+            return GolfClubSerializer(golf_club).data
+        return None
 
     def get_my_participant_id(self, obj):
         self.my_participant_id = obj.participant_set.filter(club_member__user=self.context['request'].user).first().id

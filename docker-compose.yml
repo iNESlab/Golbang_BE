@@ -16,7 +16,6 @@ services:     # 컨테이너 지정
       - "8000:8000"
     env_file: #
       - .env
-      # - ./golbang_firebase_sdk.json # Firebase Admin SDK 키 파일
 
   db:
     container_name: db
