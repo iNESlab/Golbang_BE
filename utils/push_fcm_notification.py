@@ -42,7 +42,7 @@ def get_fcm_tokens_for_event_participants(event):
     return list(Participant.objects.filter(event=event).values_list('club_member__user__fcm_token', flat=True))
 
 
-def send_fcm_notifications(tokens, title, body):
+def send_fcm_notifications(tokens, title, body, event_id=None, club_id=None):
     '''
     주어진 FCM 토큰 리스트에 일괄적으로 푸시 알림을 전송하는 함수
 
@@ -53,7 +53,16 @@ def send_fcm_notifications(tokens, title, body):
     if not tokens:
         logger.warning("FCM 토큰이 없습니다. 알림을 전송하지 않습니다.")
         return
+
+        # 조건에 따라 data 필드 구성
+    additional_data = {}
+    if event_id:
+        additional_data["event_id"] = str(event_id)  # 이벤트 ID만 포함
+    elif club_id:
+        additional_data["club_id"] = str(club_id)  # 모임 ID만 포함
+
     logger.info(f"send_fcm_notifications 전송할 FCM 토큰: {tokens}")  # 토큰 리스트 출력
+    logger.info(f"이벤트/모임 데이터: {additional_data}")
 
     for token in tokens:
         print(f"token: {token}, type: {type(tokens)}")
@@ -61,6 +70,7 @@ def send_fcm_notifications(tokens, title, body):
     for token in tokens:
         # 개별 메시지 객체 생성
         message = messaging.Message(
+            data=additional_data,# 이벤트/모임 id 필ㅂ1
             notification=messaging.Notification(title=title, body=body),
             token=token,
         )

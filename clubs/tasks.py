@@ -67,7 +67,7 @@ def send_club_creation_notification(club_id):
 
         # FCM 메시지 전송
         if fcm_tokens:
-            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            send_fcm_notifications(fcm_tokens, message_title, message_body, club_id=club.id)
             logger.info(f"모임 생성 알림 전송 성공")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
