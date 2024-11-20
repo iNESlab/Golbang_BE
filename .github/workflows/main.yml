@@ -13,13 +13,16 @@ jobs:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}  # SECRET_KEY를 직접 설정
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version  # 설치 확인
+      
+      - name: Save JSON data from secret to file
+        run:  echo '${{ secrets.FIREBASE_SDK_JSON }}' > golbang-test-31a73-firebase-adminsdk-wqtgg-f611444c79.json
 
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
