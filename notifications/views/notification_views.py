@@ -39,7 +39,7 @@ class NotificationViewSet(viewsets.ViewSet):
         print(f"===notifications={notifications}")
         if not notifications:
             return handle_404_not_found('Notifications of userId', user_id)
-
+        # notifications = notifications.sorted(lamba)
         return Response({
             "status": 200,
             "message": "Successfully retrieved notification list",

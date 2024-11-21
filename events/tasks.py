@@ -10,14 +10,21 @@ from celery import shared_task, current_app
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.cache import cache
 
-from datetime import timezone, timedelta
+from datetime import timezone, timedelta, datetime
+import uuid
 
 from events.models import Event
 from utils.push_fcm_notification import get_fcm_tokens_for_club_members, send_fcm_notifications
+from notifications.redis_interface import NotificationRedisInterface
+
+from asgiref.sync import async_to_sync
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Redis 인터페이스 생성
+redis_interface = NotificationRedisInterface()
 
 @shared_task
 def send_event_creation_notification(event_id):
@@ -35,9 +42,31 @@ def send_event_creation_notification(event_id):
         message_title = f"{club.name} 모임에서 이벤트가 생성되었습니다."
         message_body = f"이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n참석 여부를 체크해주세요."
 
+        # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        base_notification_data = {
+            "title": message_title,
+            "body": message_body,
+            "status": "fail",
+            "timestamp": datetime.now().isoformat(),
+            "read": False,
+        }
+
         if fcm_tokens:
             send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이벤트 생성 알림 전송 성공: {event.event_title}")
+
+            # 알림 전송 성공 후 Redis에 저장
+            user_ids = club.members.values_list('id', flat=True)  # 모든 멤버 ID 가져오기
+            print(f"user_ids: {user_ids}")
+            for user_id in user_ids:
+                print(f"user_id: {user_id}")
+                # UUID 기반으로 notification_id 생성
+                notification_id = str(uuid.uuid4())
+
+                notification_data = {**base_notification_data, "status": "success"}
+                print(f"notification준비 완료 {notification_id}, {notification_data}")
+
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
@@ -64,9 +93,32 @@ def send_event_update_notification(event_id):
         message_title = f"{club.name} 모임에서 이벤트가 수정되었습니다."
         message_body = f"수정된 이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n다시 참석 여부를 체크해주세요."
 
+        # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        base_notification_data = {
+            "title": message_title,
+            "body": message_body,
+            "status": "fail",
+            "timestamp": datetime.now().isoformat(),
+            "read": False,
+        }
+
         if fcm_tokens:
             send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이벤트 수정 알림 전송 성공: {event.event_title}")
+
+            # 알림 전송 성공 후 Redis에 저장
+            user_ids = club.members.values_list('id', flat=True)  # 모든 멤버 ID 가져오기
+            print(f"user_ids: {user_ids}")
+            for user_id in user_ids:
+                print(f"user_id: {user_id}")
+                # UUID 기반으로 notification_id 생성
+                notification_id = str(uuid.uuid4())
+
+                notification_data = {**base_notification_data, "status": "success"}
+                print(f"notification준비 완료 {notification_id}, {notification_data}")
+
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
@@ -85,13 +137,13 @@ def schedule_event_notifications(event_id):
         now = timezone.now()
 
         # 이틀 전 알림 예약
-        two_days_before = event.start_date_time - timedelta(days=2)
+        two_days_before = event.start_date_time - timedelta(seconds=5)
         if two_days_before > now:
             countdown_until_2_days = (two_days_before - now).total_seconds()
             two_days_task = send_event_notification_2_days_before.apply_async((event_id,), countdown=countdown_until_2_days)
 
         # 1시간 전 알림 예약
-        one_hour_before = event.start_date_time - timedelta(hours=1)
+        one_hour_before = event.start_date_time - timedelta(seconds=3)
         if one_hour_before > now:
             countdown_until_1_hour = (one_hour_before - now).total_seconds()
             one_hour_task = send_event_notification_1_hour_before.apply_async((event_id,), countdown=countdown_until_1_hour)
@@ -119,17 +171,39 @@ def send_event_notification_2_days_before():
     이벤트 시작 이틀 전에 알림을 보내는 작업
     """
     now = timezone.now()
-    events = Event.objects.filter(start_date_time__date=now + timedelta(days=2))
+    # events = Event.objects.filter(start_date_time__date=now + timedelta(days=2))
+    events = Event.objects.filter(start_date_time__date=now + timedelta(seconds=5))
 
     for event in events:
         club = event.club
         fcm_tokens = get_fcm_tokens_for_club_members(club)
         message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 이틀 전입니다."
         message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
-
+        # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        base_notification_data = {
+            "title": message_title,
+            "body": message_body,
+            "status": "fail",
+            "timestamp": datetime.now().isoformat(),
+            "read": False,
+        }
         if fcm_tokens:
             send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이틀 전 알림 전송 성공: {event.event_title}")
+
+            # 알림 전송 성공 후 Redis에 저장
+            user_ids = club.members.values_list('id', flat=True)  # 모든 멤버 ID 가져오기
+            print(f"user_ids: {user_ids}")
+            for user_id in user_ids:
+                print(f"user_id: {user_id}")
+                # UUID 기반으로 notification_id 생성
+                notification_id = str(uuid.uuid4())
+
+                notification_data = {**base_notification_data, "status": "success"}
+                print(f"notification준비 완료 {notification_id}, {notification_data}")
+
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
@@ -140,7 +214,8 @@ def send_event_notification_1_hour_before():
     이벤트 시작 1시간 전에 알림을 보내는 작업
     """
     now = timezone.now()
-    events = Event.objects.filter(start_date_time__lte=now + timedelta(hours=1), start_date_time__gt=now)
+    # events = Event.objects.filter(start_date_time__lte=now + timedelta(hours=1), start_date_time__gt=now)
+    events = Event.objects.filter(start_date_time__lte=now + timedelta(seconds=2), start_date_time__gt=now)
 
     for event in events:
         club = event.club
@@ -148,9 +223,32 @@ def send_event_notification_1_hour_before():
         message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 1시간 전입니다."
         message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
 
+        # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        base_notification_data = {
+            "title": message_title,
+            "body": message_body,
+            "status": "fail",
+            "timestamp": datetime.now().isoformat(),
+            "read": False,
+        }
+
         if fcm_tokens:
             send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"1시간 전 알림 전송 성공: {event.event_title}")
+
+            # 알림 전송 성공 후 Redis에 저장
+            user_ids = club.members.values_list('id', flat=True)  # 모든 멤버 ID 가져오기
+            print(f"user_ids: {user_ids}")
+            for user_id in user_ids:
+                print(f"user_id: {user_id}")
+                # UUID 기반으로 notification_id 생성
+                notification_id = str(uuid.uuid4())
+
+                notification_data = {**base_notification_data, "status": "success"}
+                print(f"notification준비 완료 {notification_id}, {notification_data}")
+
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
@@ -169,9 +267,31 @@ def send_event_notification_event_ended():
         message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 종료되었습니다."
         message_body = f"이벤트 결과를 확인해주세요. (스코어 점수 수정은 이벤트 종료 2일 후까지만 가능합니다)"
 
+        # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        base_notification_data = {
+            "title": message_title,
+            "body": message_body,
+            "status": "fail",
+            "timestamp": datetime.now().isoformat(),
+            "read": False,
+        }
+
         if fcm_tokens:
             send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이벤트 종료 알림 전송 성공: {event.event_title}")
+
+            # 알림 전송 성공 후 Redis에 저장
+            user_ids = club.members.values_list('id', flat=True)  # 모든 멤버 ID 가져오기
+            print(f"user_ids: {user_ids}")
+            for user_id in user_ids:
+                print(f"user_id: {user_id}")
+                # UUID 기반으로 notification_id 생성
+                notification_id = str(uuid.uuid4())
+
+                notification_data = {**base_notification_data, "status": "success"}
+                print(f"notification준비 완료 {notification_id}, {notification_data}")
+
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
