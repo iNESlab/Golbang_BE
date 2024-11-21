@@ -1,7 +1,7 @@
 import redis
 import json
 from asgiref.sync import sync_to_async
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Redis 클라이언트 초기화
 redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
@@ -15,20 +15,20 @@ class NotificationRedisInterface:
     async def save_notification(self, user_id, notification_id, notification_data):
         """
         Redis에 알림 데이터를 저장합니다.
-        :param user_id: 사용자 ID
-        :param notification_id: 알림 ID
-        :param notification_data: 알림 데이터 (딕셔너리 형태)
         """
+        print(f"이곳은 save_notification 함수!!!!! user_id={user_id} notification_id={notification_id}, notification_data={notification_data}")
+        # 타임스탬프 추가
+        notification_data["timestamp"] = datetime.now().isoformat()
+        print(f"notification_data에 타임스탬프 추가 => {notification_data}")
         key = f"notification:{user_id}:{notification_id}"
+        print(f"Saving notification with key={key} and data={notification_data}")
+
         await sync_to_async(redis_client.set)(key, json.dumps(notification_data))
         await sync_to_async(redis_client.expire)(key, 172800)  # 2일 후 만료 설정
 
     async def get_notification(self, user_id, notification_id):
         """
         Redis에서 특정 알림 데이터를 가져옵니다.
-        :param user_id: 사용자 ID
-        :param notification_id: 알림 ID
-        :return: 알림 데이터 (딕셔너리 형태)
         """
         key = f"notification:{user_id}:{notification_id}"
         notification = await sync_to_async(redis_client.get)(key)
@@ -39,8 +39,6 @@ class NotificationRedisInterface:
     async def delete_notification(self, user_id, notification_id):
         """
         Redis에서 특정 알림 데이터를 삭제합니다.
-        :param user_id: 사용자 ID
-        :param notification_id: 알림 ID
         """
         key = f"notification:{user_id}:{notification_id}"
         await sync_to_async(redis_client.delete)(key)
@@ -48,23 +46,32 @@ class NotificationRedisInterface:
     async def get_all_notifications(self, user_id):
         """
         Redis에서 특정 사용자의 모든 알림 데이터를 가져옵니다.
-        :param user_id: 사용자 ID
-        :return: 알림 데이터 리스트
         """
+        print(f"get_all_notifications: {user_id} 함수 들어옴")
         pattern = f"notification:{user_id}:*"
+        print(f"pattern: {pattern}")
+
+        # 현재 저장된 모든 키 확인 (디버깅용)
+        all_keys = await sync_to_async(redis_client.keys)("*")
+        print(f"All keys in Redis: {all_keys}")
+
+        # 사용자 관련 키 검색
         keys = await sync_to_async(redis_client.keys)(pattern)
+        print(f"Filtered keys: {keys}")
+
         notifications = []
         for key in keys:
             notification = await sync_to_async(redis_client.get)(key)
+            print(f"Fetched notification from key={key}: {notification}")
+
             if notification:
+                print(f"notification 안에 들어옴")
                 notifications.append(json.loads(notification))
         return notifications
 
     async def mark_notification_as_read(self, user_id, notification_id):
         """
         Redis에서 특정 알림을 읽음 상태로 업데이트합니다.
-        :param user_id: 사용자 ID
-        :param notification_id: 알림 ID
         """
         key = f"notification:{user_id}:{notification_id}"
         notification = await self.get_notification(user_id, notification_id)
