@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     'events',
     'participants',
     'golf_data',
+    'notifications',
 
     # ==========
     # DRF (Django Rest Framework)
