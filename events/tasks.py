@@ -33,10 +33,10 @@ def send_event_creation_notification(event_id):
         logger.info(f"Retrieved FCM tokens for event creation: {fcm_tokens}")
 
         message_title = f"{club.name} 모임에서 이벤트가 생성되었습니다."
-        message_body = f"{event.event_title} 이벤트의 날짜는 {event.start_date_time.strftime('%Y-%m-%d')}이며, 장소는 {event.site}입니다. 참석 여부를 체크해주세요."
+        message_body = f"이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n참석 여부를 체크해주세요."
 
         if fcm_tokens:
-            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이벤트 생성 알림 전송 성공: {event.event_title}")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
@@ -62,10 +62,10 @@ def send_event_update_notification(event_id):
 
 
         message_title = f"{club.name} 모임에서 이벤트가 수정되었습니다."
-        message_body = f"수정된 {event.event_title} 이벤트의 날짜는 {event.start_date_time.strftime('%Y-%m-%d')}이며, 장소는 {event.site}입니다. 다시 참석 여부를 체크해주세요."
+        message_body = f"수정된 이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n다시 참석 여부를 체크해주세요."
 
         if fcm_tokens:
-            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이벤트 수정 알림 전송 성공: {event.event_title}")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
@@ -128,7 +128,7 @@ def send_event_notification_2_days_before():
         message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
 
         if fcm_tokens:
-            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이틀 전 알림 전송 성공: {event.event_title}")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
@@ -149,7 +149,7 @@ def send_event_notification_1_hour_before():
         message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
 
         if fcm_tokens:
-            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"1시간 전 알림 전송 성공: {event.event_title}")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
@@ -170,7 +170,7 @@ def send_event_notification_event_ended():
         message_body = f"이벤트 결과를 확인해주세요. (스코어 점수 수정은 이벤트 종료 2일 후까지만 가능합니다)"
 
         if fcm_tokens:
-            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
             logger.info(f"이벤트 종료 알림 전송 성공: {event.event_title}")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")

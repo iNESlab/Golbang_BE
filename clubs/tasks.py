@@ -63,11 +63,11 @@ def send_club_creation_notification(club_id):
 
         # 모임 이름을 포함한 메시지 생성
         message_title = f"{club.name} 모임에 초대되었습니다."  # 메시지 제목
-        message_body = f"모임이 성공적으로 생성되었습니다. {club.name} 모임에서 골프를 즐겨봅시다!"
+        message_body = f"{club.name} 모임에서 골프를 즐겨봅시다!"
 
         # FCM 메시지 전송
         if fcm_tokens:
-            send_fcm_notifications(fcm_tokens, message_title, message_body)
+            send_fcm_notifications(fcm_tokens, message_title, message_body, club_id=club.id)
             logger.info(f"모임 생성 알림 전송 성공")
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")

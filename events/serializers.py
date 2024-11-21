@@ -206,6 +206,7 @@ class ScoreCardSerializer(serializers.ModelSerializer):
     스코어카드 결과(그룹별 스코어 결과)를 반환하는 시리얼라이저
     """
     participant_name = serializers.CharField(source='club_member.user.name', read_only=True)
+    team = serializers.SerializerMethodField()              # 팀 정보
     front_nine_score = serializers.SerializerMethodField()  # 전반전 점수 (1~9홀)
     back_nine_score = serializers.SerializerMethodField() # 후반전 점수 (10~18홀)
     total_score = serializers.SerializerMethodField()
@@ -214,7 +215,15 @@ class ScoreCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Participant
-        fields = ['participant_name', 'front_nine_score', 'back_nine_score', 'total_score', 'handicap_score', 'scorecard']
+        fields = ['participant_name', 'team', 'front_nine_score', 'back_nine_score', 'total_score', 'handicap_score', 'scorecard']
+
+    def get_team(self, participant):
+        # 팀 정보를 반환
+        if participant.team_type == Participant.TeamType.TEAM1:
+            return "Team A"
+        elif participant.team_type == Participant.TeamType.TEAM2:
+            return "Team B"
+        return "No Team"
 
     def get_front_nine_score(self, participant):
         front_nine_score = HoleScore.objects.filter(participant=participant, hole_number__lte=9).aggregate(total=Sum('score'))['total']
