@@ -2,7 +2,7 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 
 if not firebase_admin._apps:
-    cred = credentials.Certificate("golbang-test-31a73-firebase-adminsdk-wqtgg-f611444c79.json")  # Firebase SDK JSON 경로 수정
+    cred = credentials.Certificate("serviceAccountKey.json")  # Firebase SDK JSON 경로 수정
     firebase_admin.initialize_app(cred)
 def test_send_fcm_notification(token, title, body):
     # FCM 메시지 작성

@@ -11,7 +11,7 @@ from participants.models import Participant
 
 logger = logging.getLogger(__name__)
 
-cred_path = os.path.join(BASE_DIR, "golbang-test-31a73-firebase-adminsdk-wqtgg-f611444c79.json")
+cred_path = os.path.join(BASE_DIR, "serviceAccountKey.json")
 
 # Firebase 앱 초기화
 if not firebase_admin._apps:
