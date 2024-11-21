@@ -46,7 +46,7 @@ DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2', os.getenv("AWS_HOST_IP")]
 
 # FCM
-cred_path = os.path.join(BASE_DIR, "golbang-test-31a73-firebase-adminsdk-wqtgg-f611444c79.json")
+cred_path = os.path.join(BASE_DIR, "serviceAccountKey.json")
 cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 
@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     'events',
     'participants',
     'golf_data',
+    'notifications',
 
     # ==========
     # DRF (Django Rest Framework)
