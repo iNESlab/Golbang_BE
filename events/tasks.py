@@ -62,6 +62,7 @@ def send_event_creation_notification(event_id):
                 print(f"user_id: {user_id}")
                 # UUID 기반으로 notification_id 생성
                 notification_id = str(uuid.uuid4())
+                base_notification_data['notification_id'] = notification_id
 
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
@@ -113,6 +114,7 @@ def send_event_update_notification(event_id):
                 print(f"user_id: {user_id}")
                 # UUID 기반으로 notification_id 생성
                 notification_id = str(uuid.uuid4())
+                base_notification_data['notification_id'] = notification_id
 
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
@@ -198,6 +200,7 @@ def send_event_notification_2_days_before():
                 print(f"user_id: {user_id}")
                 # UUID 기반으로 notification_id 생성
                 notification_id = str(uuid.uuid4())
+                base_notification_data['notification_id'] = notification_id
 
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
@@ -243,6 +246,7 @@ def send_event_notification_1_hour_before():
                 print(f"user_id: {user_id}")
                 # UUID 기반으로 notification_id 생성
                 notification_id = str(uuid.uuid4())
+                base_notification_data['notification_id'] = notification_id
 
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
@@ -287,6 +291,7 @@ def send_event_notification_event_ended():
                 print(f"user_id: {user_id}")
                 # UUID 기반으로 notification_id 생성
                 notification_id = str(uuid.uuid4())
+                base_notification_data['notification_id'] = notification_id
 
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
