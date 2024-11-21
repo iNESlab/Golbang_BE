@@ -39,7 +39,14 @@ class NotificationViewSet(viewsets.ViewSet):
         print(f"===notifications={notifications}")
         if not notifications:
             return handle_404_not_found('Notifications of userId', user_id)
-        # notifications = notifications.sorted(lamba)
+
+        # 알림 데이터를 timestamp 기준으로 최신순 정렬
+        notifications = sorted(
+            notifications,
+            key=lambda x: x.get("timestamp", ""),
+            reverse=True  # 최신순 정렬
+        )
+
         return Response({
             "status": 200,
             "message": "Successfully retrieved notification list",
