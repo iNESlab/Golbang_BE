@@ -43,6 +43,7 @@ def send_event_creation_notification(event_id):
         message_body = f"이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n참석 여부를 체크해주세요."
 
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        #TODO: 반복되는 코드 함수화하는 것이 필요함.
         base_notification_data = {
             "title": message_title,
             "body": message_body,
@@ -128,6 +129,70 @@ def send_event_update_notification(event_id):
         logger.error(f"Error finding event {event_id}: {e}")
     except Exception as e:
         logger.error(f"Error sending FCM notifications for event {event_id}: {e}")
+
+@shared_task
+def schedule_event_notifications_test(event_id):
+    """
+    테스트용: 이벤트 생성/수정 시 10초 전에 알림 예약하는 작업
+    """
+    try:
+        event = Event.objects.get(id=event_id)
+        now = timezone.now()
+
+        # 10초 전 알림 예약
+        ten_seconds_before = event.start_date_time - timedelta(seconds=10)
+        if ten_seconds_before > now:
+            countdown_until_10_seconds = (ten_seconds_before - now).total_seconds()
+            ten_seconds_task = send_event_notification_10_seconds_before.apply_async(
+                (event_id,), countdown=countdown_until_10_seconds
+            )
+
+        # task_id를 캐시에 저장
+        cache.set(f'event_{event_id}_test_task_id', ten_seconds_task.id, timeout=None)
+
+    except Event.DoesNotExist:
+        logger.error(f"Event {event_id} does not exist")
+    except Exception as e:
+        logger.error(f"Error scheduling test notifications for event {event_id}: {e}")
+
+
+@shared_task
+def send_event_notification_10_seconds_before(event_id):
+    """
+    이벤트 시작 10초 전에 알림을 보내는 작업
+    """
+    try:
+        event = Event.objects.get(id=event_id)
+        club = event.club
+        fcm_tokens = get_fcm_tokens_for_club_members(club)
+
+        message_title = f"{club.name} 이벤트가 곧 시작됩니다!"
+        message_body = f"이벤트: {event.event_title}\n10초 후에 시작됩니다. 참석 여부를 확인해주세요."
+
+        # Redis 저장용 알림 데이터
+        notification_data = {
+            "title": message_title,
+            "body": message_body,
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "read": False,
+        }
+
+        if fcm_tokens:
+            send_fcm_notifications(fcm_tokens, message_title, message_body, event_id=event.id)
+            logger.info(f"10초 전 알림 전송 성공: {event.event_title}")
+
+            # Redis 저장
+            user_ids = club.members.values_list('id', flat=True)
+            for user_id in user_ids:
+                notification_id = str(uuid.uuid4())
+                notification_data["notification_id"] = notification_id
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+
+    except Event.DoesNotExist:
+        logger.error(f"Event {event_id} does not exist")
+    except Exception as e:
+        logger.error(f"Error sending 10 seconds notification for event {event_id}: {e}")
 
 @shared_task
 def schedule_event_notifications(event_id):

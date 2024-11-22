@@ -74,6 +74,7 @@ def send_club_creation_notification(club_id):
         message_body = f"{club.name} 모임에서 골프를 즐겨봅시다!"
 
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        # TODO: 반복되는 코드 함수화하는 것이 필요함.
         base_notification_data = {
             "title": message_title,
             "body": message_body,
