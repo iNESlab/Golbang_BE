@@ -18,7 +18,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request, handle_401_unauthorized
 from notifications.redis_interface import NotificationRedisInterface
-from datetime import datetime
+from asgiref.sync import async_to_sync  # 추가
 
 # Redis 인터페이스 인스턴스 생성
 redis_interface = NotificationRedisInterface()
@@ -29,16 +29,23 @@ class NotificationViewSet(viewsets.ViewSet):
     """
     permission_classes = [IsAuthenticated]  # 사용자 인증 필요
 
-    async def list(self, request):
+    def list(self, request):
         """
         GET /notifications/
         - 사용자별 알림 히스토리 조회
         """
         user_id = request.user.id
-        notifications = await redis_interface.get_all_notifications(user_id)
-
+        notifications = async_to_sync(redis_interface.get_all_notifications)(user_id)  # async 메서드를 동기 호출
+        print(f"===notifications={notifications}")
         if not notifications:
-            return handle_404_not_found('Notifications', user_id)
+            return handle_404_not_found('Notifications of userId', user_id)
+
+        # 알림 데이터를 timestamp 기준으로 최신순 정렬
+        notifications = sorted(
+            notifications,
+            key=lambda x: x.get("timestamp", ""),
+            reverse=True  # 최신순 정렬
+        )
 
         return Response({
             "status": 200,
@@ -46,14 +53,14 @@ class NotificationViewSet(viewsets.ViewSet):
             "data": notifications
         }, status=status.HTTP_200_OK)
 
-    async def partial_update(self, request, pk=None):
+    def partial_update(self, request, pk=None):
         """
         PATCH /notifications/{notification_id}/
         - 알림 읽음 상태 변경
         """
         user_id = request.user.id
         try:
-            await redis_interface.mark_notification_as_read(user_id, pk)
+            async_to_sync(redis_interface.mark_notification_as_read)(user_id, pk)  # async 메서드 동기 호출
             return Response({
                 "status": 200,
                 "message": "Notification read status updated successfully."
@@ -61,16 +68,16 @@ class NotificationViewSet(viewsets.ViewSet):
         except ValueError as e:
             return handle_404_not_found('Notification', pk)
 
-    async def destroy(self, request, pk=None):
+    def destroy(self, request, pk=None):
         """
         DELETE /notifications/{notification_id}/
         - 알림 삭제
         """
         user_id = request.user.id
         try:
-            notification = await redis_interface.get_notification(user_id, pk)
+            notification = async_to_sync(redis_interface.get_notification)(user_id, pk)  # async 메서드 동기 호출
             if notification:
-                await redis_interface.delete_notification(user_id, pk)
+                async_to_sync(redis_interface.delete_notification)(user_id, pk)  # async 메서드 동기 호출
                 return Response({
                     "status": 204,
                     "message": "Notification deleted successfully."

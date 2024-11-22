@@ -13,10 +13,18 @@ from django.core.exceptions import ObjectDoesNotExist
 from participants.models import Participant
 from clubs.models import Club, ClubMember
 from utils.push_fcm_notification import get_fcm_tokens_for_club_members, send_fcm_notifications
+from notifications.redis_interface import NotificationRedisInterface
+
+import uuid
+from datetime import datetime, time
+from asgiref.sync import async_to_sync
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Redis 인터페이스 생성
+redis_interface = NotificationRedisInterface()
 
 @shared_task
 def calculate_club_ranks_and_points(club_id):
@@ -54,7 +62,7 @@ def calculate_club_ranks_and_points(club_id):
 @shared_task
 def send_club_creation_notification(club_id):
     """
-    클럽(모임) 생성 시 FCM 알림을 전송하는 Celery 작업
+    클럽(모임) 생성 시 FCM 알림을 전송하고 Redis에 저장하는 Celery 작업
     """
     try:
         club = Club.objects.get(id=club_id)
@@ -62,13 +70,37 @@ def send_club_creation_notification(club_id):
         logger.info(f"Retrieved fcm_tokens: {fcm_tokens}")
 
         # 모임 이름을 포함한 메시지 생성
-        message_title = f"{club.name} 모임에 초대되었습니다."  # 메시지 제목
+        message_title = f"{club.name} 모임에 초대되었습니다."
         message_body = f"{club.name} 모임에서 골프를 즐겨봅시다!"
+
+        # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
+        # TODO: 반복되는 코드 함수화하는 것이 필요함.
+        base_notification_data = {
+            "title": message_title,
+            "body": message_body,
+            "status": "fail",
+            "timestamp": datetime.now().isoformat(),
+            "read": False,
+        }
 
         # FCM 메시지 전송
         if fcm_tokens:
             send_fcm_notifications(fcm_tokens, message_title, message_body, club_id=club.id)
             logger.info(f"모임 생성 알림 전송 성공")
+
+            # 알림 전송 성공 후 Redis에 저장
+            user_ids = club.members.values_list('id', flat=True)  # 모든 멤버 ID 가져오기
+            print(f"user_ids: {user_ids}")
+            for user_id in user_ids:
+                print(f"user_id: {user_id}")
+                # UUID 기반으로 notification_id 생성
+                notification_id = str(uuid.uuid4())
+                base_notification_data['notification_id'] = notification_id
+
+                notification_data = {**base_notification_data, "status": "success"}
+                print(f"notification준비 완료 {notification_id}, {notification_data}")
+
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
