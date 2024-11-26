@@ -161,6 +161,7 @@ class UserInfoViewSet(viewsets.ModelViewSet):
         """
         특정 사용자 정보 수정
         """
+
         instance = self.get_object()
         print(f"request.data: {request.data}")
 
@@ -183,22 +184,40 @@ class UserInfoViewSet(viewsets.ModelViewSet):
             else:
                 request.data['profile_image'] = None
 
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        try:
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            if not serializer.is_valid():
+                print(f"Validation errors: {serializer.errors}")
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'messages': 'Invalid data',
+                    'error': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not serializer.is_valid():
+            user = serializer.save()
+        except Exception as e:
+            print(f"Error while updating user info: {e}")
             return Response({
-                'status': status.HTTP_400_BAD_REQUEST,
-                'messages': 'Invalid data',
-                'error': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+                'messages': 'An error occurred while updating user info',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        user = serializer.save()
-        read_serializer = self.get_serializer(user)
-        return Response({
-            'status': status.HTTP_200_OK,
-            'message': 'Successfully updated user info',
-            'data': read_serializer.data
-        }, status=status.HTTP_200_OK)
+        try:
+            read_serializer = self.get_serializer(user)
+            return Response({
+                'status': status.HTTP_200_OK,
+                'message': 'Successfully updated user info',
+                'data': read_serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"Error while reading updated user info: {e}")
+            return Response({
+                'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+                'messages': 'An error occurred while retrieving updated user info',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 class PasswordManagementView(APIView):
