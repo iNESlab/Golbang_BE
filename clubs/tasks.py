@@ -71,7 +71,7 @@ def send_club_creation_notification(club_id):
 
         # 모임 이름을 포함한 메시지 생성
         message_title = f"{club.name} 모임에 초대되었습니다."
-        message_body = f"{club.name} 모임에서 골프를 즐겨봅시다!"
+        message_body = f"{club.name} 이벤트 페이지에서 이벤트를 만들어보세요!"
 
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
         # TODO: 반복되는 코드 함수화하는 것이 필요함.
