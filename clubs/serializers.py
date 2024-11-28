@@ -37,14 +37,27 @@ class ClubMemberSerializer(serializers.ModelSerializer):
     member_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
     name = serializers.CharField(source='user.name')
     profile_image = serializers.SerializerMethodField(read_only=True)
+    is_current_user_admin = serializers.SerializerMethodField()  # 현재 사용자가 관리자인지 여부를 반환
 
     class Meta:
         model = ClubMember
-        fields = ('member_id', 'name', 'role', 'profile_image')
+        fields = ('member_id', 'name', 'role', 'profile_image', 'is_current_user_admin')
 
-    def get_profile_image(self,obj):
+    def get_profile_image(self, obj):
         profile_image = obj.user.profile_image
         return profile_image.url if profile_image else None
+
+    def get_is_current_user_admin(self, obj):
+        '''
+        현재 요청 사용자가 관리자인지 확인
+        '''
+        request = self.context.get('request')  # DRF에서 제공하는 요청 객체 가져오기
+        if not request:
+            return False
+
+        current_user = request.user
+        return obj.user == current_user and obj.role == 'admin'
+
 
 class ClubSerializer(serializers.ModelSerializer):
     '''
@@ -52,10 +65,24 @@ class ClubSerializer(serializers.ModelSerializer):
     클럽의 모든 정보를 포함한 JSON 응답을 생성
     '''
     members = ClubMemberSerializer(many=True, read_only=True, source='clubmember_set')
+    is_admin = serializers.SerializerMethodField()  # 현재 요청 사용자가 클럽 관리자 여부 반환
 
     class Meta:
-        model   = Club # 직렬화할 모델
-        fields  = ('id', 'name', 'description', 'image', 'members', 'created_at')
+        model = Club
+        fields = ('id', 'name', 'description', 'image', 'members', 'created_at', 'is_admin')
+
+    def get_is_admin(self, obj):
+        '''
+        현재 요청 사용자가 클럽 관리자 여부를 확인
+        '''
+        request = self.context.get('request')  # DRF에서 제공하는 요청 객체 가져오기
+        if not request:
+            return False
+
+        current_user = request.user
+        # ClubMember 중 현재 사용자가 admin인 경우 True 반환
+        return obj.clubmember_set.filter(user=current_user, role='admin').exists()
+
 
 class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     '''
