@@ -50,29 +50,29 @@ def import_excel_data(file_url):
 
     # Tee 데이터를 데이터베이스에 저장
     for _, row in tees_df.iterrows():
-        print("import tees")
-        course = GolfCourse.objects.get(course_id=row['Course ID'])
+        print(f"Processing Tee for Course ID: {row['Course ID']}")
 
-        # 특정 조건으로 Tee 객체들 필터링
-        tees = Tee.objects.filter(course=course)
+        # GolfCourse 확인
+        try:
+            course = GolfCourse.objects.get(course_id=row['Course ID'])
+        except GolfCourse.DoesNotExist:
+            print(f"GolfCourse not found for Course ID: {row['Course ID']}")
+            continue
 
-        # 각 Tee 객체에 대해 반복문을 실행하여 필드를 설정
-        for tee in tees:
-            for hole_num in range(1, 19):
-                par_field = f'hole_{hole_num}_par'
-                handicap_field = f'hole_{hole_num}_handicap'
+        # Tee 데이터 업데이트 또는 생성
+        tee, created = Tee.objects.update_or_create(
+            course=course,
+            defaults={**{
+                f'hole_{i}_par': 0 if row.get(f'Hole{i} Par') in [None, '~', 'N/D'] else int(row.get(f'Hole{i} Par', 0))
+                for i in range(1, 19)
+            }, **{
+                f'hole_{i}_handicap': 0 if row.get(f'Hole{i} Handicap') in [None, '~', 'N/D'] else int(
+                    row.get(f'Hole{i} Handicap', 0))
+                for i in range(1, 19)
+            }}
+        )
 
-                # 'Hole {x} Par'과 'Hole {x} Handicap' 컬럼 값 가져오기
-                par_value = row.get(f'Hole{hole_num} Par', 0)
-                handicap_value = row.get(f'Hole{hole_num} Handicap', 0)
-
-                # None, '~', 'N/D' 값을 0으로 대체
-                par_value = 0 if par_value in [None, '~', 'N/D'] else int(par_value)
-                handicap_value = 0 if handicap_value in [None, '~', 'N/D'] else int(handicap_value)
-
-                # 필드에 값 설정
-                setattr(tee, par_field, par_value)
-                setattr(tee, handicap_field, handicap_value)
-
-            # Tee 객체 저장
-            tee.save()
+        if created:
+            print(f"Created new Tee for Course ID {row['Course ID']}")
+        else:
+            print(f"Updated existing Tee for Course ID {row['Course ID']}")
