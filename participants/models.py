@@ -60,9 +60,20 @@ class Participant(models.Model):
     is_group_win_handicap = models.BooleanField("속한 조에서 핸디캡 승리 여부", default=False)
 
     def get_scorecard(self):
+        """
+        참가자의 1~18홀 점수를 반환하며, 누락된 점수는 0으로 채운다.
+        """
         # MySQL의 participants_holescore 테이블에서 유저의 스코어카드를 가져오는 로직 (재사용성을 위해 모델에 정의함)
         hole_scores = HoleScore.objects.filter(participant=self).order_by('hole_number')
-        return [hole.score for hole in hole_scores]
+
+        # {hole_number: score} 형태로 매핑
+        hole_score_map = {hole.hole_number: hole.score for hole in hole_scores}
+        print(f"hole_score_map: {hole_score_map}")
+        # 1~18홀 점수를 채우고, 누락된 점수는 0으로 채운다.
+        complete_scorecard = [hole_score_map.get(hole, 0) for hole in range(1, 19)]
+        print(f"complete_scorecard: {complete_scorecard}")
+        return complete_scorecard
+
 
     def get_front_nine_score(self): # 전반전 점수
         return HoleScore.objects.filter(participant=self, hole_number__lte=9).aggregate(total=Sum('score'))[
