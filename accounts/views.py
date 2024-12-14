@@ -7,7 +7,7 @@ accounts/participants_view.py
 현재 기능:
 - 일반 회원가입
 - 소셜 회원가입 & 로그인, 로그인 성공
-- 회원 전체 조회, 회원정보 조회, 수정
+- 회원 전체 조회, 회원정보 조회, 수정, 탈퇴
 - 비밀번호 인증, 변경
 '''
 import boto3
@@ -17,9 +17,14 @@ from rest_framework.decorators import api_view, permission_classes, action  # �
 from rest_framework.permissions import AllowAny, IsAuthenticated  # 권한 클래스
 from rest_framework.response import Response                        # API 응답 생성
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
+
 
 from accounts.serializers import UserSerializer, UserInfoSerializer, OtherUserInfoSerializer
 from accounts.forms import UserCreationFirstStepForm, UserCreationSecondStepForm
+from clubs.views.club_member import ClubMemberViewSet
+from clubs.models import ClubMember
+
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
 from django.http import QueryDict
@@ -61,7 +66,7 @@ def signup_first_step(request):
 #         user.set_password(request.data.get('password')) # password는 해시화하여 저장
 #         user.save() # 객체를 DB에 저장
 #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
 # 회원가입 step 2
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -217,14 +222,71 @@ class UserInfoViewSet(viewsets.ModelViewSet):
                 'messages': 'An error occurred while retrieving updated user info',
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    def destroy(self, request, *args, **kwargs):
+        """
+        회원탈퇴 API - 클럽 관리 여부 확인 후 탈퇴 처리
+        """
+        user = request.user  # 현재 사용자 가져오기
+        club_memberships = ClubMember.objects.filter(user=user)  # 사용자가 가입한 클럽 목록 가져오기
 
+        # ClubMemberViewSet 인스턴스 생성
+        club_member_viewset = ClubMemberViewSet()
 
+        for membership in club_memberships:
+            # 클럽 관리자 여부 확인
+            if membership.role == 'admin':
+                # 같은 클럽의 다른 관리자가 있는지 확인
+                other_admins = ClubMember.objects.filter(
+                    club=membership.club,
+                    role='admin'
+                ).exclude(user=user)
+
+                if not other_admins.exists():
+                    # 다른 관리자가 없으면 에러 반환
+                    raise ValidationError({
+                        "status": status.HTTP_400_BAD_REQUEST,
+                        "message": f"Cannot leave the club '{membership.club.name}' because you are the only admin. Please transfer admin rights to another member before deleting your account."
+                    })
+
+            # 관리자가 아닌 경우 또는 다른 관리자가 있는 경우, 클럽 나가기 호출
+            club_member_viewset.common_leave_club(member=membership, user=user)
+
+        # 유저 데이터 익명화 및 비활성화
+        user.name = 'Deleted_User'
+        user.phone_number = '000-000-0000'
+        user.address = None
+        user.date_of_birth = None
+        user.student_id = None
+        user.profile_image = None
+        user.fcm_token = None
+        user.provider = None
+        user.email = f"deleted_{user.id}@example.com"
+        user.is_active = False
+        user.save()
+
+        return Response({
+            "status": status.HTTP_200_OK,
+            "message": "User account successfully anonymized and deactivated"
+        }, status=status.HTTP_200_OK)
+
+from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
 
 class PasswordManagementView(APIView):
     '''
     비밀번호 변경
     '''
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """
+        작업(action)에 따라 권한 설정
+        """
+        action = self.request.resolver_match.kwargs.get('action')
+
+        if action == 'forget':
+            return [AllowAny()]  # 비밀번호 잊음은 인증 필요 없음
+        return [IsAuthenticated()]  # 나머지는 인증 필요
 
     def post(self, request, *args, **kwargs):
         action = kwargs.get('action')
@@ -233,6 +295,8 @@ class PasswordManagementView(APIView):
             return self.verify_password(request)
         elif action == 'change':
             return self.change_password(request)
+        elif action == 'forget':
+            return self.forget_password(request)
         else:
             return Response({
                 "status": status.HTTP_400_BAD_REQUEST,
@@ -271,3 +335,39 @@ class PasswordManagementView(APIView):
             "status": status.HTTP_200_OK,
             "message": "Password updated successfully"
         }, status=status.HTTP_200_OK)
+    
+    def forget_password(self, request):
+            # 인증 필요 없음
+            email = request.data.get('email')
+
+            if not email:
+                return Response({
+                    "status": status.HTTP_400_BAD_REQUEST,
+                    "message": "Email is required"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.get(email=email)
+                
+            except User.DoesNotExist:
+                return Response({
+                    "status": status.HTTP_404_NOT_FOUND,
+                    "message": "User with this email does not exist"
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            temporary_password = get_random_string(length=8)
+            user.set_password(temporary_password)
+            user.save()
+
+            subject = "비밀번호 변경 요청: Password Reset Request"
+            message = f"안녕하세요 {user.name}님,\n\n임시 비밀번호: {temporary_password}\n\n로그인 후 비밀번호를 변경해주세요."
+            message += f"\n\nHello {user.name},\n\nYour temporary password is: {temporary_password}\n\nPlease log in and reset your password immediately."
+            from_email = 'your_email@example.com'
+            recipient_list = [email]
+
+            send_mail(subject, message, from_email, recipient_list)
+
+            return Response({
+                "status": status.HTTP_200_OK,
+                "message": "A temporary password has been sent to your email"
+            }, status=status.HTTP_200_OK)

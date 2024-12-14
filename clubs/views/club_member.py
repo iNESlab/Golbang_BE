@@ -90,6 +90,12 @@ class ClubMemberViewSet(ClubViewSet):
         user = request.user
         member = ClubMember.objects.filter(club=club, user=user).first()
 
+        self.common_leave_club(member, user)
+    
+    @staticmethod
+    def common_leave_club(member, user):
+        
+
         if not member:  # 사용자가 해당 클럽의 멤버가 아닌 경우, 404 반환
             return handle_404_not_found('Club Member', user.id)
 
