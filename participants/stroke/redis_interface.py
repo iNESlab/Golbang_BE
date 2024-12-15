@@ -106,18 +106,16 @@ class RedisInterface:
     async def get_scores_from_redis(self, participant):
         # Redis에서 참가자의 점수를 반환
         redis_key = f'event:{participant.event_id}:participant:{participant.id}'
-        sum_score = await sync_to_async(redis_client.hget)(redis_key, "sum_score")
-        handicap_score = await sync_to_async(redis_client.hget)(redis_key, "handicap_score")
 
-        is_group_win = await sync_to_async(redis_client.hget)(redis_key, "is_group_win")
-        is_group_win_handicap = await sync_to_async(redis_client.hget)(redis_key, "is_group_win_handicap")
-        user_name = await sync_to_async(redis_client.hget)(redis_key, "user_name")
+        # Redis 해시 데이터 한 번에 가져오기
+        participant_data = await sync_to_async(redis_client.hgetall)(redis_key)
 
-        user_name = user_name.decode('utf-8') if user_name else 'unknown'
-        sum_score = int(sum_score) if sum_score else 0
-        handicap_score = int(handicap_score) if handicap_score else 0
-        is_group_win = bool(int(is_group_win)) if is_group_win else False
-        is_group_win_handicap = bool(int(is_group_win)) if is_group_win_handicap else False
+        # 데이터 디코딩 및 변환
+        user_name = participant_data.get(b"user_name", b"unknown").decode('utf-8')
+        sum_score = int(participant_data.get(b"sum_score", b"0"))
+        handicap_score = int(participant_data.get(b"handicap_score", b"0"))
+        is_group_win = bool(int(participant_data.get(b"is_group_win", b"0")))
+        is_group_win_handicap = bool(int(participant_data.get(b"is_group_win_handicap", b"0")))
 
         return user_name, sum_score, handicap_score, is_group_win, is_group_win_handicap
 
