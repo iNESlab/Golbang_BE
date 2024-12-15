@@ -100,7 +100,7 @@ def send_club_creation_notification(club_id):
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
 
-                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data, club_id=club.id)
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 

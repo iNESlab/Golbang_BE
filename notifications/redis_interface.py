@@ -12,19 +12,24 @@ class NotificationRedisInterface:
     Redis와 상호작용하여 알림 데이터를 관리하는 인터페이스
     """
 
-    async def save_notification(self, user_id, notification_id, notification_data):
+    async def save_notification(self, user_id, notification_id, notification_data, event_id=None, club_id=None):
         """
         Redis에 알림 데이터를 저장합니다.
         """
         print(f"이곳은 save_notification 함수!!!!! user_id={user_id} notification_id={notification_id}, notification_data={notification_data}")
-        # 타임스탬프 추가
-        notification_data["timestamp"] = datetime.now().isoformat()
+
+        # 타임스탬프 및 event_id 또는 club_id 데이터 추가
+        notification_data.update({
+            "timestamp": datetime.now().isoformat(),
+            "event_id": event_id,
+            "club_id": club_id
+        })
         print(f"notification_data에 타임스탬프 추가 => {notification_data}")
         key = f"notification:{user_id}:{notification_id}"
         print(f"Saving notification with key={key} and data={notification_data}")
 
         await sync_to_async(redis_client.set)(key, json.dumps(notification_data))
-        await sync_to_async(redis_client.expire)(key, 172800)  # 2일 후 만료 설정
+        await sync_to_async(redis_client.expire)(key, 604800)  # 7일 후 만료
 
     async def get_notification(self, user_id, notification_id):
         """
