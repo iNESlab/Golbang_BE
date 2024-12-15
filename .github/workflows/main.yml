@@ -44,6 +44,7 @@ jobs:
         run: |
           docker-compose -f docker-compose.ci.yml build
           docker-compose -f docker-compose.ci.yml push
+          
   deploy:
     if: github.repository == 'iNESlab/Golbang_BE'  # 특정 레포지토리에서만 실행
     runs-on: self-hosted
