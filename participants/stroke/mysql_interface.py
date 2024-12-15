@@ -30,8 +30,8 @@ class MySQLInterface:
         )
 
     @database_sync_to_async
-    def update_participant_rank_in_db(self, participant_data):
-        Participant.objects.filter(id=participant_data.participant_id).update(**asdict(participant_data))
+    def update_participant_rank_in_db(self, participant_id, participant_data):
+        Participant.objects.filter(id=participant_id).update(**asdict(participant_data))
 
     @database_sync_to_async
     def get_group_participants(self, event_id, group_type=None):
@@ -105,7 +105,6 @@ class MySQLInterface:
 
                 # ParticipantUpdateData 객체 생성
                 participant_data = ParticipantUpdateData(
-                    participant_id=participant.id,
                     rank=participant_data_dict.get(b"rank"),
                     handicap_rank=participant_data_dict.get(b"handicap_rank"),
                     sum_score=participant_data_dict.get(b"sum_score"),
@@ -115,7 +114,7 @@ class MySQLInterface:
                 )
 
                 if participant_data.rank is not None and participant_data.handicap_rank is not None:
-                    await self.update_participant_rank_in_db(participant_data)
+                    await self.update_participant_rank_in_db(participant.id, participant_data)
 
                 # 참가자 포인트 계산 및 저장
                 await sync_to_async(participant.calculate_points)()
