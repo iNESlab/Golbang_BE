@@ -12,7 +12,6 @@ from typing import Optional
 
 @dataclass
 class ParticipantUpdateData:
-    participant_id: int
     rank: str
     handicap_rank: str
     sum_score: int
