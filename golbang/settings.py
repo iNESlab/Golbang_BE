@@ -156,7 +156,7 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Seoul'
 CELERY_BEAT_SCHEDULE = {
     'update-club-rankings-every-day': {
-        'task': 'clubs.tasks.update_all_clubs_periodically',
+        'task': 'clubs.tasks.calculate_club_ranks_and_points',
         'schedule': crontab(minute=0, hour=0),  # 매일 자정에 실행
     },
 }
