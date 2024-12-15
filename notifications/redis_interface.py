@@ -24,7 +24,7 @@ class NotificationRedisInterface:
         print(f"Saving notification with key={key} and data={notification_data}")
 
         await sync_to_async(redis_client.set)(key, json.dumps(notification_data))
-        await sync_to_async(redis_client.expire)(key, 172800)  # 2일 후 만료 설정
+        await sync_to_async(redis_client.expire)(key, 604800)  # 7일 후 만료 설정
 
     async def get_notification(self, user_id, notification_id):
         """
