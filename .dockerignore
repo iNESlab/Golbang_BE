@@ -1,0 +1,41 @@
+# 숨김 파일 및 디렉토리 제외
+.*
+!.dockerignore  # .dockerignore은 포함
+
+# 빌드 디렉토리 및 시스템 관련 파일 제외
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Git 관련 파일 제외
+.git/
+.gitignore
+
+# OS 및 IDE 관련 파일 제외
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Docker Compose 파일 제외 (프로덕션 환경에서는 필요 없을 수 있음)
+docker-compose.yml
+docker-compose.*.yml
+
+# 테스트, 문서, 기타 불필요한 파일 제외
+tests/
+CHANGELOG.md
+README.md
+
+# 미디어 및 정적 파일 제외 (컨테이너에서 별도로 관리 가능)
+media/
+static/
+
+# 비밀 키 및 인증 정보 제외
+serviceAccountKey.json  # Firebase 키 파일, 필요하면 Docker 컨텍스트 외부에서 볼륨으로 마운트
+.env
+
+# 관리 스크립트 제외
+create-superuser.py  # 프로덕션 빌드에서는 불필요
+send_fcm_test.py  # 테스트용 스크립트 제외

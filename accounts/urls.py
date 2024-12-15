@@ -44,4 +44,5 @@ urlpatterns = [
     path('', include(router.urls)),  # 'users/info/'로 접근 가능  # 회원정보 조회 및 수정
     path('info/password/verify/', PasswordManagementView.as_view(), {'action': 'verify'}, name='password-verify'), # 비밀번호 인증
     path('info/password/change/', PasswordManagementView.as_view(), {'action': 'change'}, name='password-change'), # 비밀번호 수정
+    path('info/password/forget/', PasswordManagementView.as_view(), {'action': 'forget'}, name='password-forget'), # 비밀번호 재발급
 ]

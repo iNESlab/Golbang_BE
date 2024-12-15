@@ -72,6 +72,15 @@ STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
+# 이메일
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # 예: Gmail
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'iamgolbang@gmail.com'  # 이메일 계정
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')  # 이메일 비밀번호 또는 앱 비밀번호
+DEFAULT_FROM_EMAIL = 'iamgolbang@gmail.com' # 이메일이 발송될 때 수신자가 보게 되는 발신자 이메일 주소
+
 # 중복된 STATIC_URL 제거
 # Static files (CSS, JavaScript, Images)
 # STATIC_URL = '/static/' # 이 부분은 S3를 사용하지 않을 경우에만 활성화
