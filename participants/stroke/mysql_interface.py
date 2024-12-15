@@ -92,12 +92,12 @@ class MySQLInterface:
         # 이벤트 데이터 업데이트
         Event.objects.filter(id=event_id).update(**asdict(event_data))
 
-    async def transfer_participant_data_to_db(self, participants):
+    async def transfer_participant_data_to_db(self, event_id, participants):
         from clubs.models import ClubMember
         try:
             # Redis에서 참가자 데이터를 가져와서 MySQL로 전달
             for participant in participants:
-                redis_key = f'participant:{participant.id}'
+                redis_key = f'event:{event_id}:participant:{participant.id}'
                 logging.info('redis_key: %s', redis_key)
 
                 participant_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)

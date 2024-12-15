@@ -56,7 +56,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             # Redis에서 데이터를 가져와 MySQL로 전송
             participants = await self.get_event_participants(self.event_id)
-            await self.transfer_participant_data_to_db(participants)
+            await self.transfer_participant_data_to_db(self.event_id, participants)
             await self.transfer_hole_scores_to_db(participants)
             await self.transfer_event_data_to_db(self.event_id)
 
