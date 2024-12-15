@@ -29,6 +29,8 @@ jobs:
           # SECRET_KEY 추가
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
           echo "VERSION=${{ github.sha }}" >> .env
+          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
+          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> .env
 
       - name: Upload Docker Compose and list of variables as artifacts
         uses: actions/upload-artifact@v4
@@ -44,7 +46,6 @@ jobs:
         run: |
           docker-compose -f docker-compose.ci.yml build
           docker-compose -f docker-compose.ci.yml push
-          
   deploy:
     if: github.repository == 'iNESlab/Golbang_BE'  # 특정 레포지토리에서만 실행
     runs-on: self-hosted
@@ -72,6 +73,8 @@ jobs:
           echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
           echo "VERSION=${{ github.sha }}" >> .env
+          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
+          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD}}" >> .env
 
       - name: Download deployment artifacts
         uses: actions/download-artifact@v4
