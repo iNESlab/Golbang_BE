@@ -68,7 +68,7 @@ def send_event_creation_notification(event_id):
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
 
-                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data, event_id=event.id)
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
@@ -120,7 +120,7 @@ def send_event_update_notification(event_id):
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
 
-                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data, event_id=event.id)
 
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
@@ -187,7 +187,7 @@ def send_event_notification_10_seconds_before(event_id):
             for user_id in user_ids:
                 notification_id = str(uuid.uuid4())
                 notification_data["notification_id"] = notification_id
-                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data, event_id=event.id)
 
     except Event.DoesNotExist:
         logger.error(f"Event {event_id} does not exist")
@@ -270,7 +270,7 @@ def send_event_notification_2_days_before():
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
 
-                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data, event_id=event.id)
 
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
@@ -316,7 +316,7 @@ def send_event_notification_1_hour_before():
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
 
-                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data, event_id=event.id)
 
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
@@ -361,7 +361,7 @@ def send_event_notification_event_ended():
                 notification_data = {**base_notification_data, "status": "success"}
                 print(f"notification준비 완료 {notification_id}, {notification_data}")
 
-                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data)
+                async_to_sync(redis_interface.save_notification)(user_id, notification_id, notification_data, event_id=event.id)
         else:
             logger.info(f"No FCM tokens found for club members in club: {club}")
 
