@@ -101,6 +101,7 @@ class MySQLInterface:
                 logging.info('redis_key: %s', redis_key)
 
                 participant_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)
+                logging.info('participant_data_dict: %s', participant_data_dict)
 
                 # ParticipantUpdateData 객체 생성
                 participant_data = ParticipantUpdateData(

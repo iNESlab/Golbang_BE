@@ -28,8 +28,6 @@ class ParticipantUpdateData:
             self.handicap_rank = self.handicap_rank.decode('utf-8')
         # is_group_win과 is_group_win_handicap이 bytes 타입인 경우 boolean으로 변환
         if isinstance(self.is_group_win, bytes):
-            self.participant_id = int(self.participant_id)
-        if isinstance(self.is_group_win, bytes):
             self.is_group_win = bool(int(self.is_group_win))
         if isinstance(self.is_group_win_handicap, bytes):
             self.is_group_win_handicap = bool(int(self.is_group_win_handicap))
