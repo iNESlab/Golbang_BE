@@ -90,7 +90,7 @@ class ClubMemberViewSet(ClubViewSet):
         user = request.user
         member = ClubMember.objects.filter(club=club, user=user).first()
 
-        self.common_leave_club(member, user)
+        return self.common_leave_club(member, user)
     
     @staticmethod
     def common_leave_club(member, user):
