@@ -137,8 +137,8 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
         return {
             'user': {
-                'name': user.name
-                # TODO 'image' : 유저 프로필 사진 추가
+                'name': user.name,
+                'profile_image' : user.profile_image,
             },
             **asdict(rank_data)  # RankData 객체를 딕셔너리로 변환 후 펼침
         }
