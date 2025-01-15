@@ -10,6 +10,8 @@ import asyncio # 비동기 작업
 import logging
 from dataclasses import asdict
 
+from sympy import Q
+
 from asgiref.sync import sync_to_async # 비동기 작업을 동기 함수로 전환하기 위한 함수
 from channels.db import database_sync_to_async # 데이터베이스 작업을 비동기 함수로 전환하기 위한 함수
 
@@ -45,7 +47,10 @@ class MySQLInterface:
     @database_sync_to_async
     def get_event_participants(self, event_id):
         # 특정 이벤트에 참여한 모든 참가자를 반환
-        return list(Participant.objects.filter(event_id=event_id).select_related('club_member__user'))
+        return list(Participant.objects.filter(
+            Q(status_type=Participant.StatusType.PARTY) | Q(status_type=Participant.StatusType.ACCEPT),
+            event_id=event_id
+        ).select_related('club_member__user'))
 
     @database_sync_to_async
     def get_and_check_participant(self, participant_id, user):
