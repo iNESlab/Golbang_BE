@@ -18,9 +18,12 @@ services:     # 컨테이너 지정
     container_name: redis
     image: redis:latest
     restart: always
-    ports: # 포트포워딩 - 로컬의 호스트가 6379 포트를 사용 중일 수 있으므로 6379 포트를 도커 컨테이너의 6379 포트로 포워딩해줌
+    ports:
       - "6379:6379"
-    volumes: # 파일 시스템 정의
+    environment:
+      - REDIS_PASSWORD=${MYSQL_DB_PASSWORD}
+    command: redis-server --requirepass ${MYSQL_DB_PASSWORD}
+    volumes:
       - redisdata:/data
 
   celery:   # celery 작업자

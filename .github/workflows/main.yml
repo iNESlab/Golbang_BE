@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - release
 
 jobs:
   build:
@@ -46,8 +47,8 @@ jobs:
         run: |
           docker-compose -f docker-compose.ci.yml build
           docker-compose -f docker-compose.ci.yml push
-  deploy:
-    if: github.repository == 'iNESlab/Golbang_BE'  # 특정 레포지토리에서만 실행
+  deploy-dev:
+    if: github.ref == 'refs/heads/main'  # main 브랜치에서만 실행  
     runs-on: self-hosted
     needs: build
     steps:
@@ -83,6 +84,31 @@ jobs:
 
       - name: Log in to Docker Hub
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login --username ${{secrets.DOCKER_USERNAME}} --password-stdin
+
+      - name: Pull and run Docker container
+        run: |
+          sudo docker-compose --env-file .env -f docker-compose.prod.yml pull
+          sudo docker-compose --env-file .env -f docker-compose.prod.yml up -d
+
+  deploy-release:
+    if: github.ref == 'refs/heads/release'  # release 브랜치에서만 실행  
+    runs-on: self-hosted  #TODO:  release 전용 러너 수정하기
+    needs: build
+    steps:
+      - name: Deploy for release branch
+        run: echo "Deploying on release branch runner"
+
+      - name: Stop and remove existing containers (if docker-compose.prod.yml exists)
+        run: |
+          if [ -f docker-compose.prod.yml ] && [ -f .env ]; then
+            sudo docker-compose --env-file .env -f docker-compose.prod.yml down
+          else
+            echo "docker-compose.prod.yml or .env not found. Skipping container shutdown."
+          fi
+
+      - name: Remove existing images
+        run: |
+          sudo docker image prune -af  # 모든 사용하지 않는 이미지를 강제 삭제
 
       - name: Pull and run Docker container
         run: |
