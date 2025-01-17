@@ -3,10 +3,6 @@ services:     # 컨테이너 지정
   web:
     container_name: web
     image: "${DOCKER_USERNAME}/web:${VERSION}"  # CI에서 빌드할 이미지 이름
-    environment:
-      DJANGO_SETTINGS_MODULE: golbang.settings
-      REDIS_URL: redis://redis:6379/0  # Redis URL 환경 변수 설정
-      REDIS_HOST: redis
     restart: always
     ports:
       - "8000:8000"
@@ -30,10 +26,6 @@ services:     # 컨테이너 지정
     container_name: celery
     image: "${DOCKER_USERNAME}/celery:${VERSION}"
     command: celery -A golbang worker -l info
-    environment:
-      DJANGO_SETTINGS_MODULE: golbang.settings
-      REDIS_URL: redis://redis:6380/0
-      REDIS_HOST: redis
     env_file:
       - .env
 
@@ -41,10 +33,6 @@ services:     # 컨테이너 지정
     container_name: celery-beat
     image: "${DOCKER_USERNAME}/celery-beat:${VERSION}"
     command: celery -A golbang beat -l info
-    environment:
-      DJANGO_SETTINGS_MODULE: golbang.settings
-      REDIS_URL: redis://redis:6380/0
-      REDIS_HOST: redis
     env_file:
       - .env
 

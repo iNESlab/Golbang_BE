@@ -5,10 +5,6 @@ services:     # 컨테이너 지정
   web:
     container_name: web
     build: .  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
-    environment:
-      DJANGO_SETTINGS_MODULE: golbang.settings
-      REDIS_URL: redis://redis:6379/0  # Redis URL 환경 변수 설정
-      REDIS_HOST: redis
     restart: always
     volumes:  # 파일 시스템 정의
       - .:/app
@@ -37,36 +33,31 @@ services:     # 컨테이너 지정
     container_name: redis
     image: redis:latest
     restart: always
-    ports: # 포트포워딩 - 로컬의 호스트가 6379 포트를 사용 중일 수 있으므로 6379 포트를 도커 컨테이너의 6379 포트로 포워딩해줌
-      - "6380:6379"
-    volumes: # 파일 시스템 정의
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${MYSQL_DB_PASSWORD}
+    command: redis-server --requirepass ${MYSQL_DB_PASSWORD}
+    volumes:
       - redisdata:/data
 
   celery:   # celery 작업자
     container_name: celery
     build: .
     command: celery -A golbang worker -l info
-    environment:
-      DJANGO_SETTINGS_MODULE: golbang.settings
-      REDIS_URL: redis://redis:6380/0
-      REDIS_HOST: redis
     volumes:
       - .:/app
     env_file:
       - .env
 
-#  celery-beat:   # 주기적으로 업데이트
-#    container_name: celery-beat
-#    build: .
-#    command: celery -A golbang beat -l info
-#    environment:
-#      DJANGO_SETTINGS_MODULE: golbang.settings
-#      REDIS_URL: redis://redis:6380/0
-#      REDIS_HOST: redis
-#    volumes:
-#      - .:/app
-#    env_file:
-#      - .env
+  celery-beat:   # 주기적으로 업데이트
+    container_name: celery-beat
+    build: .
+    command: celery -A golbang beat -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
 
 volumes:
   dbdata:
