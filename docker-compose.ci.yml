@@ -22,8 +22,6 @@ services:     # 컨테이너 지정
     environment:
       - REDIS_PASSWORD=${MYSQL_DB_PASSWORD}
     command: redis-server --requirepass ${MYSQL_DB_PASSWORD}
-    volumes:
-      - redisdata:/data
 
   celery:   # celery 작업자
     container_name: celery
