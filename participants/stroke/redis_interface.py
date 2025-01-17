@@ -11,11 +11,17 @@ import logging
 from asgiref.sync import sync_to_async
 import redis
 
+from golbang import settings
 from participants.models import Participant
 from participants.stroke.data_class import EventData, ParticipantResponseData
 
 # Redis 클라이언트 설정
-redis_client = redis.StrictRedis(host='redis', port=6379, db=0)
+redis_client = redis.StrictRedis(
+    host='redis', 
+    port=6379, 
+    db=0, 
+    password=settings.REDIS_PASSWORD
+)
 
 
 class RedisInterface:
