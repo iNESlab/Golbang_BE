@@ -121,7 +121,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             print(f'response_data: {response_data}')
             await self.send_json(response_data)
         except Exception as e:
-            await self.send_json({'error': '스코어 기록을 가져오는 데 실패했습니다.'})
+            await self.send_json({'error': f'스코어 기록을 가져오는 데 실패했습니다.{e}'})
 
     async def process_participant(self, participant):
         # 참가자 데이터를 처리하여 rank 정보를 반환
