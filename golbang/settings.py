@@ -144,8 +144,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.environ.get('REDIS_HOST', 'localhost'), 6379)],
-            "password": REDIS_PASSWORD,
+            "hosts":[f"redis://:{os.environ.get('MYSQL_DB_PASSWORD')}@redis:6379/0"],
         },
     },
 }
