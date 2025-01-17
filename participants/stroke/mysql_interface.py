@@ -47,10 +47,7 @@ class MySQLInterface:
     @database_sync_to_async
     def get_event_participants(self, event_id):
         # 특정 이벤트에 참여한 모든 참가자를 반환
-        return list(Participant.objects.filter(
-            Q(status_type=Participant.StatusType.PARTY) | Q(status_type=Participant.StatusType.ACCEPT),
-            event_id=event_id
-        ).select_related('club_member__user'))
+        return list(Participant.objects.filter(event_id=event_id).select_related('club_member__user'))
 
     @database_sync_to_async
     def get_and_check_participant(self, participant_id, user):
