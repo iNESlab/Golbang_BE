@@ -1,7 +1,7 @@
 # .gitignore
 .idea/
 .env
-.env.prod
+.env.*
 .DS_Store
 __pycache__/
 *.pyc
