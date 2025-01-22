@@ -25,13 +25,24 @@ jobs:
 
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
-          # .env 파일 생성
+          # 공통.env 파일 생성
           echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > .env
           # SECRET_KEY 추가
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
           echo "VERSION=${{ github.sha }}" >> .env
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
           echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> .env
+          
+          # 브랜치별 환경 변수 추가
+          BRANCH_NAME=${{ github.ref_name }}
+          if [ "$BRANCH_NAME" == "main" ]; then
+            echo "AWS_HOST_IP=${{ secrets.AWS_HOST_IP_STAG }}" >> .env
+          elif [ "$BRANCH_NAME" == "release" ]; then
+            echo "AWS_HOST_IP=${{ secrets.AWS_HOST_IP_PROD }}" >> .env
+          else
+            echo "Unknown branch: $BRANCH_NAME"
+            exit 1
+          fi
 
       - name: Upload Docker Compose and list of variables as artifacts
         uses: actions/upload-artifact@v4
@@ -76,6 +87,7 @@ jobs:
           echo "VERSION=${{ github.sha }}" >> .env
           echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
           echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD}}" >> .env
+          echo "AWS_HOST_IP=${{ secrets.AWS_HOST_IP_STAG }}" >> .env 
 
       - name: Download deployment artifacts
         uses: actions/download-artifact@v4
@@ -109,6 +121,23 @@ jobs:
       - name: Remove existing images
         run: |
           sudo docker image prune -af  # 모든 사용하지 않는 이미지를 강제 삭제
+
+      - name: Create .env file from SERVER_ENV_FILE secret
+        run: |
+          echo "${{ secrets.SERVER_ENV_FILE }}" | sed 's/\r$//' > ${{ github.workspace }}/.env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> ${{ github.workspace }}/.env
+          echo "VERSION=${{ github.sha }}" >> .env
+          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
+          echo "DOCKER_PASSWORD=${{ secrets.DOCKER_PASSWORD}}" >> .env
+          echo "AWS_HOST_IP=${{ secrets.AWS_HOST_IP_STAG }}" >> .env 
+
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-files
+
+      - name: Log in to Docker Hub
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login --username ${{secrets.DOCKER_USERNAME}} --password-stdin
 
       - name: Pull and run Docker container
         run: |
