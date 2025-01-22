@@ -92,7 +92,7 @@ jobs:
 
   deploy-release:
     if: github.ref == 'refs/heads/release'  # release 브랜치에서만 실행  
-    runs-on: self-hosted  #TODO:  release 전용 러너 수정하기
+    runs-on: release
     needs: build
     steps:
       - name: Deploy for release branch
