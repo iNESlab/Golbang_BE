@@ -13,6 +13,7 @@ from django.contrib import admin
 from django.urls import include, path, re_path
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from golbang.views import health_check
 from rest_framework.permissions import AllowAny
 
 schema_view_v1 = get_schema_view(
@@ -29,6 +30,7 @@ schema_view_v1 = get_schema_view(
 )
 
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('admin/', admin.site.urls),  # admin 페이지
     path('api/v1/users/', include('accounts.urls')),    # accounts 앱의 URL
     path('api/v1/clubs/', include('clubs.urls')),       # clubs 앱의 URL

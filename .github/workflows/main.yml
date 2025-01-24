@@ -59,7 +59,7 @@ jobs:
           docker-compose -f docker-compose.ci.yml push
   deploy-dev:
     if: github.ref == 'refs/heads/main'  # main 브랜치에서만 실행  
-    runs-on: self-hosted
+    runs-on: dev
     needs: build
     steps:
 
