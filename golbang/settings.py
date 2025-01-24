@@ -205,26 +205,28 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+# TODO: 추후 settings.dev, settgins.prod로 파일 분리가 필요함
+CSRF_TRUSTED_ORIGINS = [
+    'https://us.golf-bang.store',
+    'https://dev.golf-bang.store',
+    'http://10.0.2.2:8080',  # Flutter 개발 환경
+]
 
-# 아래는 필요 없음
-# 일단 주석처리
-# CSRF_TRUSTED_ORIGINS = [
-#     'http://localhost:8000',  # 클라이언트의 도메인 추가
-# ]
-
-# CORS_ORIGIN_WHITELIST = [
-#     'http://localhost:8000',  # 클라이언트의 도메인 추가
-# ]
-
-# # CSRF 설정
-# CSRF_COOKIE_NAME = 'csrftoken'
+# CSRF 설정
+CSRF_COOKIE_NAME = 'csrftoken'
 # CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
 
-CORS_ORIGIN_ALLOW_ALL = True  # 모든 도메인 허용 (개발 중에만)
 # 실제 운영 환경에서는 아래와 같이 특정 도메인만 허용하도록 설정해야 합니다.
-CORS_ORIGIN_WHITELIST = ['http://10.0.2.2:8080']
+CORS_ORIGIN_ALLOW_ALL = False  # 모든 도메인 허용 비활성화
+CORS_ORIGIN_WHITELIST = [
+    'https://us.golf-bang.store',
+    'https://dev.golf-bang.store',
+    'http://10.0.2.2:8080', # Flutter 개발 환경
+]
 
 CORS_ALLOW_CREDENTIALS = True
+
+SECURE_SSL_REDIRECT = True  # HTTP -> HTTPS 리다이렉트
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
