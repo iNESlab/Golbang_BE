@@ -43,7 +43,7 @@ MAIN_DOMAIN = env('MAIN_DOMAIN')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2','.golf-bang.store']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2','.golf-bang.store', '10.0.1.27']
 
 # FCM
 cred_path = os.path.join(BASE_DIR, "serviceAccountKey.json")
@@ -209,6 +209,8 @@ SIMPLE_JWT = {
 CSRF_TRUSTED_ORIGINS = [
     'https://us.golf-bang.store',
     'https://dev.golf-bang.store',
+    'https://us.golf-bang.store:8000',
+    'https://dev.golf-bang.store:8000',
     'http://10.0.2.2:8080',  # Flutter 개발 환경
 ]
 
@@ -225,8 +227,6 @@ CORS_ORIGIN_WHITELIST = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
-
-SECURE_SSL_REDIRECT = True  # HTTP -> HTTPS 리다이렉트
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
