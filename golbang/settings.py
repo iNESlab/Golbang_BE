@@ -43,7 +43,13 @@ MAIN_DOMAIN = env('MAIN_DOMAIN')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True # 프로덕션 환경에서는 False로 해야 함
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2','.golf-bang.store', '10.0.1.27']
+ALLOWED_HOSTS = [
+    'localhost', 
+    '10.0.2.2',
+    '.golf-bang.store', 
+    '10.0.1.27', 
+    env('ALB_DOMAIN')# ALB 도메인
+] 
 
 # FCM
 cred_path = os.path.join(BASE_DIR, "serviceAccountKey.json")
