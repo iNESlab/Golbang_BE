@@ -226,8 +226,6 @@ CORS_ORIGIN_WHITELIST = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-SECURE_SSL_REDIRECT = True  # HTTP -> HTTPS 리다이렉트
-
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
