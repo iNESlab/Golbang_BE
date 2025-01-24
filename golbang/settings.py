@@ -209,6 +209,8 @@ SIMPLE_JWT = {
 CSRF_TRUSTED_ORIGINS = [
     'https://us.golf-bang.store',
     'https://dev.golf-bang.store',
+    'https://us.golf-bang.store:8000',
+    'https://dev.golf-bang.store:8000',
     'http://10.0.2.2:8080',  # Flutter 개발 환경
 ]
 
