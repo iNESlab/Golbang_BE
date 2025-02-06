@@ -229,7 +229,7 @@ CORS_ORIGIN_ALLOW_ALL = False  # 모든 도메인 허용 비활성화
 CORS_ORIGIN_WHITELIST = [
     'https://us.golf-bang.store',
     'https://dev.golf-bang.store',
-    'http://10.0.2.2', # Flutter 개발 환경
+    'http://10.0.2.2:8080', # Flutter 개발 환경
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -270,7 +270,7 @@ TEMPLATES = [
     },
 ]
 
-# 템플릿 경로 
+# 템플릿 경로
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 
 # django가 사용자 인증을 위해 사용할 백엔드 정의
@@ -279,7 +279,7 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',    # 기본 Django 인증 백엔드 (세션 기반 인증 시스템)
     'auth.authenticate.EmailorUsernameAuthBackend', # 사용자 정의 인증 백엔드 (직접 정의 / 이메일 or 사용자 아이디를 사용해서 인증)
     # drf-social-oauth2
-    'drf_social_oauth2.backends.DjangoOAuth2',      # 소셜 로그인 인증 백엔드 
+    'drf_social_oauth2.backends.DjangoOAuth2',      # 소셜 로그인 인증 백엔드
     # Social Oauth2
     'social_core.backends.google.GoogleOAuth2',     # 구글 소셜 로그인 백엔드 추가
     'social_core.backends.naver.NaverOAuth2',       # 네이버 소셜 로그인 백엔드 추가
@@ -296,7 +296,7 @@ NAVER_CALLBACK_URL = env('NAVER_CALLBACK_URL')
 
 # Social Oauth2
 ## Google  Social Login 설정
-SOCIAL_AUTH_GOOGLE_CLIENT_ID = env('SOCIAL_AUTH_GOOGLE_CLIENT_ID') 
+SOCIAL_AUTH_GOOGLE_CLIENT_ID = env('SOCIAL_AUTH_GOOGLE_CLIENT_ID')
 SOCIAL_AUTH_GOOGLE_SECRET = env('SOCIAL_AUTH_GOOGLE_SECRET')
 SOCIAL_AUTH_GOOGLE_SCOPE = [
     'https://www.googleapis.com/auth/userinfo.email',
