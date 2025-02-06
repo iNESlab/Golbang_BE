@@ -229,7 +229,7 @@ CORS_ORIGIN_ALLOW_ALL = False  # 모든 도메인 허용 비활성화
 CORS_ORIGIN_WHITELIST = [
     'https://us.golf-bang.store',
     'https://dev.golf-bang.store',
-    'http://10.0.2.2:8080', # Flutter 개발 환경
+    'http://10.0.2.2', # Flutter 개발 환경
 ]
 
 CORS_ALLOW_CREDENTIALS = True
