@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from django.db import transaction
 from django.http import Http404
 
 from .club_common import IsMemberOfClub, ClubViewSet
@@ -88,26 +89,32 @@ class ClubAdminViewSet(ClubViewSet):
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
-        user_id = request.data.get('user_id')
-        if not user_id: # 유효하지 않은 user_id인 경우, 400 반환
-            return handle_400_bad_request('User ID is required and must be a valid integer')
+        user_ids = request.data.get('user_ids')  # 유저 ID 리스트 받기
+        if not user_ids or not isinstance(user_ids, list):  # 유효하지 않은 요청 검증
+            return handle_400_bad_request('User IDs must be a valid list of integers')
 
-        if not User.objects.filter(id=user_id).exists():  # 사용자가 존재하지 않을 경우, 404 반환
-            return handle_404_not_found('User', user_id)
+        # 존재하는 유저 필터링
+        existing_users = set(User.objects.filter(user_id__in=user_ids).values_list('id', flat=True))
+        if not existing_users:  # 존재하는 유저가 없을 경우
+            return handle_404_not_found('Users', user_ids)
+        
+        # 이미 가입된 유저 필터링
+        existing_members = set(ClubMember.objects.filter(club=club, user_id__in=existing_users).values_list('id', flat=True))
+        new_users = existing_users - existing_members  # 가입되지 않은 유저만 초대
 
-        if ClubMember.objects.filter(club=club, user_id=user_id).exists(): # 사용자가 이미 모임에 존재하는 경우, 400 반환
-            return handle_400_bad_request(f'User {user_id} is already a member of the club')
+        if not new_users:  # 이미 모두 가입된 경우
+            return handle_400_bad_request('All users are already members of the club')
 
-        # 새로운 멤버 추가
-        ClubMember.objects.create(club=club, user_id=user_id, role='member')
+        # 한 번의 쿼리로 멤버 추가 (Bulk Create 사용)
+        new_members = [ClubMember(club=club, user_id=id, role='member') for id in new_users]
+        with transaction.atomic():  # 트랜잭션 사용
+            ClubMember.objects.bulk_create(new_members)
         response_data = {
             'status': status.HTTP_201_CREATED,
-            'message': 'Member successfully invited',
-            'data': {
-                'club_id': club.id,
-                'user_id': user_id,
-                'status': 'pending'
-            }
+            'message': 'Members successfully invited',
+            'data': [
+                {'club_id': club.id, 'account_id': id, 'status': 'pending'} for id in new_users
+            ]
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
