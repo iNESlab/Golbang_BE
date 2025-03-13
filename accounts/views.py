@@ -49,7 +49,7 @@ def signup_first_step(request):
             "status": status.HTTP_201_CREATED,
             "message": "First step completed successfully",
             "data": {
-                "user_id": user.id
+                "user_id": user.id # TODO: user_id -> account_id
             }
         }, status=status.HTTP_201_CREATED)
     else:
@@ -100,6 +100,7 @@ def signup_second_step(request):
         return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # 소셜 회원가입 & 로그인
+# TODO: 아래 페이지 삭제
 def social_login(request):
     """
     소셜 로그인 테스트 페이지 렌더링
@@ -359,7 +360,7 @@ class PasswordManagementView(APIView):
             user.set_password(temporary_password)
             user.save()
 
-            subject = "비밀번호 변경 요청: Password Reset Request"
+            subject = "비밀번호 변경 요청: Password Reset Request" # TODO: 제목 앞에 '골방' 넣기
             message = f"안녕하세요 {user.name}님,\n\n임시 비밀번호: {temporary_password}\n\n로그인 후 비밀번호를 변경해주세요."
             message += f"\n\nHello {user.name},\n\nYour temporary password is: {temporary_password}\n\nPlease log in and reset your password immediately."
             from_email = 'your_email@example.com'

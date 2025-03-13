@@ -1,3 +1,7 @@
+'''
+웹소켓을 위한 JWT 인증
+'''
+
 import logging
 
 from channels.exceptions import DenyConnection
@@ -16,6 +20,7 @@ class JWTAuthMiddleware(BaseMiddleware):
 
         # 토큰으로부터 사용자 ID 추출 및 검증
         if token:
+            # TODO: user_id -> account_id
             user_id = await self.get_user_from_token(token)
             logging.info(f"User ID: {user_id}")
             if user_id:

@@ -48,6 +48,7 @@ class ClubMember(models.Model):
     class Meta:
         unique_together = ('user', 'club')
 
+    # TODO: 아래 함수들의 위치를 models.py에 둘 지 아니면 따로 utils나 다른 파일을 만들어할 지 정하기
     def update_total_points(self):
         """
         클럽 멤버의 전체 포인트를 모든 이벤트의 포인트 합으로 업데이트

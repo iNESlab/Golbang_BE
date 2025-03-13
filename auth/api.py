@@ -36,6 +36,7 @@ class LoginApi(APIView):
         key값 : username, password
         '''
         # 요청 데이터로부터 이메일 또는 아이디가 들어간 username필드와 비밀번호 가져옴
+        # TODO: userid_or_email로 변경
         username_or_email   = request.data.get('username')
         password            = request.data.get('password')
         fcm_token           = request.data.get('fcm_token')
@@ -90,6 +91,7 @@ class LoginApi(APIView):
 '''
 JWT 토큰 갱신 로직을 처리하는 클래스 기반 뷰
 '''
+# TODO: 완성 시 성문이에게 공유
 @method_decorator(csrf_exempt, name='dispatch')
 class RefreshJWTToken(APIView):
     def post(self, request, *args, **kwargs): # HTTP POST 요청을 처리
@@ -142,7 +144,8 @@ class RefreshJWTToken(APIView):
 
 '''
 로그아웃 로직을 처리하는 클래스 기반 뷰
-'''        
+'''
+# TODO: 사용성 점검. 소셜 로그인 할 때 다시 보기
 @method_decorator(csrf_exempt, name='dispatch')
 class LogoutApi(APIView):
     permission_classes = [IsAuthenticated]  # 로그인 엔드포인트에 대한 접근 권한 설정

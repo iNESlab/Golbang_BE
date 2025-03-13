@@ -34,7 +34,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
                 # await self.send_json({'error': "Authentication required"})
                 # accept 전까지는 send_json을 사용하지 못함 => 이는 구체적인 에러 메시지를 못만듬
                 # 즉, 인증이 되지 않은 사용자는 연결을 거부
-                await self.close(code=4001)
+                await self.close(code=4001) # TODO: 에러코드가 잘 나오도록 보완이 필요함
                 return
 
             self.participant_id = self.scope['url_route']['kwargs']['participant_id']
