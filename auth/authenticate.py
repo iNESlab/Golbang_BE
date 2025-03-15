@@ -41,12 +41,14 @@ class EmailorUsernameAuthBackend(backends.ModelBackend):
         except User.DoesNotExist:
             return None
 
+    # TODO: 제거
     def get_user(self, user_id):
         try:
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None
 
+# TODO: 코드의 사용성을 점검
 class SafeJWTAuthentication(BaseAuthentication): # BaseAuthentication을 상속받아 JWT 인증 클래스를 정의
     # 요청(request)에서 인증 정보를 확인하는 함수
     def authenticate(self, request):
@@ -113,6 +115,7 @@ JWT 토큰 생성 함수
 def generate_access_token(user):
     # 액세스 토큰의 페이로드를 정의
     access_token_payload = {
+        # TODO: user_id -> account_id
         'user_id': user.id,
         'token_type': 'access',
         'exp': datetime.utcnow() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
@@ -129,6 +132,7 @@ def generate_access_token(user):
     return access_token # 생성된 액세스 토큰 반환
 
 # 리프레시 토큰 생성 함수
+# TODO: 완성 시 성문이에게 공유
 def generate_refresh_token(user):
     # 리프레시 토큰의 페이로드를 정의
     refresh_token_payload = {
@@ -148,6 +152,7 @@ def generate_refresh_token(user):
     return refresh_token # 생성된 리프레시 토큰 반환
 
 # 로그인 후 응답에 JWT 토큰을 설정하는 함수
+# TODO: 완성 시 성문이에게 공유
 def jwt_login(response, user):
     access_token    = generate_access_token(user)      # 액세스 토큰 생성
     refresh_token   = None

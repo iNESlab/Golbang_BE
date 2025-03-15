@@ -19,8 +19,8 @@ import logging
 
 
 from ..models import Club, ClubMember, User
-from ..serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
-    ClubMemberSerializer
+from ..serializers import (ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer,
+                           ClubMemberSerializer) # TODO: 안 쓰는 건 제거
 from clubs.tasks import send_club_creation_notification
 
 from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
@@ -31,6 +31,8 @@ class IsMemberOfClub(BasePermission):
     '''
     사용자가 모임에 속한 멤버인지 확인하는 권한 클래스
     '''
+
+    # TODO: has_permission, has_object_permission 이 꼭 나뉘어져야 하는가
     def has_permission(self, request, view):
         # 요청한 사용자가 어떤 모임의 멤버인지 확인 (뷰 수준, 리스트 뷰, 생성 뷰에 사용)
         # ex. 모임 목록 보기
@@ -106,6 +108,7 @@ class ClubViewSet(viewsets.ModelViewSet):
 
     # 모임 생성 메서드
     def create(self, request, *args, **kwargs):
+        ## Club
         # 데이터 복사 및 JSON 요청과 form-data 요청을 구분하여 처리
         data = self.process_request_data(request)
         print("Request Data:", request.data)
@@ -125,7 +128,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         if admins.count() != len(admins_user_ids):
             return handle_400_bad_request('Invalid user IDs in admins')
 
-        # 각각의 userId에 대응하는 id 리스트 생성
+        # 각각의 user.id에 대응하는 {members/admins} id 리스트 생성
         members_ids = list(members.values_list('id', flat=True))
         admins_ids = list(admins.values_list('id', flat=True))
 
@@ -142,6 +145,7 @@ class ClubViewSet(viewsets.ModelViewSet):
 
         club = serializer.save()  # 유효한 데이터인 경우 모임 생성
 
+        ## ClubMember
         # 일반 멤버와 관리자 리스트
         members = data.get('members', [])
         admins = data.get('admins', [])

@@ -20,6 +20,7 @@ from .utils import calculate_event_points
 
 User = get_user_model()
 
+# TODO: UserSerializer 이동시키고 한 곳에서만 호출되도록
 class UserSerializer(serializers.ModelSerializer):
     '''
     User 모델을 직렬화/역직렬화하는 클래스
@@ -65,6 +66,7 @@ class ClubSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Club
+        # TODO: id -> club_id
         fields = ('id', 'name', 'description', 'image', 'members', 'created_at', 'is_admin')
 
     def get_is_admin(self, obj):
@@ -94,6 +96,7 @@ class ClubCreateUpdateSerializer(serializers.ModelSerializer):
         model   = Club
         fields  = ('name', 'description', 'image')
 
+# TODO: user의 모든 정보가 나오지 않도록 수정
 class ClubMemberAddSerializer(serializers.ModelSerializer):
     '''
     클럽에 멤버를 추가할 때 사용되는 데이터의 직렬화/역직렬화를 처리하는 클래스
@@ -147,6 +150,7 @@ class ClubRankingSerializer(serializers.ModelSerializer):
         participation_count = self.get_participation_count(obj)
         return (participation_count / total_events * 100) if total_events > 0 else 0.0
 
+# TODO: 제거
 class ClubStatisticsSerializer(serializers.Serializer):
     from participants.serializers import EventStatisticsSerializer
 
@@ -162,4 +166,5 @@ class ClubProfileSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Club  # 직렬화할 모델
+        # TODO: id -> club_id
         fields = ('id', 'name', 'image')

@@ -24,6 +24,7 @@ class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = (
+            # TODO: id->account_id
             'id', 'user_id', 'profile_image', 'name', 'email', 'phone_number',
             'handicap', 'address', 'date_of_birth', 'student_id'
         )
@@ -32,5 +33,6 @@ class OtherUserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = (
+            # TODO: id->account_id
             'id', 'user_id', 'profile_image', 'name'
         )
