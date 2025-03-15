@@ -34,18 +34,14 @@ class ClubMemberSerializer(serializers.ModelSerializer):
     ClubMember 모델을 직렬화하는 클래스
     클럽 내의 멤버의 멤버아이디, 이름, 역할에 대한 정보가 담김
     '''
+    user= UserSerializer(read_only=True)
     member_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
-    name = serializers.CharField(source='user.name')
-    profile_image = serializers.SerializerMethodField(read_only=True)
     is_current_user_admin = serializers.SerializerMethodField()  # 현재 사용자가 관리자인지 여부를 반환
 
     class Meta:
         model = ClubMember
-        fields = ('member_id', 'name', 'role', 'profile_image', 'is_current_user_admin')
+        fields = ('user','member_id', 'role', 'is_current_user_admin')
 
-    def get_profile_image(self, obj):
-        profile_image = obj.user.profile_image
-        return profile_image.url if profile_image else None
 
     def get_is_current_user_admin(self, obj):
         '''
