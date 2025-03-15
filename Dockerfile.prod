@@ -36,7 +36,9 @@ EXPOSE 8000
 
 # 명령어 설정
 CMD ["/wait-for-it.sh", "redis:6379", "--", "sh", "-c", "\
+    python manage.py migrate --fake-initial && \
     python manage.py makemigrations && \
+    python manage.py migrate --fake golf_data zero  && \
     python manage.py migrate && \
     python create-superuser.py && \
     python manage.py runserver 0.0.0.0:8000"]
