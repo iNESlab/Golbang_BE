@@ -20,7 +20,7 @@ from accounts.models import User
 from clubs.models import Club
 from clubs.serializers import ClubProfileSerializer
 from golf_data.models import GolfClub
-from golf_data.serializers import GolfClubSerializer
+from golf_data.serializers import GolfClubDetailSerializer
 from participants.models import Participant, HoleScore
 from .models import Event
 from participants.serializers import ParticipantCreateUpdateSerializer, ParticipantDetailSerializer
@@ -103,7 +103,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
         # site 필드와 club_name이 일치하는 GolfClub 객체를 직렬화하여 반환
         golf_club = GolfClub.objects.filter(club_name=obj.site).first()
         if golf_club:
-            return GolfClubSerializer(golf_club).data
+            return GolfClubDetailSerializer(golf_club).data
         return None
 
     def get_my_participant_id(self, obj):
