@@ -10,7 +10,12 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from accounts.forms import UserChangeForm, UserCreationFirstStepForm
 from accounts.models import User
-
+'''
+목록 보기: list_display
+필터: list_filter
+검색: search_fields
+정렬: ordering
+'''
 class CustomUserAdmin(BaseUserAdmin):
     form = UserChangeForm
     add_form = UserCreationFirstStepForm

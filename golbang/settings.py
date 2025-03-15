@@ -47,7 +47,8 @@ ALLOWED_HOSTS = [
     'localhost', 
     '10.0.2.2',
     '.golf-bang.store', 
-    '10.0.1.27', 
+    '10.0.1.27',
+    '127.0.0.1',
     env('ALB_DOMAIN')# ALB 도메인
 ] 
 
