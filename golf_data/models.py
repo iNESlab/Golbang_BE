@@ -13,8 +13,8 @@ class GolfClub(models.Model):
     '''
     club_name = models.CharField("club name",max_length=255, unique=True)
     address = models.TextField("address")
-    longitude = models.DecimalField("longitude", max_digits=9, decimal_places=6, null=True, blank=True)
-    latitude = models.DecimalField("latitude", max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.FloatField("longitude", null=True, blank=True)
+    latitude = models.FloatField("latitude", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)  # 데이터 변경 이력 추적용
 
