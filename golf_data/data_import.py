@@ -12,7 +12,6 @@ import requests
 from io import BytesIO
 from .models import GolfClub, GolfCourse, Tee
 
-
 def import_excel_data(file_url):
     response = requests.get(file_url)
     response.raise_for_status()
@@ -27,22 +26,22 @@ def import_excel_data(file_url):
     # GolfClub 데이터를 데이터베이스에 저장
     for _, row in clubs_df.iterrows():
         print("import clubs")
-
         GolfClub.objects.update_or_create(
-            facility_id=row['Facility ID'],
-            defaults={'club_name': row['Club Name'] or '', 'address': row['Address'] or ''}
+            club_name=row['Club Name'],
+            defaults={
+                'address': row['Address'] or '',
+                'longitude': row.get('Longitude'),
+                'latitude': row.get('Latitude')
+            }
         )
 
-    # GolfCourse 데이터를 데이터베이스에 저장
     for _, row in courses_df.iterrows():
-        print("import courses")
-
-        club = GolfClub.objects.get(facility_id=row['Facility ID'])
+        print(f"import courses, {row}")
+        club = GolfClub.objects.get(club_name=row['Club Name'])
         GolfCourse.objects.update_or_create(
-            course_id=row['Course ID'],
+            club=club,
+            course_name=row['Course Name'],
             defaults={
-                'club': club,
-                'course_name': row['Course Name'] or '',
                 'holes': row['Holes'] or 0,
                 'par': row['Par'] or 0
             }
@@ -50,29 +49,30 @@ def import_excel_data(file_url):
 
     # Tee 데이터를 데이터베이스에 저장
     for _, row in tees_df.iterrows():
-        print(f"Processing Tee for Course ID: {row['Course ID']}")
+        print(f"Processing Tee for Club Name: {row['Club Name']}, Course Name: {row['Course Name']}")
 
         # GolfCourse 확인
         try:
-            course = GolfCourse.objects.get(course_id=row['Course ID'])
+            course = GolfCourse.objects.get(club__club_name=row['Club Name'], course_name=row['Course Name'])
         except GolfCourse.DoesNotExist:
-            print(f"GolfCourse not found for Course ID: {row['Course ID']}")
+            print(f"GolfCourse not found for Club Name: {row['Club Name']}, Course Name: {row['Course Name']}")
             continue
 
         # Tee 데이터 업데이트 또는 생성
         tee, created = Tee.objects.update_or_create(
             course=course,
+            tee_name=row['Tee Name'],
             defaults={**{
-                f'hole_{i}_par': 0 if row.get(f'Hole{i} Par') in [None, '~', 'N/D'] else int(row.get(f'Hole{i} Par', 0))
+                f'hole_{i}_par': "0" if row.get(f'Hole{i} Par') in [None, '~', 'N/D'] else row.get(f'Hole{i} Par', "0")
                 for i in range(1, 19)
             }, **{
-                f'hole_{i}_handicap': 0 if row.get(f'Hole{i} Handicap') in [None, '~', 'N/D'] else int(
-                    row.get(f'Hole{i} Handicap', 0))
+                f'hole_{i}_handicap': "0" if row.get(f'Hole{i} Handicap') in [None, '~', 'N/D'] else row.get(
+                    f'Hole{i} Handicap', "0")
                 for i in range(1, 19)
             }}
         )
 
         if created:
-            print(f"Created new Tee for Course ID {row['Course ID']}")
+            print(f"Created new Tee for Club Name: {row['Club Name']}, Course Name: {row['Course Name']}")
         else:
-            print(f"Updated existing Tee for Course ID {row['Course ID']}")
+            print(f"Updated existing Tee for Club Name: {row['Club Name']}, Course Name: {row['Course Name']}")
