@@ -192,6 +192,12 @@ class UserInfoViewSet(viewsets.ModelViewSet):
                 request.data['profile_image'] = None
 
         try:
+            # 이미지 압축 적용
+            image = request.FILES.get('profile_image', None)
+            if image:
+                compressed_image = compress_image(image, output_format="WEBP")
+                request.data['profile_image'] = compressed_image
+
             serializer = self.get_serializer(instance, data=request.data, partial=True)
 
             if not serializer.is_valid():
