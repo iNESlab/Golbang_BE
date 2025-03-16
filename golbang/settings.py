@@ -204,12 +204,14 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=0, minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(weeks=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(weeks=3),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',  # 사용자 모델에서 ID 필드 지정
+    'USER_ID_CLAIM': 'user_id',  # 토큰 내부에서 사용자 ID를 저장할 키 #TODO: user_id -> account_id
 }
 
 # TODO: 추후 settings.dev, settgins.prod로 파일 분리가 필요함
