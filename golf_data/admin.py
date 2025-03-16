@@ -23,7 +23,7 @@ class ExcelFileUploadAdmin(admin.ModelAdmin):
         # 기존 파일을 삭제하기 전에 S3 이미지 삭제 함수 호출
         existing_files = ExcelFileUpload.objects.all()
         for existing_file in existing_files:
-            if existing_file.file and delete_s3_file(existing_file.file):
+            if existing_file.file and delete_s3_file("golf_data", existing_file.file):
                 print(f"=====기존 파일이 존재한다면 s3도 삭제!!!!")
                 # S3에서 파일 삭제 성공 시 기존 데이터 삭제
                 existing_file.delete()
