@@ -29,6 +29,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import redirect, render
 from django.http import QueryDict
 
+from utils.compress_image import compress_image
 from utils.delete_s3_image import delete_s3_file
 
 User = get_user_model()
@@ -178,7 +179,7 @@ class UserInfoViewSet(viewsets.ModelViewSet):
                 print(f"image_key: {instance.profile_image}")
 
                 # S3 이미지 삭제 함수 호출
-                if delete_s3_file(instance.profile_image):
+                if delete_s3_file("accounts", instance.profile_image):
                     instance.profile_image = None  # 프로필 이미지를 None으로 설정
                     instance.save()
 
@@ -191,7 +192,14 @@ class UserInfoViewSet(viewsets.ModelViewSet):
                 request.data['profile_image'] = None
 
         try:
+            # 이미지 압축 적용
+            image = request.FILES.get('profile_image', None)
+            if image:
+                compressed_image = compress_image(image, output_format="WEBP")
+                request.data['profile_image'] = compressed_image
+
             serializer = self.get_serializer(instance, data=request.data, partial=True)
+
             if not serializer.is_valid():
                 print(f"Validation errors: {serializer.errors}")
                 return Response({
