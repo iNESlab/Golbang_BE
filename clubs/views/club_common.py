@@ -17,7 +17,7 @@ from rest_framework.permissions import IsAuthenticated, BasePermission
 from django.http import Http404, QueryDict
 import logging
 
-
+from utils.compress_image import compress_image
 from ..models import Club, ClubMember, User
 from ..serializers import (ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer,
                            ClubMemberSerializer) # TODO: 안 쓰는 건 제거
@@ -83,6 +83,7 @@ class ClubViewSet(viewsets.ModelViewSet):
     '''
     모임 공통 기능
     '''
+
     def process_request_data(self, request):
         """ 요청 데이터를 적절한 형식으로 변환하여 반환 """
         if isinstance(request.data, QueryDict):
@@ -135,6 +136,12 @@ class ClubViewSet(viewsets.ModelViewSet):
         # members와 admins 리스트를 id로 변경
         data['members'] = members_ids
         data['admins'] = admins_ids
+
+        # 이미지 압축 적용
+        image = request.FILES.get('image', None)
+        if image:
+            compressed_image = compress_image(image, output_format="WEBP")
+            data['image'] = compressed_image  # 압축된 이미지로 데이터 변경
 
         serializer = self.get_serializer(data=data)  # 요청 데이터를 사용해 serializer 초기화
 

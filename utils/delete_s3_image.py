@@ -5,7 +5,8 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def delete_s3_file(image_key):
+
+def delete_s3_file(domain, image_key):
     """
     S3에서 파일을 삭제하는 함수
 
@@ -14,7 +15,7 @@ def delete_s3_file(image_key):
     """
     s3 = boto3.client('s3', region_name='ap-southeast-2')
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-    image_key = f"static/{image_key}"
+    image_key = f"static/{domain}/{image_key}"
     try:
         s3.delete_object(Bucket=bucket_name, Key=image_key)
         print(f"S3에서 파일 {image_key} 삭제 완료")
