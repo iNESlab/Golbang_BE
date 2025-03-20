@@ -39,7 +39,7 @@ def send_event_creation_notification(event_id):
         # 토큰 리스트 확인을 위한 로그 출력
         logger.info(f"Retrieved FCM tokens for event creation: {fcm_tokens}")
 
-        message_title = f"{club.name} 모임에서 이벤트가 생성되었습니다."
+        message_title = f"[{club.name}] 모임에서 이벤트가 생성되었습니다."
         message_body = f"이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n참석 여부를 체크해주세요."
 
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
@@ -92,8 +92,8 @@ def send_event_update_notification(event_id):
         logger.info(f"Retrieved FCM tokens for event creation: {fcm_tokens}")
 
 
-        message_title = f"{club.name} 모임에서 이벤트가 수정되었습니다."
-        message_body = f"수정된 이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n다시 참석 여부를 체크해주세요."
+        message_title = f"[{club.name}] 모임에서 이벤트가 수정되었습니다."
+        message_body = f"수정된 이벤트: {event.event_title}\n날짜: {event.start_date_time.strftime('%Y-%m-%d')}\n장소: {event.site}\n"
 
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
         base_notification_data = {
@@ -166,7 +166,7 @@ def send_event_notification_10_seconds_before(event_id):
         club = event.club
         fcm_tokens = get_fcm_tokens_for_club_members(club)
 
-        message_title = f"{club.name} 이벤트가 곧 시작됩니다!"
+        message_title = f"[{club.name}] 이벤트가 곧 시작됩니다!"
         message_body = f"이벤트: {event.event_title}\n10초 후에 시작됩니다. 참석 여부를 확인해주세요."
 
         # Redis 저장용 알림 데이터
@@ -204,13 +204,13 @@ def schedule_event_notifications(event_id):
         now = timezone.now()
 
         # 이틀 전 알림 예약
-        two_days_before = event.start_date_time - timedelta(seconds=5)
+        two_days_before = event.start_date_time - timedelta(days=2)
         if two_days_before > now:
             countdown_until_2_days = (two_days_before - now).total_seconds()
             two_days_task = send_event_notification_2_days_before.apply_async((event_id,), countdown=countdown_until_2_days)
 
         # 1시간 전 알림 예약
-        one_hour_before = event.start_date_time - timedelta(seconds=3)
+        one_hour_before = event.start_date_time - timedelta(hours=1)
         if one_hour_before > now:
             countdown_until_1_hour = (one_hour_before - now).total_seconds()
             one_hour_task = send_event_notification_1_hour_before.apply_async((event_id,), countdown=countdown_until_1_hour)
@@ -244,7 +244,7 @@ def send_event_notification_2_days_before():
     for event in events:
         club = event.club
         fcm_tokens = get_fcm_tokens_for_club_members(club)
-        message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 이틀 전입니다."
+        message_title = f"[{club.name}] 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 이틀 전입니다."
         message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
         base_notification_data = {
@@ -288,7 +288,7 @@ def send_event_notification_1_hour_before():
     for event in events:
         club = event.club
         fcm_tokens = get_fcm_tokens_for_club_members(club)
-        message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 1시간 전입니다."
+        message_title = f"[{club.name}] 모임에서 진행하는 {event.event_title} 이벤트가 시작되기 1시간 전입니다."
         message_body = f"이벤트 상세 정보와 참석 여부를 확인해주세요."
 
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
@@ -333,7 +333,7 @@ def send_event_notification_event_ended():
     for event in events:
         club = event.club
         fcm_tokens = get_fcm_tokens_for_club_members(club)
-        message_title = f"{club.name} 모임에서 진행하는 {event.event_title} 이벤트가 종료되었습니다."
+        message_title = f"[{club.name}] 모임에서 진행하는 {event.event_title} 이벤트가 종료되었습니다."
         message_body = f"이벤트 결과를 확인해주세요. (스코어 점수 수정은 이벤트 종료 2일 후까지만 가능합니다)"
 
         # Redis 저장용 알림 데이터 (status는 기본적으로 fail로 설정)
