@@ -334,7 +334,12 @@ class EventViewSet(viewsets.ModelViewSet):
             return handle_404_not_found('participant', user)
 
         group_type = participant.group_type
-        group_participants = Participant.objects.filter(event=event, group_type=group_type) # 조에 해당하는 참가자들
+
+        group_participants = Participant.objects.filter(
+            event=event,
+            group_type=group_type,
+            status_type__in=[Participant.StatusType.ACCEPT, Participant.StatusType.PARTY]
+        )
 
         # 팀 스코어를 저장할 변수들
         team_a_scores = None
