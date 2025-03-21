@@ -15,8 +15,6 @@ from django.http import Http404
 
 from . import ClubViewSet
 from ..models import Club, ClubMember
-from ..serializers import ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer, \
-    ClubMemberSerializer
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 
 # class IsMemberOfClub(BasePermission):
