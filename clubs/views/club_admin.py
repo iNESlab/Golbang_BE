@@ -9,61 +9,129 @@ clubs/views/club_admin.py
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 
 from django.db import transaction
 from django.http import Http404
 
-from .club_common import IsMemberOfClub, ClubViewSet
-from ..models import Club, ClubMember, User
+from utils.compress_image import compress_image
+from .club_common import ClubViewSet, IsClubAdmin, IsMemberOfClub
+from ..models import ClubMember, User
 from ..serializers import ClubSerializer
 from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
-#
-# class IsClubAdmin(IsMemberOfClub):
-#     '''
-#     사용자가 모임 내에서 관리자 역할을 하는지 확인하는 권한 클래스
-#     '''
-#     def has_object_permission(self, request, view, obj):
-#         # 먼저 사용자가 모임의 멤버인지 확인한 후 (IsMemberOfClub에서 상속받아 사용)
-#         if super().has_object_permission(request, view, obj):
-#             # 요청한 사용자가 모임의 관리자 역할을 하는지 추가로 확인
-#             return ClubMember.objects.filter(club=obj, user=request.user, role='admin').exists()
-#         return False
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+class IsClubAdmin(IsMemberOfClub):
+    '''
+    사용자가 모임 내에서 관리자 역할을 하는지 확인하는 권한 클래스
+    '''
+    def has_object_permission(self, request, view, obj):
+        # 먼저 사용자가 모임의 멤버인지 확인한 후 (IsMemberOfClub에서 상속받아 사용)
+        if super().has_object_permission(request, view, obj):
+            # 요청한 사용자가 모임의 관리자 역할을 하는지 추가로 확인
+            return ClubMember.objects.filter(club=obj, user=request.user, role='admin').exists()
+        return False
 
 class ClubAdminViewSet(ClubViewSet):
-    '''
-    모임 내 관리자 기능 제공 클래스
-    '''
-    # def get_queryset(self): # 데이터베이스로부터 가져온 객체 목록
-    #     user = self.request.user
-    #     # 현재 요청한 사용자가 속한 모임만 반환
-    #     return Club.objects.filter(members=user)
+    """
+    관리자 전용 기능: 클럽 수정(PATCH), 삭제, 멤버 초대, 삭제, 역할 변경 등.
+    기본 ClubViewSet에서 상속받지만, 관리자 작업은 별도의 @action으로 처리합니다.
+    """
+    # 관리자 전용 기능은 별도의 권한 설정
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated, IsClubAdmin]
+        return [permission() for permission in permission_classes]
 
-    # def get_permissions(self):
-    #     # 액션에 따라 필요한 권한 설정
-    #     permission_classes = [IsAuthenticated]  # 기본 권한: 인증된 사용자
-    #     if self.action in ['partial_update', 'destroy', 'invite_member', 'remove_member', 'update_role']:
-    #         # 모임을 수정, 삭제하거나 멤버를 초대, 삭제, 관리자로 등록/삭제할 때는 모임의 관리자여야 함
-    #         permission_classes.extend([IsMemberOfClub, IsClubAdmin])
-    #     self.permission_classes = permission_classes
-    #     return super().get_permissions()
-
-    # 모임 기본 정보 수정 메서드
+    """
+    모임 수정 메서드
+    - 모임이름, 이미지, 모임 설명
+    - 관리자 추가/삭제
+    """
     def partial_update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', True)
 
         try:
-            instance = self.get_object() # 모임 객체
+            club = self.get_object()  # 수정할 클럽 객체 가져오기
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', kwargs.get("pk"))
 
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        # 요청 데이터 전처리: form-data와 JSON 모두 처리 (모임 생성 시와 유사)
+        data = self.process_request_data(request)
+        print("Request Data:", request.data)
+        print("Processed Data:", data)
 
-        if not serializer.is_valid(): # 유효하지 않은 데이터가 들어온 경우, 400 반환
+        # form-data의 경우, admins 값은 문자열 리스트일 수 있으므로 정수로 변환
+        admins_user_ids_raw = data.get('admins', [])
+        print(f"form-data: {admins_user_ids_raw}")
+        try:
+            admins_user_ids = [int(x) for x in admins_user_ids_raw]
+        except Exception as e:
+            return handle_400_bad_request("Admins field must contain valid integer IDs")
+        print(f"form-data2: {admins_user_ids_raw}")
+
+        # 실제 User 객체 조회 (user_id 필드 기준)
+        admins = User.objects.filter(id__in=admins_user_ids)
+        admins_ids = list(admins.values_list('id', flat=True))
+        data['admins'] = admins_ids
+        print(f"admin_user_ids: {admins_ids}")
+
+        # 이미지 처리: 이미지가 있다면 압축 처리
+        image = request.FILES.get('image', None)
+        if image:
+            try:
+                compressed_image = compress_image(image, output_format="WEBP")
+                data['image'] = compressed_image
+            except Exception as e:
+                logger.error("Image compression error: %s", str(e))
+                return handle_400_bad_request("Image processing error.")
+
+        # 클럽 기본 정보 업데이트 (name, description, image 등)
+        serializer = self.get_serializer(club, data=data, partial=partial)
+        if not serializer.is_valid():
             return handle_club_400_invalid_serializer(serializer)
+        try:
+            club = serializer.save()
+        except Exception as e:
+            logger.error("Error updating club info: %s", str(e))
+            return handle_400_bad_request("Error updating club info.")
 
-        club = serializer.save()                # 유훃한 데이터인 경우 정보 업데이트
-        read_serializer = ClubSerializer(club)  # 업데이트된 모임 데이터 직렬화
+        new_admin_ids = data.get('admins', [])
+        if new_admin_ids is not None:
+            try:
+                # 현재 클럽의 관리자 user id 목록(정수형) 조회
+                current_admin_ids = list(
+                    ClubMember.objects.filter(club=club, role='admin').values_list('user_id', flat=True)
+                )
+                print(f"current_admin_ids: {current_admin_ids}")
+                # 만약 새로 전달된 관리자 목록과 기존 목록이 다르다면 업데이트 진행
+                if set(new_admin_ids) != set(current_admin_ids):
+                    # 새로 전달된 관리자에 대해: 존재 여부 확인 후, role이 'admin'이 아니면 업데이트
+                    for user_id in new_admin_ids:
+                        if not User.objects.filter(id=user_id).exists():
+                            return handle_404_not_found('User', user_id)
+                        club_member, created = ClubMember.objects.get_or_create(
+                            club=club,
+                            user_id=user_id,
+                            defaults={'role': 'admin'}
+                        )
+                        if not created and club_member.role != 'admin':
+                            club_member.role = 'admin'
+                            club_member.save()
+                    # 기존 관리자 중 새 관리자 목록에 없는 사용자는 role을 'member'로 업데이트
+                    for user_id in current_admin_ids:
+                        if user_id not in new_admin_ids:
+                            club_member = ClubMember.objects.filter(club=club, user_id=user_id).first()
+                            if club_member:
+                                club_member.role = 'member'
+                                club_member.save()
+            except Exception as e:
+                logger.error("Error updating admin roles: %s", str(e))
+                return handle_400_bad_request("Error updating admin roles.")
+
+        read_serializer = ClubSerializer(club, context={'request': request})
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully updated',

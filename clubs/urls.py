@@ -13,7 +13,7 @@ from .views.club_statistics import ClubStatisticsViewSet
 
 router = DefaultRouter()
 router.register(r'', ClubViewSet)
-router.register(r'', ClubAdminViewSet, basename='club-admin')
+router.register(r'admin', ClubAdminViewSet, basename='club-admin')
 router.register(r'', ClubMemberViewSet, basename='club-member')
 router.register(r'statistics', ClubStatisticsViewSet, basename='statistics')
 
