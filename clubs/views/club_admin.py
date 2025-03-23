@@ -161,6 +161,7 @@ class ClubAdminViewSet(ClubViewSet):
             return handle_404_not_found('Users', user_ids)
         
         # 이미 가입된 유저 필터링
+        # TODO: 다른 api와는 다르게 모임 초대할 때에는 PK가 아니라 유저 아이디로 초대하고 있음. 통일이 필요
         existing_members = set(ClubMember.objects.filter(club=club, user_id__in=existing_users).values_list('id', flat=True))
         new_users = existing_users - existing_members  # 가입되지 않은 유저만 초대
 
@@ -188,7 +189,7 @@ class ClubAdminViewSet(ClubViewSet):
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
-        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
+        member = ClubMember.objects.filter(club=club, id=member_id).first()
 
         if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
             return handle_404_not_found('Club Member', member_id)
