@@ -18,6 +18,9 @@ from utils.compress_image import compress_image
 from .club_common import ClubViewSet, IsClubAdmin, IsMemberOfClub
 from ..models import ClubMember, User
 from ..serializers import ClubSerializer
+from .club_common import IsMemberOfClub, ClubViewSet
+from ..models import Club, ClubMember, User
+from ..serializers import ClubMemberSerializer, ClubSerializer
 from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
 
 import logging
@@ -171,13 +174,17 @@ class ClubAdminViewSet(ClubViewSet):
         # 한 번의 쿼리로 멤버 추가 (Bulk Create 사용)
         new_members = [ClubMember(club=club, user_id=id, role='member') for id in new_users]
         with transaction.atomic():  # 트랜잭션 사용
-            ClubMember.objects.bulk_create(new_members)
+            created_members = ClubMember.objects.bulk_create(new_members)
+
+        # user 포함해서 다시 조회
+        created_members = ClubMember.objects.filter(pk__in=[m.pk for m in created_members]).select_related('user')
+
+        # 생성된 ClubMember들을 시리얼라이즈
+        serializer = ClubMemberSerializer(created_members, many=True, context={'request': request})
         response_data = {
             'status': status.HTTP_201_CREATED,
             'message': 'Members successfully invited',
-            'data': [
-                {'club_id': club.id, 'account_id': id, 'status': 'pending'} for id in new_users
-            ]
+            'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
