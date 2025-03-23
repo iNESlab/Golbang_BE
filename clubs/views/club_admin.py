@@ -50,6 +50,7 @@ class ClubAdminViewSet(ClubViewSet):
     - 모임이름, 이미지, 모임 설명
     - 관리자 추가/삭제
     """
+
     def partial_update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', True)
 
@@ -64,19 +65,15 @@ class ClubAdminViewSet(ClubViewSet):
         print("Processed Data:", data)
 
         # form-data의 경우, admins 값은 문자열 리스트일 수 있으므로 정수로 변환
-        admins_user_ids_raw = data.get('admins', [])
-        print(f"form-data: {admins_user_ids_raw}")
+        admins_member_ids_raw = data.get('admins', [])
+        print(f"form-data: {admins_member_ids_raw}")
         try:
-            admins_user_ids = [int(x) for x in admins_user_ids_raw]
+            admins_member_ids = [int(x) for x in admins_member_ids_raw]
         except Exception as e:
             return handle_400_bad_request("Admins field must contain valid integer IDs")
-        print(f"form-data2: {admins_user_ids_raw}")
-
-        # 실제 User 객체 조회 (user_id 필드 기준)
-        admins = User.objects.filter(id__in=admins_user_ids)
-        admins_ids = list(admins.values_list('id', flat=True))
-        data['admins'] = admins_ids
-        print(f"admin_user_ids: {admins_ids}")
+        print(f"Converted club_member IDs: {admins_member_ids}")
+        # admins 필드에 정수화된 리스트로 대입
+        data['admins'] = admins_member_ids
 
         # 이미지 처리: 이미지가 있다면 압축 처리
         image = request.FILES.get('image', None)
@@ -98,32 +95,29 @@ class ClubAdminViewSet(ClubViewSet):
             logger.error("Error updating club info: %s", str(e))
             return handle_400_bad_request("Error updating club info.")
 
-        new_admin_ids = data.get('admins', [])
-        if new_admin_ids is not None:
+        # 전달된 admins (ClubMember pk 값 리스트)를 기반으로 역할 업데이트 진행
+        new_admin_member_ids = data.get('admins', [])
+        if new_admin_member_ids is not None:
             try:
-                # 현재 클럽의 관리자 user id 목록(정수형) 조회
-                current_admin_ids = list(
-                    ClubMember.objects.filter(club=club, role='admin').values_list('user_id', flat=True)
+                # 현재 클럽의 관리자 ClubMember pk 목록 조회
+                current_admin_member_ids = list(
+                    ClubMember.objects.filter(club=club, role='admin').values_list('id', flat=True)
                 )
-                print(f"current_admin_ids: {current_admin_ids}")
+                print(f"current_admin_member_ids: {current_admin_member_ids}")
                 # 만약 새로 전달된 관리자 목록과 기존 목록이 다르다면 업데이트 진행
-                if set(new_admin_ids) != set(current_admin_ids):
-                    # 새로 전달된 관리자에 대해: 존재 여부 확인 후, role이 'admin'이 아니면 업데이트
-                    for user_id in new_admin_ids:
-                        if not User.objects.filter(id=user_id).exists():
-                            return handle_404_not_found('User', user_id)
-                        club_member, created = ClubMember.objects.get_or_create(
-                            club=club,
-                            user_id=user_id,
-                            defaults={'role': 'admin'}
-                        )
-                        if not created and club_member.role != 'admin':
+                if set(new_admin_member_ids) != set(current_admin_member_ids):
+                    # 새로 전달된 관리자에 대해: 해당 ClubMember가 존재하는지 확인 후 role을 'admin'으로 업데이트
+                    for member_id in new_admin_member_ids:
+                        if not ClubMember.objects.filter(club=club, id=member_id).exists():
+                            return handle_404_not_found('Club Member', member_id)
+                        club_member = ClubMember.objects.get(club=club, id=member_id)
+                        if club_member.role != 'admin':
                             club_member.role = 'admin'
                             club_member.save()
-                    # 기존 관리자 중 새 관리자 목록에 없는 사용자는 role을 'member'로 업데이트
-                    for user_id in current_admin_ids:
-                        if user_id not in new_admin_ids:
-                            club_member = ClubMember.objects.filter(club=club, user_id=user_id).first()
+                    # 기존 관리자 중 새 목록에 없는 ClubMember는 role을 'member'로 업데이트
+                    for member_id in current_admin_member_ids:
+                        if member_id not in new_admin_member_ids:
+                            club_member = ClubMember.objects.filter(club=club, id=member_id).first()
                             if club_member:
                                 club_member.role = 'member'
                                 club_member.save()
