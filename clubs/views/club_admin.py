@@ -18,6 +18,9 @@ from utils.compress_image import compress_image
 from .club_common import ClubViewSet, IsClubAdmin, IsMemberOfClub
 from ..models import ClubMember, User
 from ..serializers import ClubSerializer
+from .club_common import IsMemberOfClub, ClubViewSet
+from ..models import Club, ClubMember, User
+from ..serializers import ClubMemberSerializer, ClubSerializer
 from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
 
 import logging
@@ -155,6 +158,8 @@ class ClubAdminViewSet(ClubViewSet):
         if not user_ids or not isinstance(user_ids, list):  # 유효하지 않은 요청 검증
             return handle_400_bad_request('User IDs must be a valid list of integers')
 
+        # TODO: 다른 api와는 다르게 모임 초대할 때에는 PK가 아니라 유저 아이디로 초대하고 있음. 통일이 필요
+
         # 존재하는 유저 필터링
         existing_users = set(User.objects.filter(user_id__in=user_ids).values_list('id', flat=True))
         if not existing_users:  # 존재하는 유저가 없을 경우
@@ -167,16 +172,20 @@ class ClubAdminViewSet(ClubViewSet):
         if not new_users:  # 이미 모두 가입된 경우
             return handle_400_bad_request('All users are already members of the club')
 
-        # 한 번의 쿼리로 멤버 추가 (Bulk Create 사용)
-        new_members = [ClubMember(club=club, user_id=id, role='member') for id in new_users]
+        # 신규 ClubMember 객체 생성 (Bulk Create 사용)
+        new_members = [ClubMember(club=club, user_id=user_id, role='member') for user_id in new_users]
         with transaction.atomic():  # 트랜잭션 사용
             ClubMember.objects.bulk_create(new_members)
+
+        # 새로 추가된 멤버를 user_id 기준으로 다시 조회 (select_related로 user 정보 포함)
+        created_members = ClubMember.objects.filter(club=club, user_id__in=list(new_users)).select_related('user')
+
+        # 생성된 ClubMember들을 시리얼라이즈
+        serializer = ClubMemberSerializer(created_members, many=True, context={'request': request})
         response_data = {
             'status': status.HTTP_201_CREATED,
             'message': 'Members successfully invited',
-            'data': [
-                {'club_id': club.id, 'account_id': id, 'status': 'pending'} for id in new_users
-            ]
+            'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
 
@@ -188,7 +197,7 @@ class ClubAdminViewSet(ClubViewSet):
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
-        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
+        member = ClubMember.objects.filter(club=club, id=member_id).first()
 
         if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
             return handle_404_not_found('Club Member', member_id)
