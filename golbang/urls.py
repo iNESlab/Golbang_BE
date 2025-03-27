@@ -1,12 +1,13 @@
 '''
-MVP demo ver 0.0.3
-2024.08.28
+MVP demo ver 0.0.4
+2025.03.28
 golbang/urls.py
 
 역할: 골방 프로젝트 전체의 엔드포인트 라우팅
 현재 기능:
 - admin
-- accounts, club(모임), event(이벤트), participants(참가자), statistics(통계)
+- API: accounts, club(모임), event(이벤트), participants(참가자), statistics(통계), golfcourses(골프장 코스 정보), notifications(알림), feedbacks(피드백)
+- demo: newperio-calculator
 '''
 
 from django.contrib import admin
@@ -40,6 +41,8 @@ urlpatterns = [
     path('api/v1/notifications/', include('notifications.urls')),  # notifications 앱의 URL
 
     path('api/v1/feedbacks/', include('feedbacks.urls')),  # 사용자 피드백 앱의 URL
+
+    path('calculator/', include('calculator.urls')),     # calculator 앱의 URL
 
     path('auth/', include('drf_social_oauth2.urls', namespace='drf')),
 
