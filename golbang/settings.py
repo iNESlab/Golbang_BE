@@ -88,6 +88,9 @@ EMAIL_HOST_USER = 'iamgolbang@gmail.com'  # 이메일 계정
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')  # 이메일 비밀번호 또는 앱 비밀번호
 DEFAULT_FROM_EMAIL = 'iamgolbang@gmail.com' # 이메일이 발송될 때 수신자가 보게 되는 발신자 이메일 주소
 
+# OPEN AI API KEY
+OPENAI_API_KEY = env('OPENAI_API_KEY')
+
 # 중복된 STATIC_URL 제거
 # Static files (CSS, JavaScript, Images)
 # STATIC_URL = '/static/' # 이 부분은 S3를 사용하지 않을 경우에만 활성화
@@ -119,6 +122,7 @@ INSTALLED_APPS = [
     'golf_data',
     'notifications',
     'feedbacks',
+    'calculator',
 
     # ==========
     # DRF (Django Rest Framework)
