@@ -41,6 +41,8 @@ urlpatterns = [
 
     path('api/v1/feedbacks/', include('feedbacks.urls')),  # 사용자 피드백 앱의 URL
 
+    path('api/v1/calculator/', include('calculator.urls')),     # calculator 앱의 URL
+
     path('auth/', include('drf_social_oauth2.urls', namespace='drf')),
 
     # Swagger URL
