@@ -58,7 +58,13 @@ class StatisticsViewSet(viewsets.ViewSet):
         user = request.user  # 요청을 보낸 사용자를 가져옴
         participants = Participant.objects.filter(club_member__user=user)  # 해당 사용자의 모든 참가 데이터
 
-        data = calculate_statistics(participants)
+        data, error = calculate_statistics(participants)
+        if error:
+            model_name, pk = error
+            return handle_404_not_found(model_name, pk)
+
+        if isinstance(data, Response):  # calculate_statistics 함수 내에서 예외처리 되었다면 Response가 생성됨
+            return data                 # 이미 Response면 그대로 리턴
 
         return Response({
             "status": status.HTTP_200_OK,
@@ -79,7 +85,10 @@ class StatisticsViewSet(viewsets.ViewSet):
         if not participants.exists():  # 해당 연도의 데이터가 없을 경우
             return handle_404_not_found('Statistics', f"for the year {year}")
 
-        data = calculate_statistics(participants, year=year)
+        data, error = calculate_statistics(participants, year=year)
+        if error:
+            model_name, pk = error
+            return handle_404_not_found(model_name, pk)
 
         return Response({
             "status": status.HTTP_200_OK,
@@ -115,7 +124,11 @@ class StatisticsViewSet(viewsets.ViewSet):
         if not participants.exists():  # 기간에 해당하는 데이터가 없을 경우
             return handle_404_not_found('Statistics', f"for the period {start_date} to {end_date}")
 
-        data = calculate_statistics(participants, start_date=start_date, end_date=end_date)
+        data, error = calculate_statistics(participants, start_date=start_date, end_date=end_date)
+        if error:
+            model_name, pk = error
+            return handle_404_not_found(model_name, pk)
+
         return Response({
             "status": status.HTTP_200_OK,
             "message": f"Successfully retrieved statistics for the period {start_date} to {end_date}",

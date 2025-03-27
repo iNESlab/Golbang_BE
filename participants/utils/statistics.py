@@ -10,20 +10,18 @@ participants/utils/statistics.py
 from datetime import timedelta
 from django.db.models import Avg, Min
 
-from utils.error_handlers import handle_404_not_found
-
-
 def calculate_statistics(participants, start_date=None, end_date=None, year=None):
     """
     통계 데이터를 계산하고 응답 데이터를 생성하는 함수
+    에러 발생 시 None과 에러 메시지를 반환
     """
     if not participants.exists():
         if year:
-            return handle_404_not_found('participant data for the year', year)
+            return None, ('participant data for the year', year)
         elif start_date and end_date:
-            return handle_404_not_found('participant data for the given period', f"{start_date} to {end_date}")
+            return None, ('participant data for the given period', f"{start_date} to {end_date}")
         else:
-            return handle_404_not_found('participant data', 'for the user')
+            return None, ('participant data', 'for the user')
 
     # 평균 스코어 계산
     average_score = participants.aggregate(average=Avg('sum_score'))['average'] or 0
@@ -53,4 +51,4 @@ def calculate_statistics(participants, start_date=None, end_date=None, year=None
         "games_played": games_played
     } )
 
-    return data
+    return data, None
