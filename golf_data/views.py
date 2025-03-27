@@ -12,7 +12,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
-from utils.error_handlers import handle_404_not_found
 from .models import GolfClub
 from .serializers import GolfClubDetailSerializer, GolfClubListSerializer
 
