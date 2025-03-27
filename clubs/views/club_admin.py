@@ -160,7 +160,7 @@ class ClubAdminViewSet(ClubViewSet):
 
         # TODO: 다른 api와는 다르게 모임 초대할 때에는 PK가 아니라 유저 아이디로 초대하고 있음. 통일이 필요
 
-        # 존재하는 유저 필터링
+        # 존재하는 유저 필터링 (pk)
         existing_users = set(User.objects.filter(user_id__in=user_ids).values_list('id', flat=True))
         if not existing_users:  # 존재하는 유저가 없을 경우
             return handle_404_not_found('Users', user_ids)
@@ -168,12 +168,11 @@ class ClubAdminViewSet(ClubViewSet):
         # 이미 가입된 유저 필터링
         existing_members = set(ClubMember.objects.filter(club=club, user_id__in=existing_users).values_list('id', flat=True))
         new_users = existing_users - existing_members  # 가입되지 않은 유저만 초대
-
         if not new_users:  # 이미 모두 가입된 경우
             return handle_400_bad_request('All users are already members of the club')
 
         # 신규 ClubMember 객체 생성 (Bulk Create 사용)
-        new_members = [ClubMember(club=club, user_id=user_id, role='member') for user_id in new_users]
+        new_members = [ClubMember(club=club, user_id=account_id, role='member') for account_id in new_users]
         with transaction.atomic():  # 트랜잭션 사용
             ClubMember.objects.bulk_create(new_members)
 
