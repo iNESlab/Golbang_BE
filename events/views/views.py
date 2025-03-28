@@ -329,9 +329,7 @@ class EventViewSet(viewsets.ModelViewSet):
             return handle_404_not_found('event', event_id)
 
         # 해당 유저가 이벤트 참가자인지 확인
-        try:
-            participant = Participant.objects.get(event=event, club_member__user=user)
-        except Participant.DoesNotExist:
+        if not Participant.objects.filter(event=event, club_member__user=user).exists():
             return handle_404_not_found('participant', user)
 
         group_participants = Participant.objects.filter(
