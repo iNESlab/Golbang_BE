@@ -328,16 +328,12 @@ class EventViewSet(viewsets.ModelViewSet):
         except Event.DoesNotExist:  # 이벤트가 존재하지 않는 경우, 404 반환
             return handle_404_not_found('event', event_id)
 
-        try:
-            participant = Participant.objects.get(event=event, club_member__user=user)
-        except Participant.DoesNotExist:
+        # 해당 유저가 이벤트 참가자인지 확인
+        if not Participant.objects.filter(event=event, club_member__user=user).exists():
             return handle_404_not_found('participant', user)
-
-        group_type = participant.group_type
 
         group_participants = Participant.objects.filter(
             event=event,
-            group_type=group_type,
             status_type__in=[Participant.StatusType.ACCEPT, Participant.StatusType.PARTY]
         )
 
