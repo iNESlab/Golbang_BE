@@ -22,16 +22,16 @@ class FileUploadAPIView(APIView):
     template_name = 'calculator/upload_form.html'
 
     def get(self, request, format=None):
-        # GET 요청 시, HTML 폼을 렌더링
-        context = {"message": None}
+        context = {"message": None, "hole_range": range(1, 19)}
         return Response(context, template_name=self.template_name)
 
     def post(self, request, format=None):
         serializer = FileUploadSerializer(data=request.data)
         if serializer.is_valid():
             uploaded_file = serializer.validated_data['upload_file']
+            selected_holes = serializer.validated_data.get('selected_holes')
             try:
-                output_path = process_excel_file(uploaded_file) # OpenAI API를 이용한 신페리오 핸디캡 계산 결과
+                output_path = process_excel_file(uploaded_file, selected_holes)  # OpenAI API를 이용한 신페리오 핸디캡 계산 결과
                 download_url = f"/calculator/download/?path={os.path.basename(output_path)}"
                 print(f"download_url:{download_url}")
                 return Response({
