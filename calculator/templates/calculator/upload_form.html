@@ -192,7 +192,7 @@
     <!-- 안내 메시지 -->
     <p id="instruction">
       <span class="green-text">엑셀 파일</span>을 업로드한 후,
-      <span class="green-text">9개</span>의 홀을 선택해주세요.
+      <span class="green-text">12개</span>의 홀을 선택해주세요.
     </p>
 
 
@@ -206,7 +206,7 @@
           </div>
           <!-- 홀 선택 영역: 파일 선택 후 나타남 -->
           <div id="holeSelection" class="mb-3">
-            <p>선택할 9개의 홀을 클릭하세요:</p>
+            <p>선택할 12개의 홀을 클릭하세요:</p>
             <div class="hole-group">
               {% for i in hole_range %}
                 <input type="checkbox" class="btn-check hole-checkbox" id="hole-{{ i }}" value="{{ i }}" autocomplete="off">
@@ -215,7 +215,7 @@
             </div>
             <!-- Hidden input에 선택된 홀 번호 저장 (쉼표 구분) -->
             <input type="hidden" name="selected_holes" id="selectedHoles">
-            <small class="form-text text-muted">총 9개를 선택해야 합니다.</small>
+            <small class="form-text text-muted">총 12개를 선택해야 합니다.</small>
           </div>
           <!-- 제출 버튼: 텍스트 "계산하기", 기본 비활성화 -->
           <button type="submit" id="submitButton" class="btn btn-calc px-4 py-2 w-100" disabled>계산하기</button>
@@ -269,10 +269,10 @@
         }
       });
 
-      // 홀 선택 시, 9개 선택이 되어야만 제출 버튼 활성화
+      // 홀 선택 시, 12개 선택이 되어야만 제출 버튼 활성화
       $('.hole-checkbox').on('change', function() {
         var selected = $('.hole-checkbox:checked').length;
-        if (selected === 9) {
+        if (selected === 12) {
           $('#submitButton').prop('disabled', false);
         } else {
           $('#submitButton').prop('disabled', true);
@@ -285,8 +285,8 @@
         $('.hole-checkbox:checked').each(function() {
           selectedHoles.push($(this).val());
         });
-        if (selectedHoles.length !== 9) {
-          alert("정확히 9개의 홀 번호를 선택해야 합니다.");
+        if (selectedHoles.length !== 12) {
+          alert("정확히 12개의 홀 번호를 선택해야 합니다.");
           e.preventDefault();
           return false;
         }
