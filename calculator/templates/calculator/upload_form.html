@@ -1,0 +1,259 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>신페리오 계산</title>
+  <!-- 모바일/웹뷰 반응형 지원 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap CSS (CDN) -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css"
+  >
+  <style>
+    /* 1) 전체 Flex 레이아웃으로 Sticky Footer 구현 */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 2) 상단 네비게이션 바는 기본적으로 내용만큼만 차지 */
+    nav {
+      flex-shrink: 0;
+    }
+
+    /* 3) main이 남은 공간을 차지하면서, 내부 콘텐츠를 중앙 정렬 */
+    main {
+      flex: 1 0 auto; /* 화면에서 남은 공간을 채워줌 */
+      display: flex;
+      flex-direction: column;
+      justify-content: center; /* 수직 중앙 정렬 */
+      align-items: center;     /* 수평 중앙 정렬 */
+      padding: 20px;
+      text-align: center;
+    }
+    .main-title {
+      font-weight: 700;
+      margin-bottom: 20px;
+      font-size: 48px; /* 데스크톱 기본 크기 */
+    }
+    .main-subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    /* 반응형 폰트 크기 설정 */
+    @media (max-width: 576px) { /* 모바일 (576px 이하) */
+      .main-title {
+        font-size: 28px;
+      }
+      .main-subtitle {
+        font-size: 18px;
+      }
+    }
+    @media (min-width: 577px) and (max-width: 768px) { /* 태블릿 (577px ~ 768px) */
+      .main-title {
+        font-size: 36px;
+      }
+      .main-subtitle {
+        font-size: 18px;
+      }
+    }
+    @media (min-width: 769px) and (max-width: 992px) { /* 중간 크기 화면 (769px ~ 992px) */
+      .main-title {
+        font-size: 42px;
+      }
+      .main-subtitle {
+        font-size: 24px;
+      }
+    }
+
+    /* 파일 업로드 버튼 스타일 */
+    .btn-upload {
+      background-color: #4caf50;
+      border: none;
+      color: #fff;
+      border-radius: 50px;
+      transition: transform 0.2s ease-in-out; /* 크기 변화 부드럽게 */
+      box-shadow: 0 4px 6px rgba(76, 175, 80, 0.3); /* 30% 투명도 그림자 */
+    }
+    .btn-upload:hover {
+      transform: scale(1.03); /* 마우스 올렸을 때 살짝 커짐 */
+      background-color: #4caf50;
+      color: #fff;
+    }
+    .btn-upload:active, .btn-upload:focus {
+      background-color: #4caf50;
+      color: #fff;
+      border: none;
+      outline: none;
+    }
+
+    /* 결과 파일 다운로드 버튼: 업로드 버튼과 동일한 width 및 모양 */
+    .btn-download {
+      width: 100%;
+      border-radius: 50px;
+      transition: transform 0.2s ease-in-out;
+      box-shadow: 0 4px 6px rgba(76, 175, 80, 0.3);
+    }
+    .btn-download:hover {
+      transform: scale(1.03);
+    }
+
+    /* 그라데이션 바와 푸터 */
+    .gradient-bar {
+      background: linear-gradient(
+        to top,
+        rgba(76, 175, 80, 0.3),
+        white
+      );
+      height: 150px;
+      width: 100%;
+    }
+    footer {
+      flex-shrink: 0;
+      background-color: #fff;
+      color: #666;
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 15px 0;
+    }
+
+    /* 네비게이션 바 디자인 */
+    .navbar-brand img {
+      width: 40px;
+      height: 40px;
+      margin-right: 8px;
+    }
+    .navbar-brand span {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #4caf50;
+    }
+  </style>
+</head>
+<body>
+  <!-- 상단 네비게이션 바 (반응형) -->
+  <nav class="navbar navbar-expand-md navbar-light bg-light">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <!-- 로고 -->
+        <img src="{% static 'images/golbang-logo.webp' %}" alt="Golbang Logo">
+        <span>골방</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+              data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+              aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <!-- 추후 네비게이션 메뉴 항목 추가 -->
+      </div>
+    </div>
+  </nav>
+
+  <!-- 메인 섹션: 남은 공간을 채우며, 수직/수평 중앙 정렬 -->
+  <main>
+    <h1 class="main-title">
+      신페리오 방식으로 핸디캡 결과를<br>계산해드릴게요!
+    </h1>
+    <h5 class="main-subtitle">
+      따로 시간 내어 계산하지 않아도,<br>엑셀파일만 올려주시면 계산할 수 있어요.
+    </h5>
+
+    <!-- 파일 업로드 폼 (부트스트랩 그리드로 최대 너비 제한) -->
+    <div class="row justify-content-center w-100">
+      <div class="col-12 col-md-6 col-lg-4">
+        <form id="uploadForm"
+              method="post"
+              enctype="multipart/form-data"
+              action="{% url 'calculator:file-upload' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <input type="file" name="upload_file" class="form-control">
+          </div>
+          <button type="submit" class="btn btn-upload px-4 py-2 w-100">
+            엑셀 파일 업로드
+          </button>
+        </form>
+
+        <!-- Circular Loading 표시 (초기에는 숨김) -->
+        <div id="loading" style="display: none;" class="mt-3">
+          <div class="spinner-border text-success" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- 다운로드 섹션 (초기에는 숨김) -->
+        <div id="downloadSection" style="display: none;">
+          <a id="downloadButton" href="" class="btn btn-success btn-download mt-3">결과 파일 다운로드</a>
+        </div>
+
+        <!-- 메시지 영역 -->
+
+        <div id="messageSection"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 중간 그라데이션 바 -->
+  <div class="gradient-bar"></div>
+
+  <!-- 푸터 (화면 하단 고정) -->
+  <footer>
+    <div class="container">
+      <p class="mb-0">
+        © 2025 Golbang/New Perio Calc. All rights reserved.
+        <br>
+        이메일 iamgolbang@gmail.com
+      </p>
+    </div>
+  </footer>
+
+  <!-- jQuery (CDN) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- Bootstrap JS (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // AJAX를 통한 파일 업로드 및 처리
+    $('#uploadForm').on('submit', function(e) {
+      e.preventDefault();
+      $('#loading').show();  // 로딩 표시
+      var formData = new FormData(this);
+      $.ajax({
+        url: $(this).attr('action'),
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(data) {
+          $('#loading').hide();
+          // 다운로드 URL이 응답에 포함되면 다운로드 섹션 표시
+          if(data.download_url) {
+            $('#downloadButton').attr('href', data.download_url);
+            $('#downloadSection').show();
+          }
+          // 성공 메시지 표시 (3초 후 자연스럽게 사라짐)
+          if(data.message) {
+            $('#messageSection').html('<div class="alert alert-success mt-3" id="successMessage">' + data.message + '</div>');
+            $('#successMessage').hide().fadeIn(800, function(){
+              setTimeout(function(){
+                $('#successMessage').fadeOut(800);
+              }, 3000);
+            });
+          }
+        },
+        error: function(xhr) {
+          $('#loading').hide();
+          $('#messageSection').html('<div class="alert alert-danger mt-3">에러 발생: ' + xhr.responseText + '</div>');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
