@@ -39,7 +39,7 @@ def process_excel_file(uploaded_file, selected_holes):
     if not api_key:
         raise ValueError("OPENAI_API_KEY 환경 변수가 설정되어 있지 않습니다.")
 
-    def gpt_execute(data, par):
+    def gpt_execute():
         url = "https://api.openai.com/v1/chat/completions"
         header = {
             "Authorization": f"Bearer {api_key}",
@@ -57,17 +57,18 @@ def process_excel_file(uploaded_file, selected_holes):
                     "content": (
                         "골프 점수를 담은 이중 리스트의 데이터가 주어지면, 이 데이터를 토대로 신페리오 핸디캡을 계산하는 파이썬 코드를 작성해주세요."
                         "입력으로 사용되는 이중 리스트 내부의 리스트 하나는 한 사람의 1~18홀에 대한 골프 점수를 순서대로 나타냅니다."
+                        "이를 이용해 다음과 같은 신페리오 핸디캡을 계산하는 파이썬 코드를 작성하면 됩니다."
+                        "신페리오 핸디캡 = (((지정된 12개 hole의 score + 각 hole에 해당하는 par값) × 1.5) - 72) × 0.8"
+                        "이때 지정된 12개의 hole의 번호와, par 정보는 고정된 값으로 주어집니다."
                         "코드는 반환되면 검토를 거치지 않고 바로 사용할 수 있도록 되도록이면 간단하고 직관적이게 짜주세요."
-                        "신페리오 핸디캡 계산 수식은 다음과 같습니다. 신페리오 핸디캡 = (((선택된 12개 hole의 score + 각 hole의 par값) × 1.5) - 72) × 0.8"
-                        "이때 선택되는 hole의 번호는 모든 사용자에게 같아야 하고, par정보는 고정된 값으로 주어집니다. "
-                        "해당 코드의 반환 형태는 계산된 신페리오 값을 순서대로 넣은 리스트 형태면 됩니다. 이때 Nan 값을 갖는 리스트들의 반환 값은 빈 문자열 처리 해주세요."
-                        "예시 입력: [[1.0, 0.0, 1.0, 2.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 2.0, 2.0], [nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]]"
-                        "예시 출력: [-49.2,""]"
+                        "작성하는 코드의 반환 형태는 계산된 신페리오 값을 순서대로 넣은 리스트 형태면 됩니다. 이때 Nan 값을 갖는 리스트들의 반환 값은 빈 문자열 처리 해주세요."
+                        "예시 입력: [[1.0, 0.0, 1.0, 2.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 2.0, 2.0], [1, 2, 2, -6, -5, -4, 0, -3, -1, 0, 1, 2, 3, -3, 2, -2, -1, 0]]"
+                        "예시 출력: [8.4, -7.2]"
                         "위의 입출력 형태를 만족할 수 있도록 코드를 짜주세요. 또한 최종 출력은 handicap이라는 변수 안에 담기도록 코드를 짜주세요."
                         "결과 이외의 추가적인 설명은 절대 포함하지 말고, 데이터를 변형시키지 마세요."
-                        f"골프 score 데이터는 여기 있습니다: {data}"
+                        f"골프 score 데이터는 여기 있습니다: {score}"
                         f"골프 par 데이터는 여기 있습니다: {par}"
-                        f"사용자가 선택한 홀 번호는 여기 있습니다.: {selected_holes} (홀은 1~18 홀 사이로 전달해주고 있으니 0-index 처리를 하지 마세요.)"
+                        f"지정된 hole은 다음과 같습니다: {selected_holes}"
                     )
                 }
             ]
@@ -86,7 +87,7 @@ def process_excel_file(uploaded_file, selected_holes):
         return raw_content
 
     # 4. GPT API 호출 및 코드 실행
-    result = gpt_execute(score, par)
+    result = gpt_execute()
     print(result)
 
     exec_env = {}
@@ -97,7 +98,7 @@ def process_excel_file(uploaded_file, selected_holes):
     handicap.insert(0, '신페리오 핸디캡')
 
     total_score = next(i for i in data if '전체 스코어' in str(i[0]))
-    handi_score = [total_score[i] - handicap[i] for i in range(1, len(total_score))]
+    handi_score = [total_score[i] - float(handicap[i]) for i in range(1, len(total_score))]
     handi_score.insert(0, '신페리오 핸디캡 스코어')
 
     rank = pd.Series(handi_score[1:]).rank(method='min').astype(int).tolist()
