@@ -34,6 +34,10 @@ def process_excel_file(uploaded_file, selected_holes):
     # par정보
     par = [4, 4, 5, 3, 4, 3, 4, 4, 5, 4, 4, 4, 3, 4, 5, 3, 4, 5]
 
+    # 총 stroke(타) 정보 (각 플레이어의 홀별 score에 해당 홀의 par를 더함)
+    total_strokes = [sum(s + p for s, p in zip(player_score, par)) for player_score in score]
+
+
     # 3. GPT API 호출 함수
     api_key = settings.OPENAI_API_KEY
     if not api_key:
@@ -94,12 +98,14 @@ def process_excel_file(uploaded_file, selected_holes):
     exec(result, exec_env)
 
     # 5. DataFrame에 계산 결과(handicap), 핸디캡 스코어, 랭킹을 삽입
+    total_strokes = ['총 타수'] + total_strokes
+
     handicap = exec_env.get("handicap")
     handicap.insert(0, '신페리오 핸디캡')
 
-    total_score = next(i for i in data if '전체 스코어' in str(i[0]))
-    handi_score = [total_score[i] - float(handicap[i]) for i in range(1, len(total_score))]
-    handi_score.insert(0, '신페리오 핸디캡 스코어')
+    # 신페리오 핸디캡 최종 점수 = 총 타수 - 신페리오 핸디캡
+    handi_score = [total_strokes[i] - float(handicap[i]) for i in range(1, len(total_strokes))]
+    handi_score.insert(0, '신페리오 핸디캡 최종 점수')
 
     rank = pd.Series(handi_score[1:]).rank(method='min').astype(int).tolist()
     rank.insert(0, '랭킹')
@@ -107,6 +113,7 @@ def process_excel_file(uploaded_file, selected_holes):
     while row >= df.shape[0]:
         df.loc[df.shape[0]] = [None] * df.shape[1]
 
+    df.iloc[row - 3, 0:len(handicap) + 1] = total_strokes
     df.iloc[row - 2, 0:len(handicap) + 1] = handicap
     df.iloc[row - 1, 0:len(handicap) + 1] = handi_score
     df.iloc[row, 0:len(handicap) + 1] = rank
