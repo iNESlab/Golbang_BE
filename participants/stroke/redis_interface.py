@@ -6,6 +6,8 @@ participa/stroke/redis_interface.py
 - Redis 데이터베이스와 상호작용하는 클래스
 - 참가자와 이벤트의 데이터를 관리
 '''
+from dataclasses import asdict
+import json
 import logging
 
 from asgiref.sync import sync_to_async
@@ -13,18 +15,69 @@ import redis
 
 from golbang import settings
 from participants.models import Participant
-from participants.stroke.data_class import EventData, ParticipantResponseData
+from participants.stroke.data_class import EventData, ParticipantRedisData
 
 # Redis 클라이언트 설정
 redis_client = redis.StrictRedis(
     host='redis', 
     port=6379, 
     db=0, 
-    password=settings.REDIS_PASSWORD
+    password=settings.REDIS_PASSWORD,
+    decode_responses=True,  # 문자열 바로 디코딩되게
+    socket_connect_timeout=5,
+    socket_timeout=5
 )
 
-
 class RedisInterface:
+    def __init__(self):
+        self.redis_client = redis_client  # <-- 여기 정의해야 함
+
+    async def decrease_event_auto_migration_count(self, event_id):
+        key = f"event:{event_id}:is_saving"
+        count = await sync_to_async(redis_client.decr)(key)
+        logging.info(f"참가자: {count} 감소")
+
+        if count <= 0:
+            await sync_to_async(redis_client.delete)(key)
+            logging.info(f"[{event_id}] 모든 참가자 퇴장 → 마이그레이션 종료")
+    
+    
+    async def save_is_event_auto_migration_in_redis(self, event_id):
+        '''
+        이 키가 레디스에 저장돼있으면,
+        redis에서 mysql로 정기적(xx초 간격)으로 마이그레이션 되는 것을 의미
+        '''
+        key = f"event:{event_id}:is_saving"
+        created = await sync_to_async(redis_client.setnx)(key, 1)
+
+        if created:
+            # ✅ 처음 생성된 경우 → Celery Task 시작
+            logging.info(f"[{event_id}] 마이그레이션 시작됨")
+            await sync_to_async(redis_client.expire)(key, 21600) # 6시간 동안 유지
+            return True
+        else:
+            # 이미 존재하는 경우, count 증가
+            logging.info(f"[{event_id}] 기존 마이그레이션 중 → count 증가")
+            await sync_to_async(redis_client.incr)(key)
+            return False
+
+    async def save_participant_in_redis(self, participant: Participant):
+        # 참가자 Redis 캐싱 메서드
+        key = f'event:{participant.event.pk}:participant:{participant.pk}'
+        value = ParticipantRedisData.orm_to_participant_redis(participant=participant).to_redis_dict()
+
+        await sync_to_async(redis_client.hset)(key, mapping=value)  # 문자열로 저장
+        await sync_to_async(redis_client.expire)(key, 172800)       # 2일 TTL 설정
+        data = await sync_to_async(redis_client.hgetall)(key)
+
+        return ParticipantRedisData(**data)  # 저장된 값을 반환
+
+    async def get_participant_from_redis(self, event_id, participant_id):
+        key = f'event:{event_id}:participant:{participant_id}'
+        data = await sync_to_async(redis_client.hgetall)(key)
+        if data:
+            return ParticipantRedisData(**data)  # 저장된 값을 반환
+        return None
 
     async def update_hole_score_in_redis(self, participant_id, hole_number, score):
         # Redis에 홀 점수를 업데이트
@@ -32,30 +85,27 @@ class RedisInterface:
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
 
-    async def update_participant_sum_and_handicap_score_in_redis(self, participant):
+    async def update_participant_sum_and_handicap_score_in_redis(self, participant: ParticipantRedisData):
         # Redis에 참가자의 총 점수와 핸디캡 점수를 업데이트
 
-        keys_pattern = f'participant:{participant.id}:hole:*'
+        keys_pattern = f'participant:{participant.participant_id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
 
         sum_score = 0
         for key in keys:
             score = await sync_to_async(redis_client.get)(key)
             sum_score += int(score)
-        event_id = participant.event_id
-        handicap_score = sum_score - participant.club_member.user.handicap
-        redis_key = f'event:{event_id}:participant:{participant.id}'
-        await sync_to_async(redis_client.hset)(redis_key, "user_name", participant.club_member.user.name)
-        await sync_to_async(redis_client.hset)(redis_key, "sum_score", sum_score)
-        await sync_to_async(redis_client.hset)(redis_key, "handicap_score", handicap_score)
-        await sync_to_async(redis_client.hset)(redis_key, "group_type", participant.group_type)
-        await sync_to_async(redis_client.hset)(redis_key, "team_type", participant.team_type)
-        await sync_to_async(redis_client.expire)(redis_key, 172800)
+        handicap_score = sum_score - participant.user_handicap
+        redis_key = f'event:{participant.event_id}:participant:{participant.participant_id}'
+        await sync_to_async(redis_client.hset)(redis_key, mapping={
+            "sum_score": sum_score,
+            "handicap_score": handicap_score,
+        })
 
     async def update_rankings_in_redis(self, event_id):
         # Redis에 참가자들의 순위를 업데이트
 
-        participants = await self.get_participants_from_redis(event_id)
+        participants = await self.get_event_participants_from_redis(event_id)
 
         # sum_score이 0인 참가자들은 제외
         participants = [p for p in participants if p.sum_score != 0]
@@ -70,7 +120,6 @@ class RedisInterface:
             redis_key = f'event:{event_id}:participant:{participant.participant_id}'
             await sync_to_async(redis_client.hset)(redis_key, "rank", participant.rank)
             await sync_to_async(redis_client.hset)(redis_key, "handicap_rank", participant.handicap_rank)
-            await sync_to_async(redis_client.expire)(redis_key, 172800)
 
     def assign_ranks(self, participants, rank_type):
         """
@@ -111,74 +160,75 @@ class RedisInterface:
 
     async def get_scores_from_redis(self, participant):
         # Redis에서 참가자의 점수를 반환
-        redis_key = f'event:{participant.event_id}:participant:{participant.id}'
+        redis_key = f'event:{participant.event_id}:participant:{participant.participant_id}'
 
         # Redis 해시 데이터 한 번에 가져오기
         participant_data = await sync_to_async(redis_client.hgetall)(redis_key)
 
         # 데이터 디코딩 및 변환
-        user_name = participant_data.get(b"user_name", b"unknown").decode('utf-8')
-        sum_score = int(participant_data.get(b"sum_score", b"0"))
-        handicap_score = int(participant_data.get(b"handicap_score", b"0"))
-        is_group_win = bool(int(participant_data.get(b"is_group_win", b"0")))
-        is_group_win_handicap = bool(int(participant_data.get(b"is_group_win_handicap", b"0")))
+        user_name = participant_data.get("user_name", "unknown")
+        sum_score = int(participant_data.get("sum_score", 0))
+        handicap_score = bool(int(participant_data.get("is_group_win", 0)))
+        is_group_win = bool(int(participant_data.get("is_group_win", "0")))
+        is_group_win_handicap = bool(int(participant_data.get("is_group_win_handicap", "0")))
 
         return user_name, sum_score, handicap_score, is_group_win, is_group_win_handicap
-
-    async def get_participants_from_redis(self, event_id, group_type_filter=None):
-        # Redis에서 참가자들을 가져옴
-
+    
+    async def get_event_participants_from_redis(self, event_id, group_type_filter=None):
         base_key = f'event:{event_id}:participant:'
-        keys = await sync_to_async(redis_client.keys)(f'{base_key}*')
-        logging.info(f'keys:{keys}')
-        participants = []
+        cursor = 0
+        keys = []
 
-        for key in keys:
-            participant_id = key.decode('utf-8').split(':')[-1]
-            logging.info(f'====participant_id:{participant_id}====')
-            participant_key = f'{base_key}{participant_id}'
-
-            # hgetall로 모든 데이터를 한 번에 가져옴
-            participant_data = await sync_to_async(redis_client.hgetall)(participant_key)
-
-            # 각 필드를 가져와 변환
-            user_name = participant_data.get(b'user_name', 'unknown')
-            sum_score = participant_data.get(b'sum_score', 0)
-            handicap_score = participant_data.get(b'handicap_score', 0)
-            team_type = participant_data.get(b'team_type', '')
-            group_type = participant_data.get(b'group_type', 0)
-            rank = participant_data.get(b'rank','')
-            handicap_rank = participant_data.get(b'')
-            is_group_win = participant_data.get(b'is_group_win', False)
-            is_group_win_handicap = participant_data.get(b'is_group_win_handicap', False)
-
-            logging.info(f'group_type:{int(group_type)}, group_type_filter:{group_type_filter}')
-            # 그룹 필터링: group_type이 전달되었고, 가져온 group_type이 동일한지 확인
-            if group_type_filter is not None and group_type and int(group_type) != group_type_filter:
-                continue
-            participant = ParticipantResponseData(
-                participant_id=participant_id,
-                user_name=user_name,
-                group_type=group_type,
-                team_type=team_type,
-                is_group_win=is_group_win,
-                is_group_win_handicap=is_group_win_handicap,
-                hole_number=0,
-                score=0,
-                rank=rank,
-                handicap_rank=handicap_rank,
-                sum_score=sum_score,
-                handicap_score=handicap_score,
+        while True:
+            cursor, scanned_keys = await sync_to_async(redis_client.scan)(
+                cursor=cursor,
+                match=f'{base_key}*',
+                count=100
             )
-            participants.append(participant)
+            keys.extend(scanned_keys)
+            if cursor == 0:
+                break
+
+        participants = []
+        for key in keys:
+            try:
+                participant_id = key.split(':')[-1]
+                participant_key = f'{base_key}{participant_id}'
+                data = await sync_to_async(redis_client.hgetall)(participant_key)
+
+                if not data:
+                    continue
+
+                participant_data = ParticipantRedisData(**data)
+                participants.append(participant_data)
+
+            except Exception as e:
+                logging.warning(f"Failed to parse participant from key {key}: {e}")
+                continue
 
         return participants
 
+
+    async def get_group_participants_from_redis(self, event_id, group_type_filter=None):
+        # Redis에서 참가자들을 가져옴
+
+        event_participants = await self.get_event_participants_from_redis(event_id, group_type_filter)
+        if group_type_filter is None:
+            return event_participants
+        
+        # group_type 기준으로 필터링
+        filtered = [
+            p for p in event_participants
+            if getattr(p, "group_type", None) == group_type_filter
+        ]
+
+        return filtered
+    
     async def update_is_group_win_in_redis(self, participant):
         event_id = participant.event_id
 
         # 각 조별로 점수를 계산하여 Redis에 조별 승리 여부를 저장하는 로직
-        group_participants = await self.get_participants_from_redis(event_id, participant.group_type)
+        group_participants = await self.get_group_participants_from_redis(event_id, participant.group_type)
         logging.info('group_participants: %s', group_participants)
         # 팀별로 점수 계산
         team_a_score = sum([p.sum_score for p in group_participants if p.team_type == Participant.TeamType.TEAM1])
@@ -200,7 +250,7 @@ class RedisInterface:
 
         # Redis에 저장
         for p in group_participants:
-            redis_key = f'event:{event_id}:participant:{p.id}'
+            redis_key = f'event:{event_id}:participant:{p.participant_id}'
             await sync_to_async(redis_client.hset)(redis_key, "is_group_win", is_team_a_winner
                                                     if p.team_type == Participant.TeamType.TEAM1 else is_team_b_winner)
             await sync_to_async(redis_client.hset)(redis_key, "is_group_win_handicap",is_handicap_a_winner
@@ -257,7 +307,7 @@ class RedisInterface:
         hole_scores = []
         for key in keys:
             logging.info('hole_scores: %s', hole_scores)
-            hole_number = int(key.decode('utf-8').split(':')[-1])
+            hole_number = int(key.split(':')[-1])
             score = int(await sync_to_async(redis_client.get)(key))
             logging.info('score: %s', score)
             hole_scores.append({'hole_number': hole_number, 'score': score})
@@ -271,8 +321,8 @@ class RedisInterface:
 
         # EventData 클래스에 필드를 전달할 때 기본값을 설정하지 않으면 Optional 처리해주고, 디코딩은 __post_init__에서 처리
         return EventData(
-            group_win_team=event_data_dict.get(b"group_win_team"),
-            group_win_team_handicap=event_data_dict.get(b"group_win_team_handicap"),
-            total_win_team=event_data_dict.get(b"total_win_team"),
-            total_win_team_handicap=event_data_dict.get(b"total_win_team_handicap")
+            group_win_team=event_data_dict.get("group_win_team"),
+            group_win_team_handicap=event_data_dict.get("group_win_team_handicap"),
+            total_win_team=event_data_dict.get("total_win_team"),
+            total_win_team_handicap=event_data_dict.get("total_win_team_handicap")
         )
