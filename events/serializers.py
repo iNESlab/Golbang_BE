@@ -52,7 +52,6 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
             for participant in participant_data:
                 participant['event_id'] = event.pk
                 participant['member_id'] = participant['club_member'].pk  # 객체에서 다시 pk로 변경
-                participant['status_type'] = Participant.StatusType.ACCEPT
                 participant_serializer = ParticipantCreateUpdateSerializer(data=participant)
                 if participant_serializer.is_valid(raise_exception=True):
                     participant_serializer.save()
