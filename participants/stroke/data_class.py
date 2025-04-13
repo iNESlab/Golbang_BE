@@ -70,8 +70,11 @@ class ParticipantRedisData:
         # 필드들이 bytes 타입인 경우 적절한 타입으로 변환
         for attr in ['participant_id', 'event_id', 'user_handicap', 'sum_score', 'handicap_score']:
             value = getattr(self, attr)
-            if isinstance(value, str) and value.isdigit():
-                setattr(self, attr, int(value))
+            if isinstance(value, str):
+                try:
+                    setattr(self, attr, int(value)) # 음수도 int로 변환
+                except (ValueError, TypeError):
+                    pass
 
         for attr in ['is_group_win', 'is_group_win_handicap']:
             value = getattr(self, attr)
