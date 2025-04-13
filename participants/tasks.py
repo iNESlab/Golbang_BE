@@ -49,7 +49,7 @@ def save_event_periodically_task(event_id: int):
             redis_client.delete(task_key)
             break
 
-        time.sleep(30)
+        time.sleep(30) #TODO: 테스트 후에 10분 이상조정해주세요
 
 
 class MigrationMySQLInterface:
@@ -59,7 +59,7 @@ class MigrationMySQLInterface:
 
     def get_event_participants(self, event_id):
     # 특정 이벤트에 참여한 모든 참가자를 반환
-        return list(Participant.objects.filter(event_id=event_id))
+        return list(Participant.objects.filter(event_id=event_id, status_type__in=["PARTY", "ACCEPT"]).select_related('event__club'))
     
     def transfer_participant_data_to_db(self, event_id, participants):
         from clubs.models import ClubMember
@@ -71,6 +71,10 @@ class MigrationMySQLInterface:
 
                 participant_data_dict = self.redis_client.hgetall(redis_key)
                 logging.info('participant_data_dict: %s', participant_data_dict)
+
+                if not participant_data_dict:
+                    print(f"Redis key {redis_key} does not exist.")
+                    continue
 
                 # ParticipantUpdateData 객체 생성
                 participant_data = ParticipantUpdateData(
