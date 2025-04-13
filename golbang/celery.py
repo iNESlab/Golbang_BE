@@ -11,6 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'golbang.settings')
 
 # Celery 애플리케이션을 생성한다.
 app = Celery('golbang')
+app.conf.task_track_started = True
 
 # Django 설정 파일에서 Celery 관련 설정을 불러온다.
 app.config_from_object('django.conf:settings', namespace='CELERY')

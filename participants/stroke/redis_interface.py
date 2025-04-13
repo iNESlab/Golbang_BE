@@ -41,6 +41,11 @@ class RedisInterface:
 
         if count <= 0:
             await sync_to_async(redis_client.delete)(key)
+            task_id = await sync_to_async(redis_client.get)(f"{key}:task_id")
+            result = AsyncResult(task_id)
+            if result and result.status in ['STARTED', 'PENDING']:
+                result.revoke(terminate=True)
+                logging.info(f"[{event_id}] Celery task 종료")
             logging.info(f"[{event_id}] 모든 참가자 퇴장 → count 보관 키 삭제")
     
     
@@ -60,8 +65,8 @@ class RedisInterface:
             if task_id and task_id != "creating":
                 try:
                     result = AsyncResult(task_id)
-                    logging.info(f"[{event_id}] AsyncResult 확인: {result}")
-                    if result.status in ['PENDING', 'STARTED']:
+                    logging.info(f"[{event_id}] AsyncResult 확인: {result.status} {result.result}")
+                    if result.status == 'STARTED':
                         await sync_to_async(redis_client.setnx)(key, 1)
                         await sync_to_async(redis_client.expire)(key, 1800)
                         logging.info(f"[{event_id}] 기존 Celery task 실행 중 → key만 재설정")
