@@ -56,18 +56,21 @@ class RedisInterface:
         # 1️⃣ 먼저 task_key 존재 + 상태 확인
         if await sync_to_async(redis_client.exists)(task_key):
             task_id = await sync_to_async(redis_client.get)(task_key)
-            if task_id:
-                result = AsyncResult(task_id)
-                if result.status in ['PENDING', 'STARTED']:
-                    # ✅ 현재 Celery 작업이 진행 중이면 → key만 다시 세팅
-                    await sync_to_async(redis_client.setnx)(key, 1)
-                    await sync_to_async(redis_client.expire)(key, 1800)
-                    logging.info(f"[{event_id}] 기존 Celery task 실행 중 → key만 재설정")
-                    return
-                else:
-                    # ✅ 종료된 task → task_key 제거
-                    logging.info(f"[{event_id}] 기존 Celery task 종료됨 → task_key 삭제")
-                    await sync_to_async(redis_client.delete)(task_key)
+            logging.info(f"[{event_id}] 기존 Celery task 확인: {task_id}")
+            if task_id and task_id != "creating":
+                try:
+                    result = AsyncResult(task_id)
+                    logging.info(f"[{event_id}] AsyncResult 확인: {result}")
+                    if result.status in ['PENDING', 'STARTED']:
+                        await sync_to_async(redis_client.setnx)(key, 1)
+                        await sync_to_async(redis_client.expire)(key, 1800)
+                        logging.info(f"[{event_id}] 기존 Celery task 실행 중 → key만 재설정")
+                        return
+                    else:
+                        logging.info(f"[{event_id}] 기존 Celery task 종료됨 → task_key 삭제")
+                        await sync_to_async(redis_client.delete)(task_key)
+                except Exception as e:
+                    logging.exception(f"[{event_id}] AsyncResult 처리 중 에러 발생: {e}")
                     
         # task_key가 없으면 새로 생성
         task_set = await sync_to_async(redis_client.setnx)(task_key, "creating")
