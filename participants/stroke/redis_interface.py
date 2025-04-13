@@ -43,9 +43,11 @@ class RedisInterface:
             await sync_to_async(redis_client.delete)(key)
             task_id = await sync_to_async(redis_client.get)(f"{key}:task_id")
             result = AsyncResult(task_id)
-            if result and result.status in ['STARTED', 'PENDING']:
-                result.revoke(terminate=True)
-                logging.info(f"[{event_id}] Celery task 종료")
+            #TODO: 저장 후에 종료해야하는데, 저장 로직을 추가하기에는 무거운 느낌이 있음. 
+            # 자동저장 텀을 짧게 잡으면 필요 없는 부분이기도 해서.. 일단 주석처리
+            # if result and result.status in ['STARTED', 'PENDING']:
+            #     result.revoke(terminate=True)
+            #     logging.info(f"[{event_id}] Celery task 종료")
             logging.info(f"[{event_id}] 모든 참가자 퇴장 → count 보관 키 삭제")
     
     
