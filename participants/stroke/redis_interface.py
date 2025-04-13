@@ -9,7 +9,7 @@ participa/stroke/redis_interface.py
 from dataclasses import asdict
 import json
 import logging
-from multiprocessing.pool import AsyncResult
+from celery.result import AsyncResult
 
 from asgiref.sync import sync_to_async
 from participants.tasks import save_event_periodically_task
