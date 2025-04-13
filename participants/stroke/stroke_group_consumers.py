@@ -54,11 +54,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             # 주기적으로 스코어를 전송하는 태스크를 설정
             self.send_task = asyncio.create_task(self.send_scores_periodically()) # 문제 없이 잘 됐음.
-
-            is_event_auto_migration = await self.save_is_event_auto_migration_in_redis(self.event_id) # 이벤트 자동 저장 여부를 Redis에 저장
-            if is_event_auto_migration :
-                # ✅ 처음 생성된 경우 → Celery Task 시작
-                save_event_periodically_task.delay(self.event_id)
+            await self.save_celery_event_from_redis_to_mysql(self.event_id) # 이벤트 자동 저장
 
         except ValueError as e:
             await self.close_with_status(500, str(e))
@@ -114,9 +110,6 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 # 전체 이벤트 승리 팀 갱신
                 await self.update_event_win_team_in_redis(participant.event_id)
 
-            # # Redis에서 갱신된 sum_score와 handicap_score, is_group_win, is_group_win_handicap을 가져오기
-            # user_name, sum_score, handicap_score, is_group_win, is_group_win_handicap = await self.get_scores_from_redis(participant)
-
             participant = await self.get_participant_from_redis(event_id=self.event_id,participant_id=participant_id) # redis에서 갱신된 참가자 정보 가져오기
             response_data_dict = asdict(participant)
             response_data_dict["hole_number"] = hole_number
@@ -126,6 +119,9 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 'type': 'input_score',
                 **response_data_dict  # Send all response data
             })
+
+            await self.save_celery_event_from_redis_to_mysql(self.event_id, auto_inc=False) # count 증가 없이, 자동 저장 시간 연장
+
         except ValueError as e:
             await self.close_with_status(500, str(e))
 

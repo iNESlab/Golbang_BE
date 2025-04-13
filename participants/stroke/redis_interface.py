@@ -9,8 +9,10 @@ participa/stroke/redis_interface.py
 from dataclasses import asdict
 import json
 import logging
+from multiprocessing.pool import AsyncResult
 
 from asgiref.sync import sync_to_async
+from participants.tasks import save_event_periodically_task
 import redis
 
 from golbang import settings
@@ -39,27 +41,59 @@ class RedisInterface:
 
         if count <= 0:
             await sync_to_async(redis_client.delete)(key)
-            logging.info(f"[{event_id}] 모든 참가자 퇴장 → 마이그레이션 종료")
+            logging.info(f"[{event_id}] 모든 참가자 퇴장 → count 보관 키 삭제")
     
     
-    async def save_is_event_auto_migration_in_redis(self, event_id):
+    async def save_celery_event_from_redis_to_mysql(self, event_id, is_count_incr = True):
         '''
-        이 키가 레디스에 저장돼있으면,
+        key가 레디스에 저장돼있으면,
         redis에서 mysql로 정기적(xx초 간격)으로 마이그레이션 되는 것을 의미
+        task_key는 celery 작업 상태 추적키
         '''
         key = f"event:{event_id}:is_saving"
+        task_key = f"{key}:task_id"
+
+        # 1️⃣ 먼저 task_key 존재 + 상태 확인
+        if await sync_to_async(redis_client.exists)(task_key):
+            task_id = await sync_to_async(redis_client.get)(task_key)
+            if task_id:
+                result = AsyncResult(task_id)
+                if result.status in ['PENDING', 'STARTED']:
+                    # ✅ 현재 Celery 작업이 진행 중이면 → key만 다시 세팅
+                    await sync_to_async(redis_client.setnx)(key, 1)
+                    await sync_to_async(redis_client.expire)(key, 1800)
+                    logging.info(f"[{event_id}] 기존 Celery task 실행 중 → key만 재설정")
+                    return
+                else:
+                    # ✅ 종료된 task → task_key 제거
+                    logging.info(f"[{event_id}] 기존 Celery task 종료됨 → task_key 삭제")
+                    await sync_to_async(redis_client.delete)(task_key)
+                    
+        # task_key가 없으면 새로 생성
+        task_set = await sync_to_async(redis_client.setnx)(task_key, "creating")
+
+        if task_set:
+            task = save_event_periodically_task.delay(event_id)
+            await sync_to_async(redis_client.set)(task_key, task.id)
+            await sync_to_async(redis_client.expire)(task_key, 86400) # 하루 동안 유지
+
+        # 2️⃣ 여기까지 왔으면 → 새 작업 실행 가능
         created = await sync_to_async(redis_client.setnx)(key, 1)
 
         if created:
             # ✅ 처음 생성된 경우 → Celery Task 시작
-            logging.info(f"[{event_id}] 마이그레이션 시작됨")
-            await sync_to_async(redis_client.expire)(key, 21600) # 6시간 동안 유지
-            return True
-        else:
-            # 이미 존재하는 경우, count 증가
-            logging.info(f"[{event_id}] 기존 마이그레이션 중 → count 증가")
+            logging.info(f"[{event_id}] 마이그레이션 기본키 생성")
+            await sync_to_async(redis_client.expire)(key, 1800) # 30분 동안 유지
+        elif is_count_incr:
+            # 이미 존재하는 경우, count 증가 (count 0이면 키 제거)
+            logging.info(f"[{event_id}] 이미 마이그레이션 중 → count 증가")
             await sync_to_async(redis_client.incr)(key)
-            return False
+            await sync_to_async(redis_client.expire)(key, 1800) # 30분 갱신
+        else:
+            logging.info(f"[{event_id}] 이미 마이그레이션 중 → 기본키 유효기간 갱신")
+            await sync_to_async(redis_client.expire)(key, 1800) # 30분 갱신
+
+
 
     async def save_participant_in_redis(self, participant: Participant):
         # 참가자 Redis 캐싱 메서드
