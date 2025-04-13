@@ -82,12 +82,9 @@ class MigrationMySQLInterface:
                     is_group_win_handicap=participant_data_dict.get("is_group_win_handicap")
                 )
 
-                if participant_data.rank is not None and participant_data.handicap_rank is not None:
-                    self.update_participant_rank_in_db(participant.pk, participant_data)
+                self.update_participant_in_db(participant.pk, participant_data)
 
-                # 참가자 포인트 계산 및 저장
-                participant.calculate_points()
-                print(f"Participant ID: {participant.pk}, Rank: {participant.rank}, Handicap Rank: {participant.handicap_rank}")
+                print(f"Participant ID: {participant.pk}, Rank: {participant_data.rank}, Handicap Rank: {participant_data.handicap_rank}")
 
         except Exception as e:
             logging.error(f"Error updating participant data: {e}")
@@ -141,7 +138,7 @@ class MigrationMySQLInterface:
         self.update_event_data_in_db(event_id, event_data)
         print('transfer_event_data_to_db 실행종료')
 
-    def update_participant_rank_in_db(self, participant_id, participant_data):
+    def update_participant_in_db(self, participant_id, participant_data):
         Participant.objects.filter(id=participant_id).update(**asdict(participant_data))
     
     def update_event_data_in_db(self, event_id, event_data):
@@ -149,7 +146,7 @@ class MigrationMySQLInterface:
         Event.objects.filter(id=event_id).update(**asdict(event_data))
 
     def update_or_create_hole_score_in_db(self, participant_id, hole_number, score):
-        return HoleScore.objects.update_or_create(
+        HoleScore.objects.update_or_create(
             participant_id=participant_id,
             hole_number=hole_number,
             defaults={'score': score}
