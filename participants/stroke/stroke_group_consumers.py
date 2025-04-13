@@ -41,7 +41,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             if participant is None:
                 logging.info('participant not found or not match with user token')
-                await self.send_json({'status': 400, 'message': '참가자 정보가 유효하지 않습니다.'})
+                await self.send_json({'status': 400, 'error': '참가자 정보가 유효하지 않습니다.'})
                 await self.close(code=400)
                 return
             
@@ -54,11 +54,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             # 주기적으로 스코어를 전송하는 태스크를 설정
             self.send_task = asyncio.create_task(self.send_scores_periodically()) # 문제 없이 잘 됐음.
-
-            is_event_auto_migration = await self.save_is_event_auto_migration_in_redis(self.event_id) # 이벤트 자동 저장 여부를 Redis에 저장
-            if is_event_auto_migration :
-                # ✅ 처음 생성된 경우 → Celery Task 시작
-                save_event_periodically_task.delay(self.event_id)
+            await self.save_celery_event_from_redis_to_mysql(self.event_id) # 이벤트 자동 저장
 
         except ValueError as e:
             await self.close_with_status(500, str(e))
@@ -99,7 +95,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 return
 
             if hole_number is None or score is None:
-                await self.send_json({'status': 400, 'message': "Both hole number and score are required."})
+                await self.send_json({'status': 400, 'error': "Both hole number and score are required."})
                 return
 
             await self.update_hole_score_in_redis(participant_id, hole_number, score)
@@ -114,9 +110,6 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 # 전체 이벤트 승리 팀 갱신
                 await self.update_event_win_team_in_redis(participant.event_id)
 
-            # # Redis에서 갱신된 sum_score와 handicap_score, is_group_win, is_group_win_handicap을 가져오기
-            # user_name, sum_score, handicap_score, is_group_win, is_group_win_handicap = await self.get_scores_from_redis(participant)
-
             participant = await self.get_participant_from_redis(event_id=self.event_id,participant_id=participant_id) # redis에서 갱신된 참가자 정보 가져오기
             response_data_dict = asdict(participant)
             response_data_dict["hole_number"] = hole_number
@@ -126,28 +119,31 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 'type': 'input_score',
                 **response_data_dict  # Send all response data
             })
+
+            await self.save_celery_event_from_redis_to_mysql(self.event_id, auto_inc=False) # count 증가 없이, 자동 저장 시간 연장
+
         except ValueError as e:
-            await self.send_json({'status': 400, 'message': str(e)})
+            await self.close_with_status(500, str(e))
 
     @staticmethod
     def get_group_name(event_id, group_type):
         return f"event_{event_id}_group_{group_type}_room"
 
     async def close_with_status(self, code, message):
-        await self.send_json({'status': code, 'message': message})
+        await self.send_json({'status': code, 'error': message})
         await self.close(code=code)
 
     def handle_404_not_found(self, model_name, pk):
         return {
             'status': 404,
-            'message': f'{model_name} {pk} is not found'
+            'error': f'{model_name} {pk} is not found'
         }
 
     async def input_score(self, event):
         try:
             await self.send_json(event)
         except Exception as e:
-            await self.send_json({'error': f'메시지 전송 실패, {e}'})
+            await self.send_with_status(500, f'메시지 전송 실패, {e}')
 
     async def send_scores(self):
         try:
@@ -162,7 +158,8 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
             await self.send_json(group_scores)
         except Exception as e:
-            await self.send_json({'error': f'스코어 기록을 가져오는 데 실패했습니다.{e}'})
+            await self.send_with_status(500, f'스코어 기록을 가져오는 데 실패했습니다, {e}')
+
 
     async def process_participant(self, participant):
         participant_id = participant.participant_id
@@ -189,6 +186,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             logging.debug('JSON sent successfully')
         except Exception as e:
             logging.error(f'Error in send_json: {e}')
+            await self.send_json({'status': 500, 'error': f'Error in send_json: {e}'})
 
     async def send_scores_periodically(self):
         # 주기적으로 참가자들의 점수를 전송
@@ -197,5 +195,5 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             try:
                 await self.send_scores()
             except Exception as e:
-                await self.send_json({'status': 500, 'message': str(e)})
+                await self.send_json({'status': 500, 'error': str(e)})
             await asyncio.sleep(300)  # 5분마다 주기적으로 스코어 전송
