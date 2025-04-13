@@ -73,8 +73,8 @@ class ParticipantRedisData:
     profile_image: Optional[str] = None
     is_group_win: bool = False
     is_group_win_handicap: bool = False
-    rank: str = 'N/A'
-    handicap_rank: str = 'N/A'
+    rank: str = '0'
+    handicap_rank: str = '0'
 
     def __post_init__(self):
         # 필드들이 bytes 타입인 경우 적절한 타입으로 변환
@@ -105,8 +105,8 @@ class ParticipantRedisData:
             handicap_score=participant.handicap_score,
             is_group_win=participant.is_group_win,
             is_group_win_handicap=participant.is_group_win_handicap,
-            rank=participant.rank,
-            handicap_rank=participant.handicap_rank
+            rank= participant.rank if participant.rank else '0',
+            handicap_rank=participant.handicap_rank if participant.handicap_rank else '0'
         )
     
     def to_redis_dict(self) -> dict[str, str]:
