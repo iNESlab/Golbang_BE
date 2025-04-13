@@ -120,7 +120,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 **response_data_dict  # Send all response data
             })
 
-            await self.save_celery_event_from_redis_to_mysql(self.event_id, auto_inc=False) # count 증가 없이, 자동 저장 시간 연장
+            await self.save_celery_event_from_redis_to_mysql(self.event_id, is_count_incr=False) # count 증가 없이, 자동 저장 시간 연장
 
         except ValueError as e:
             await self.close_with_status(500, str(e))
