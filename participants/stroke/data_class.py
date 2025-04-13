@@ -25,6 +25,13 @@ class ParticipantUpdateData:
             self.is_group_win = bool(int(self.is_group_win))
         if isinstance(self.is_group_win_handicap, str):
             self.is_group_win_handicap = bool(int(self.is_group_win_handicap))
+        for attr in ['sum_score', 'handicap_score']:
+            value = getattr(self, attr)
+            if isinstance(value, str):
+                try:
+                    setattr(self, attr, int(value)) # 음수도 int로 변환
+                except (ValueError, TypeError):
+                    pass
 
 
 @dataclass
