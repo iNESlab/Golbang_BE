@@ -47,8 +47,11 @@ class RankResponseData:
     def __post_init__(self):
         for attr in ['participant_id', 'last_hole_number', 'last_score', 'sum_score', 'handicap_score']:
             value = getattr(self, attr)
-            if isinstance(value, str) and value.isdigit():
-                setattr(self, attr, int(value))
+            if isinstance(value, str):
+                try:
+                    setattr(self, attr, int(value)) # 음수도 int로 변환
+                except (ValueError, TypeError):
+                    pass
 
 @dataclass
 class ParticipantRedisData:
