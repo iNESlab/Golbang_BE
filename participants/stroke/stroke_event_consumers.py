@@ -42,18 +42,12 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             self.participant_id = self.scope['url_route']['kwargs']['participant_id']
             logging.debug(f'Participant ID: {self.participant_id}')
 
-            # participant = await self.get_and_check_participant(self.participant_id, user) # mysql 연결
             participant: ParticipantRedisData = await self.get_participant_from_redis(self.event_id,self.participant_id) # redis에서 참가자 정보 가져오기
-            if participant is None:
-                participant_mysql: Participant = await self.get_and_check_participant(self.participant_id, user) # mysql 연결
-                if participant_mysql is None:
-                    participant = None
-                else:
-                    participant = await self.save_participant_in_redis(participant_mysql)  # ✅ 캐싱 추가
             
             if participant is None:
                 logging.info('No participant')
-                await self.close(code=4004)
+                await self.send_json({'status': 404, 'error': f"Participant[{self.participant_id}] not found"})
+                await self.close(code=404)
                 return
 
             self.event_id = participant.event_id
@@ -72,8 +66,8 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
         except Exception as e:
             logging.error(f'Error in connect: {e}')
-            await self.send_json({'error': str(e)})
-            await self.close(code=4005)
+            await self.send_json({'status': 500, 'error': str(e)})
+            await self.close(code=5000)
 
     async def disconnect(self, close_code):
         try:
@@ -86,6 +80,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
                 self.send_task.cancel()  # 주기적인 태스크 취소
                 logging.debug('Cancelled send_scores_periodically task')
         except Exception as e:
+            await self.send_json({'status': 500, 'error': str(e)})
             logging.error(f'Error in disconnect: {e}')
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
@@ -99,7 +94,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
         except Exception as e:
             logging.error(f'error in receive: {e}')
-            await self.send_json({'status': 400, 'message': str(e)})
+            await self.send_json({'status': 400, 'error': str(e)})
 
     @staticmethod
     def get_event_group_name(event_id):
@@ -131,7 +126,7 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
             print(f'response_data: {response_data}')
             await self.send_json(response_data)
         except Exception as e:
-            await self.send_json({'error': f'스코어 기록을 가져오는 데 실패했습니다.{e}'})
+            await self.send_json({'status':500,'error': f'스코어 기록을 가져오는 데 실패했습니다.{e}'})
 
     async def process_participant(self, participant: ParticipantRedisData):
         # 참가자 데이터를 처리하여 rank 정보를 반환
@@ -193,15 +188,24 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
             except Exception as e:
                 logging.error(f'Error in send_scores_periodically: {e}')
-                await self.send_json({'error': '주기적인 스코어 전송 실패', 'details': str(e)})
+                await self.send_json({'status':500, 'error': '주기적인 스코어 전송 실패', 'details': str(e)})
             await asyncio.sleep(300)  # 5분마다 주기적으로 스코어 전송
 
     async def send_json(self, content):
         # JSON 데이터를 WebSocket을 통해 전송
 
         try:
-            logging.debug(f'Sending JSON: {content}')
+            logging.debug(f'Sending JSON: {content}') 
+            #TODO: 응답할 때, 아래처럼 보내도록 변경 지금은 날것으로 보내고 있어서 프론트에서 에러핸들링하기 어려움
+            '''
+            await self.send_json({
+                'status': 200,
+                'message': 'success',
+                'data': content
+            })
+            '''
             await self.send(text_data=json.dumps(content, ensure_ascii=False))
             logging.debug('JSON sent successfully')
         except Exception as e:
             logging.error(f'Error in send_json: {e}')
+            await self.send_json({'status':500, 'error': f'Error in send_json: {e}'})

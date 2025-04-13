@@ -73,10 +73,19 @@ class RedisInterface:
         return ParticipantRedisData(**data)  # 저장된 값을 반환
 
     async def get_participant_from_redis(self, event_id, participant_id):
-        key = f'event:{event_id}:participant:{participant_id}'
+        if event_id is None:
+            # Redis에서 해당 participant_id에 해당하는 모든 키 탐색
+            keys = await sync_to_async(redis_client.keys)(f'event:*:participant:{participant_id}')
+            if not keys:
+                return None
+            key = keys[0]
+        else:
+            key = f'event:{event_id}:participant:{participant_id}'
+
         data = await sync_to_async(redis_client.hgetall)(key)
+        print(f"Redis에서 참가자 정보 가져옴: {data}")
         if data:
-            return ParticipantRedisData(**data)  # 저장된 값을 반환
+            return ParticipantRedisData(**data)
         return None
 
     async def update_hole_score_in_redis(self, participant_id, hole_number, score):
@@ -87,14 +96,14 @@ class RedisInterface:
 
     async def update_participant_sum_and_handicap_score_in_redis(self, participant: ParticipantRedisData):
         # Redis에 참가자의 총 점수와 핸디캡 점수를 업데이트
-
         keys_pattern = f'participant:{participant.participant_id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
 
         sum_score = 0
         for key in keys:
             score = await sync_to_async(redis_client.get)(key)
-            sum_score += int(score)
+            if score is not None:
+                sum_score += int(score)
         handicap_score = sum_score - participant.user_handicap
         redis_key = f'event:{participant.event_id}:participant:{participant.participant_id}'
         await sync_to_async(redis_client.hset)(redis_key, mapping={
@@ -157,22 +166,6 @@ class RedisInterface:
 
             previous_score = current_score
             rank += 1  # 다음 순위로 이동
-
-    async def get_scores_from_redis(self, participant):
-        # Redis에서 참가자의 점수를 반환
-        redis_key = f'event:{participant.event_id}:participant:{participant.participant_id}'
-
-        # Redis 해시 데이터 한 번에 가져오기
-        participant_data = await sync_to_async(redis_client.hgetall)(redis_key)
-
-        # 데이터 디코딩 및 변환
-        user_name = participant_data.get("user_name", "unknown")
-        sum_score = int(participant_data.get("sum_score", 0))
-        handicap_score = bool(int(participant_data.get("is_group_win", 0)))
-        is_group_win = bool(int(participant_data.get("is_group_win", "0")))
-        is_group_win_handicap = bool(int(participant_data.get("is_group_win_handicap", "0")))
-
-        return user_name, sum_score, handicap_score, is_group_win, is_group_win_handicap
     
     async def get_event_participants_from_redis(self, event_id, group_type_filter=None):
         base_key = f'event:{event_id}:participant:'
