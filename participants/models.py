@@ -70,7 +70,7 @@ class Participant(models.Model):
         hole_score_map = {hole.hole_number: hole.score for hole in hole_scores}
         print(f"hole_score_map: {hole_score_map}")
         # 1~18홀 점수를 채우고, 누락된 점수는 0으로 채운다.
-        complete_scorecard = [hole_score_map.get(hole, 0) for hole in range(1, 19)]
+        complete_scorecard = [hole_score_map.get(hole, None) for hole in range(1, 19)]
         print(f"complete_scorecard: {complete_scorecard}")
         return complete_scorecard
 
