@@ -94,8 +94,8 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 await self.send_json(self.handle_404_not_found('Participant', participant_id))
                 return
 
-            if hole_number is None or score is None:
-                await self.send_json({'status': 400, 'error': "Both hole number and score are required."})
+            if hole_number is None:
+                await self.send_json({'status': 400, 'error': "Hole Number is required."})
                 return
 
             await self.update_hole_score_in_redis(participant_id, hole_number, score)
