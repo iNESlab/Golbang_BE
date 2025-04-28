@@ -153,6 +153,23 @@ class RedisInterface:
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
 
+
+    async def get_hole_checks(self, event_id: int, group_type: str) -> dict[int, bool]:
+        # Redis에서 hole_checks 해시를 읽어와 hole_number -> bool 매핑 리턴
+        redis_key = f"event:{event_id}:group:{group_type}:hole_checks"
+        logging.info(f"[DEBUG] Redis HGETALL redis_key={redis_key}")
+        raw = await sync_to_async(redis_client.hgetall)(redis_key)
+        logging.info(f"get_hole_checks: {raw}")
+
+        return {int(k): bool(int(v)) for k, v in raw.items()}
+
+    async def set_hole_check(self, event_id: int, group_type: str, hole_number: int, is_confirmed: bool) -> None:
+        # Redis 해시에 해당 hole_number 필드를 0/1로 설정
+        redis_key = f"event:{event_id}:group:{group_type}:hole_checks"
+        logging.info(f"[DEBUG] Redis HSET redis_key={redis_key}, hole={hole_number}, value={int(is_confirmed)}")
+        await sync_to_async(redis_client.hset)(redis_key, hole_number, int(is_confirmed))
+
+
     async def update_participant_sum_and_handicap_score_in_redis(self, participant: ParticipantRedisData):
         # Redis에 참가자의 총 점수와 핸디캡 점수를 업데이트
         keys_pattern = f'participant:{participant.participant_id}:hole:*'
