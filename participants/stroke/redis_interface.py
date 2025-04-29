@@ -133,8 +133,23 @@ class RedisInterface:
         return None
 
     async def update_hole_score_in_redis(self, participant_id, hole_number, score):
-        # Redis에 홀 점수를 업데이트
+        """
+        Redis에 홀 점수를 업데이트하는 함수
+         - score가 None이면 해당 키를 삭제함
+        """
         key = f'participant:{participant_id}:hole:{hole_number}'
+        if score is None:
+            # NULL 전달 시 Redis에서 키 삭제
+            print(f"Score 삭제 → {key}")
+            await sync_to_async(redis_client.delete)(key)
+            # TODO: 아래는 디버깅용 코드. 추후 안정화될 경우 삭제 필요
+            # deleted = await sync_to_async(redis_client.delete)(key)
+            # print(f"[디버그] delete → {key}, deleted={deleted}")
+            # still_exists = await sync_to_async(redis_client.exists)(key)
+            # print(f"[디버그] exists after delete → {still_exists}")  # 0 이면 정상 삭제
+            return
+
+        # 숫자 전달 시 기존 로직
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
 
