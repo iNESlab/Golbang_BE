@@ -97,7 +97,10 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             # 수정 요청
             if action == 'uncheck_hole':
                 await self.set_hole_check(self.event_id, self.group_type, hole_number, False)
-                await self.send_scores()
+                # 조 내 참여자 전체에게 데이터 전송
+                await self.channel_layer.group_send(self.group_name, {
+                    "type": "broadcast_scores"
+                })
                 return
 
             # 확인(계산) 요청
@@ -120,8 +123,10 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 # 확인 상태 저장
                 await self.set_hole_check(self.event_id, self.group_type, hole_number, True)
 
-                # 전체 데이터 전송
-                await self.send_scores()
+                # 조 내 참여자 전체에게 데이터 전송
+                await self.channel_layer.group_send(self.group_name, {
+                    "type": "broadcast_scores"
+                })
                 return
 
             # 전체 스코어+상태 조회 요청
@@ -162,7 +167,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 response_data_dict["score"] = score
 
                 await self.channel_layer.group_send(self.group_name, {
-                    'type': 'input_score',
+                    'type': 'broadcast_scores',
                     **response_data_dict  # Send all response data
                 })
 
@@ -195,7 +200,11 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             'error': f'{model_name} {pk} is not found'
         }
 
-    async def input_score(self, event):
+    async def broadcast_scores(self, event):
+        """
+        그룹에 broadcast_scores 메시지가 왔을 때 send_scores() 를 호출해 모두에게 최신 데이터 전송
+        """
+        await self.send_scores()
         try:
             await self.send_json(event)
         except Exception as e:
@@ -210,16 +219,15 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
         try:
             # 그룹에 속한 모든 참가자를 한 번의 쿼리로 가져옴
             participants = await self.get_group_participants_from_redis(self.event_id, self.group_type)
-            # logging.info(f'participants: {participants}')
+            logging.info(f'participants: {participants}')
             # 각 참가자의 홀 스코어를 비동기로 병렬 처리
             group_scores = await asyncio.gather(*[
                 self.process_participant(participant) for participant in participants
             ])
-            # logging.info(f'group_scores: {group_scores}')
+            logging.info(f'group_scores: {group_scores}')
 
             hole_checks = await self.get_hole_checks(self.event_id, self.group_type)
-            # logging.info(f"hole_checks: {hole_checks}")
-
+            logging.info(f"hole_checks: {hole_checks}")
             await self.send_json({
                 'scores': group_scores,
                 'hole_checks': hole_checks,
