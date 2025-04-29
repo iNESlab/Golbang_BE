@@ -36,7 +36,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             if participant is None:
                 participant_mysql = await self.get_and_check_participant(self.participant_id, user) # mysql 연결
                 if participant_mysql is not None:
-                    
+
                     participant = await self.save_participant_in_redis(participant_mysql)  # ✅ 캐싱 추가
 
             if participant is None:
@@ -44,7 +44,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 await self.send_json({'status': 400, 'error': '참가자 정보가 유효하지 않습니다.'})
                 await self.close(code=400)
                 return
-            
+
             self.group_type = participant.group_type
             self.event_id = participant.event_id
             self.group_name = self.get_group_name(self.event_id, self.group_type)
@@ -70,15 +70,25 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             await self.close_with_status(500, str(e))
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
-        # 각 사람의 스코어 저장 및 각 참가자 랭킹/총합 저장
+        """
+        각 사람의 스코어 저장 및 각 참가자 랭킹/총합 저장
+        """
+        # JSON 파싱 에러 처리
+        try:
+            text_data_json = json.loads(text_data)
+        except json.JSONDecodeError:
+            await self.send_json({
+                'status': 400,
+                'error': 'Invalid JSON format'
+            })
+            return
+
+        action = text_data_json.get("action")
+        hole_number = text_data_json.get("hole_number")
+        participant_id = text_data_json.get("participant_id")
 
         # 로직 실행
         try:
-            text_data_json = json.loads(text_data)
-            action = text_data_json.get("action")
-            hole_number = text_data_json.get("hole_number")
-            participant_id = text_data_json.get("participant_id")
-
             # 수정 요청
             if action == 'uncheck_hole':
                 await self.set_hole_check(self.event_id, self.group_type, hole_number, False)
@@ -154,6 +164,13 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                 await self.save_celery_event_from_redis_to_mysql(self.event_id,
                                                                  is_count_incr=False)  # count 증가 없이, 자동 저장 시간 연장
 
+                return
+            else:
+                # 알 수 없는 action 에 대한 에러 핸들
+                await self.send_json({
+                    'status': 400,
+                    'error': f'Unknown action: {action}'
+                })
                 return
 
         except ValueError as e:
