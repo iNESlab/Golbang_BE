@@ -71,9 +71,14 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
         """
-        각 사람의 스코어 저장 및 각 참가자 랭킹/총합 저장
+        클라이언트로부터 JSON 메시지 수신 및 분기 처리
+        Supported actions:
+        - get            : 전체 스코어 + 상태 조회
+        - confirm_hole   : 홀 확정 (계산 + 상태 업데이트)
+        - uncheck_hole   : 홀 수정 모드 전환 (상태 해제)
+        - post           : 스코어 입력
         """
-        # JSON 파싱 에러 처리
+        # 1) JSON 파싱 에러 처리
         try:
             text_data_json = json.loads(text_data)
         except json.JSONDecodeError:
@@ -87,7 +92,7 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
         hole_number = text_data_json.get("hole_number")
         participant_id = text_data_json.get("participant_id")
 
-        # 로직 실행
+        # 2) 각 액션별 로직 실행 및 예외 처리
         try:
             # 수정 요청
             if action == 'uncheck_hole':
@@ -197,18 +202,23 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
             await self.send_with_status(500, f'메시지 전송 실패, {e}')
 
     async def send_scores(self):
+        """
+        그룹 참가자의 실시간 점수 및 홀 확인 상태를 수집해 전송하는 함수
+        - participants: Redis에서 그룹 필터링 후 가져온 ParticipantRedisData 리스트
+        - hole_checks: 해당 그룹의 Redis hole_checks 해시
+        """
         try:
             # 그룹에 속한 모든 참가자를 한 번의 쿼리로 가져옴
             participants = await self.get_group_participants_from_redis(self.event_id, self.group_type)
-            logging.info(f'participants: {participants}')
+            # logging.info(f'participants: {participants}')
             # 각 참가자의 홀 스코어를 비동기로 병렬 처리
             group_scores = await asyncio.gather(*[
                 self.process_participant(participant) for participant in participants
             ])
-            logging.info(f'group_scores: {group_scores}')
+            # logging.info(f'group_scores: {group_scores}')
 
             hole_checks = await self.get_hole_checks(self.event_id, self.group_type)
-            logging.info(f"hole_checks: {hole_checks}")
+            # logging.info(f"hole_checks: {hole_checks}")
 
             await self.send_json({
                 'scores': group_scores,
