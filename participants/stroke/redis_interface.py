@@ -6,8 +6,6 @@ participa/stroke/redis_interface.py
 - Redis 데이터베이스와 상호작용하는 클래스
 - 참가자와 이벤트의 데이터를 관리
 '''
-from dataclasses import asdict
-import json
 import logging
 from celery.result import AsyncResult
 
@@ -106,7 +104,9 @@ class RedisInterface:
 
 
     async def save_participant_in_redis(self, participant: Participant):
-        # 참가자 Redis 캐싱 메서드
+        """
+        참가자 Redis 캐싱 메서드
+        """
         key = f'event:{participant.event.pk}:participant:{participant.pk}'
         value = ParticipantRedisData.orm_to_participant_redis(participant=participant).to_redis_dict()
 
@@ -153,8 +153,36 @@ class RedisInterface:
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
 
+
+    async def get_hole_checks(self, event_id: int, group_type: str) -> dict[int, bool]:
+        """
+        Redis에서 해당 이벤트·그룹의 hole_checks 해시를 Redis에서 읽어오는 함수
+        Returns:
+            Dict[int, bool]: {홀번호: 확인여부} 매핑 (True=확인, False=미확인)
+        """
+        redis_key = f"event:{event_id}:group:{group_type}:hole_checks"
+        # logging.info(f"[DEBUG] Redis HGETALL redis_key={redis_key}")
+        raw = await sync_to_async(redis_client.hgetall)(redis_key)
+        # logging.info(f"get_hole_checks: {raw}")
+
+        return {int(k): bool(int(v)) for k, v in raw.items()}
+
+    async def set_hole_check(self, event_id: int, group_type: str, hole_number: int, is_confirmed: bool) -> None:
+        """
+        해당 이벤트·그룹의 hole_checks 해시에 hole_number 필드를 0/1로 설정하는 함수
+        is_confirmed (bool): 확인 상태 (True 또는 False)
+        0: False, 1: True
+        key: hole_number, value: int(is_confirmed)
+        """
+        redis_key = f"event:{event_id}:group:{group_type}:hole_checks"
+        # logging.info(f"[DEBUG] Redis HSET redis_key={redis_key}, hole={hole_number}, value={int(is_confirmed)}")
+        await sync_to_async(redis_client.hset)(redis_key, hole_number, int(is_confirmed))
+
+
     async def update_participant_sum_and_handicap_score_in_redis(self, participant: ParticipantRedisData):
-        # Redis에 참가자의 총 점수와 핸디캡 점수를 업데이트
+        """
+        Redis에 참가자의 총 점수와 핸디캡 점수를 업데이트
+        """
         keys_pattern = f'participant:{participant.participant_id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
 
@@ -171,8 +199,9 @@ class RedisInterface:
         })
 
     async def update_rankings_in_redis(self, event_id):
-        # Redis에 참가자들의 순위를 업데이트
-
+        """
+        Redis에 참가자들의 순위를 업데이트
+        """
         participants = await self.get_event_participants_from_redis(event_id)
 
         # sum_score이 0인 참가자들은 제외
@@ -262,7 +291,9 @@ class RedisInterface:
 
 
     async def get_group_participants_from_redis(self, event_id, group_type_filter=None):
-        # Redis에서 참가자들을 가져옴
+        """
+        Redis에서 참가자들을 가져옴
+        """
 
         event_participants = await self.get_event_participants_from_redis(event_id, group_type_filter)
         if group_type_filter is None:
@@ -351,8 +382,9 @@ class RedisInterface:
         await sync_to_async(redis_client.expire)(event_key, 172800)
 
     async def get_all_hole_scores_from_redis(self, participant_id):
-        # Redis에서 모든 홀 점수를 가져옴
-
+        """
+        Redis에서 모든 홀 점수를 가져옴
+        """
         logging.info('participant_id: %s', participant_id)
         keys_pattern = f'participant:{participant_id}:hole:*'
         keys = await sync_to_async(redis_client.keys)(keys_pattern)
@@ -366,8 +398,9 @@ class RedisInterface:
         return hole_scores
 
     async def get_event_data_from_redis(self, event_id):
-        # Redis에서 이벤트 데이터를 가져옴
-
+        """
+        Redis에서 이벤트 데이터를 가져옴
+        """
         redis_key = f'event:{event_id}'
         event_data_dict = await sync_to_async(redis_client.hgetall)(redis_key)
 
