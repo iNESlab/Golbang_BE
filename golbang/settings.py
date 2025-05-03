@@ -174,7 +174,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 # settings.py (테스트 환경에서만 사용)
-CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TASK_EAGER_PROPAGATES = True
 
 
