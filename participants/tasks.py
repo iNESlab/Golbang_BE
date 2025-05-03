@@ -49,7 +49,7 @@ def save_event_periodically_task(event_id: int):
             redis_client.delete(task_key)
             break
 
-        time.sleep(30) #TODO: 테스트 후에 10분 이상조정해주세요
+        time.sleep(900) # 15분 간격으로 동기화
 
 
 class MigrationMySQLInterface:
