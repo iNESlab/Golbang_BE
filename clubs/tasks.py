@@ -27,37 +27,48 @@ logger = logging.getLogger(__name__)
 redis_interface = NotificationRedisInterface()
 
 @shared_task
-def calculate_club_ranks_and_points(club_id):
+def calculate_club_ranks_and_points(club_id=None):
     """
-    클럽 멤버들의 랭킹 및 포인트를 갱신하는 Celery 작업
+    모임 멤버들의 랭킹 및 포인트를 갱신하는 Celery 작업
+    A. club_id=None 이면 모든 모임을 순회 (in settings.py - 매일 자정에 실행되는 코드)
+    B. club_id 값이 있으면 해당 모임만 처리 (in club_statics.py)
     """
-    try:
-        with transaction.atomic():
-            club = Club.objects.get(id=club_id)
-            logger.info(f"Calculating ranks and points for club: {club}")
+    # 대상 클럽 리스트 얻기
+    if club_id:
+        clubs = Club.objects.filter(id=club_id)
+    else:
+        clubs = Club.objects.all()
 
-            # 클럽 멤버의 랭킹 계산
-            ClubMember.calculate_avg_rank(club)
-            ClubMember.calculate_handicap_avg_rank(club)
-            logger.info(f"Ranks calculated for club: {club}")
+    # 모임 순회
+    for club in clubs:
+        try:
+            with transaction.atomic():
+                logger.info(f"Calculating ranks and points for club: {club}")
 
-            # 참가자 포인트 계산 및 업데이트 (조건에 맞는 참가자만 계산)
-            participants = Participant.objects.filter(club_member__club=club, status_type__in=['ACCEPT', 'PARTY'])
-            for participant in participants:
-                # 포인트 계산 전에 조건을 확인
-                if participant.rank == '0' or participant.handicap_rank == '0':
-                    logger.info(f"Skipping points calculation for participant: {participant}")
-                    continue
-                participant.calculate_points()
-                logger.info(f"Points calculated for participant: {participant}")
+                # 클럽 멤버의 랭킹 계산
+                ClubMember.calculate_avg_rank(club)
+                ClubMember.calculate_handicap_avg_rank(club)
+                logger.info(f"Ranks calculated for club: {club}")
 
-            # 클럽 멤버들의 총 포인트 업데이트
-            for member in ClubMember.objects.filter(club=club):
-                member.update_total_points()
-            logger.info(f"Total points updated for members in club: {club}")
+                # 참가자 포인트 계산
+                participants = Participant.objects.filter(
+                    club_member__club=club,
+                    status_type__in=['ACCEPT', 'PARTY']
+                )
+                for p in participants:
+                    if p.rank == '0' or p.handicap_rank == '0':
+                        logger.info(f"Skipping points for participant: {p}")
+                        continue
+                    p.calculate_points()
+                    logger.info(f"Points calculated for participant: {p}")
 
-    except Exception as e:
-        logger.error(f"Error updating ranks and points for club {club_id}: {e}")
+                # 클럽 멤버들의 총 포인트 업데이트
+                for member in ClubMember.objects.filter(club=club):
+                    member.update_total_points()
+                logger.info(f"Total points updated for members in club: {club}")
+
+        except Exception as e:
+            logger.error(f"Error updating ranks/points for club {club.id}: {e}")
 
 @shared_task
 def send_club_creation_notification(club_id):
