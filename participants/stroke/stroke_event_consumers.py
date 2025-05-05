@@ -133,8 +133,8 @@ class EventParticipantConsumer(AsyncWebsocketConsumer, MySQLInterface, RedisInte
 
         rank_data = await self.get_event_rank_from_redis(participant.event_id, participant)
 
-        # 아직 점수입력이 안된 참가자는 제외
-        if rank_data.sum_score == 0:
+        # 아직 점수 입력을 하지 않은 참가자 정보 제외
+        if rank_data.last_hole_number == 0:
             return None
 
         return {

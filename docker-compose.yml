@@ -34,7 +34,7 @@ services:     # 컨테이너 지정
     image: redis:latest
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
     environment:
       - REDIS_PASSWORD=${MYSQL_DB_PASSWORD}
     command: redis-server --requirepass ${MYSQL_DB_PASSWORD}
