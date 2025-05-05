@@ -110,13 +110,21 @@ class GroupParticipantConsumer(AsyncWebsocketConsumer, RedisInterface, MySQLInte
                     await self.send_json({'status': 404, 'error': f'Participant {participant_id} not found'})
                     return
 
-                await self.update_participant_sum_and_handicap_score_in_redis(participant)
+                # 조에 속한 전체 참가자의 sum/handicap 계산
+                members = await self.get_group_participants_from_redis(self.event_id, self.group_type)
+                await asyncio.gather(*[
+                    self.update_participant_sum_and_handicap_score_in_redis(m)
+                    for m in members
+                    ])
                 await self.update_rankings_in_redis(self.event_id)
 
                 logging.info(f'isTeam? {participant.team_type != Participant.TeamType.NONE}')
                 if participant.team_type != Participant.TeamType.NONE:
-                    # 조별 승리 여부 갱신
-                    await self.update_is_group_win_in_redis(participant)
+                    # 조별 승리 여부 갱신 (같은 조 모든 조원들 갱신)
+                    await asyncio.gather(*[
+                        self.update_is_group_win_in_redis(m)
+                        for m in members
+                        ])
                     # 전체 이벤트 승리 팀 갱신
                     await self.update_event_win_team_in_redis(self.event_id)
 

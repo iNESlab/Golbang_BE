@@ -204,11 +204,8 @@ class RedisInterface:
         """
         participants = await self.get_event_participants_from_redis(event_id)
 
-        # sum_score이 0인 참가자들은 제외
-        participants = [p for p in participants if p.sum_score != 0]
-
-        sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score)
-        sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score)
+        sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score or 0)  # 스코어가 None일 경우 0으로 대체
+        sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score or 0)
 
         self.assign_ranks(sorted_by_sum_score, 'sum_rank')
         self.assign_ranks(sorted_by_handicap_score, 'handicap_rank')
