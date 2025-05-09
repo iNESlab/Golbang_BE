@@ -7,6 +7,7 @@ accounts/admin.py
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import AdminPasswordChangeForm  # TODO: 비밀번호 변경 후 다시 제거해야 함
 
 from accounts.forms import UserChangeForm, UserCreationFirstStepForm
 from accounts.models import User
@@ -19,7 +20,8 @@ from accounts.models import User
 class CustomUserAdmin(BaseUserAdmin):
     form = UserChangeForm
     add_form = UserCreationFirstStepForm
-
+    # 관리자 화면에서 다른 유저 비밀번호 변경 폼을 사용하도록 설정
+    change_password_form = AdminPasswordChangeForm # TODO: 비밀번호 변경 후 다시 제거해야 함
 
     list_display        = ('user_id', 'email', 'name', 'phone_number', 'handicap', 'date_of_birth', 'is_admin')
     list_filter         = ('is_admin',)

@@ -53,8 +53,7 @@ class UserCreationSecondStepForm(forms.ModelForm):
 '''
 class UserChangeForm(forms.ModelForm):
     # password는 읽기 전용. (사용자 정보 수정시 비밀번호 변경 X)
-    password = ReadOnlyPasswordHashField()
-
+    password = ReadOnlyPasswordHashField(label="비밀번호")
     class Meta:
         model   = User
         fields  = ['user_id', 'email', 'password', 'name', 'phone_number', 'handicap', 'date_of_birth', 'address', 'student_id',
