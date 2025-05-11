@@ -22,6 +22,7 @@ from ..models import Club, ClubMember, User
 from ..serializers import (ClubSerializer, ClubCreateUpdateSerializer, ClubMemberAddSerializer, ClubAdminAddSerializer,
                            ClubMemberSerializer) # TODO: 안 쓰는 건 제거
 from clubs.tasks import send_club_creation_notification
+from events.models import Event
 
 from utils.error_handlers import handle_club_400_invalid_serializer, handle_404_not_found, handle_400_bad_request
 
@@ -43,16 +44,38 @@ class IsMemberOfClub(BasePermission):
         # ex. 특정 모임 정보 보기
         return ClubMember.objects.filter(club=obj, user=request.user).exists()
 
+# class IsClubAdmin(BasePermission):
+#     '''
+#     사용자가 모임 내에서 관리자 역할을 하는지 확인하는 권한 클래스
+#     '''
+#     def has_object_permission(self, request, view, obj):
+#         # 먼저 사용자가 모임의 멤버인지 확인한 후 (IsMemberOfClub에서 상속받아 사용)
+#         if super().has_object_permission(request, view, obj):
+#             # 요청한 사용자가 모임의 관리자 역할을 하는지 추가로 확인
+#             return ClubMember.objects.filter(club=obj, user=request.user, role='admin').exists()
+#         return False
+
 class IsClubAdmin(BasePermission):
-    '''
-    사용자가 모임 내에서 관리자 역할을 하는지 확인하는 권한 클래스
-    '''
+    """
+    모임(Club) 또는 이벤트(Event)가 넘어올 때 모두 사용자가 모임 내에서 '관리자' 역할을 가지는지 확인하는 클래스
+    """
     def has_object_permission(self, request, view, obj):
-        # 먼저 사용자가 모임의 멤버인지 확인한 후 (IsMemberOfClub에서 상속받아 사용)
-        if super().has_object_permission(request, view, obj):
-            # 요청한 사용자가 모임의 관리자 역할을 하는지 추가로 확인
-            return ClubMember.objects.filter(club=obj, user=request.user, role='admin').exists()
-        return False
+        # 1) obj가 Event 인스턴스면 실제 모임은 obj.club
+        if isinstance(obj, Event):
+            club = obj.club
+        else:
+            club = obj  # Club 인스턴스인 경우
+
+        # 2) 먼저 모임 멤버인지 확인 (IsMemberOfClub.super)
+        if not super().has_object_permission(request, view, club):
+            return False
+
+        # 3) 멤버라면 role='admin' 인지 검사
+        return ClubMember.objects.filter(
+            club=club,
+            user=request.user,
+            role='admin'
+        ).exists()
 
 class ClubViewSet(viewsets.ModelViewSet):
     '''
