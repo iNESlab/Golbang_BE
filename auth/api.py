@@ -7,7 +7,7 @@ auth/api.py
 목적: participants_view.py 파일 내의 복잡성을 줄이고, 인증 관련 로직을 별도의 파일로 분리하기 위해 만든 파일
 기능: JWT 인증을 사용한 로그인, 로그아웃, 토큰 갱신, 액세스 토큰 만료시 리프레시 토큰과 함께 반환하도록 설정
 """
-
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response    # API의 응답
@@ -64,11 +64,14 @@ class LoginApi(APIView):
         # 2. 이메일 (또는 username)으로 사용자 검색 
         # 사용자가 없는 경우 -> 404 not found 응답
         try:
-            user = User.objects.get(email=userid_or_email)
+            user = User.objects.get(
+                Q(user_id__exact=userid_or_email) |
+                Q(email__exact=userid_or_email)
+            )
         except User.DoesNotExist:
             logging.error(f"[LOGIN ERROR]User does not exist: {userid_or_email}")
             return Response({
-                "status" : status.HTTP_404_NOT_FOUND,
+                "status": status.HTTP_404_NOT_FOUND,
                 "message": "Email 또는 Username을 찾을 수 없습니다."
             }, status=status.HTTP_404_NOT_FOUND)
 
@@ -79,8 +82,6 @@ class LoginApi(APIView):
                 "status" : status.HTTP_400_BAD_REQUEST,
                 "message": "비밀번호가 일치하지 않습니다."
             }, status=status.HTTP_400_BAD_REQUEST)
-
-        user = authenticate(username=userid_or_email, password=password)
 
         # FCM 토큰이 비어 있거나 다르면 업데이트
         if fcm_token:
