@@ -22,6 +22,7 @@ from events.models import Event
 from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer, \
     ScoreCardSerializer
 from events.utils import EventUtils
+from participants.serializers import ParticipantCreateUpdateSerializer
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
 
 
@@ -205,6 +206,88 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.delete()
+
+    @action(detail=True, methods=['post'], url_path='add-participants')
+    def add_participants(self, request, *args, **kwargs):
+        """
+        여러 명의 참가자를 한 번에 추가
+        요청데이터: { "participants": [ {club_member, team_type, group_type, status_type}, … ] }
+        """
+        event_id = self.kwargs.get('pk')
+
+        try:
+            event = self.get_object()
+            self.check_object_permissions(request, event.club)
+        except Event.DoesNotExist:
+            return handle_404_not_found('event', event_id)
+
+        if EventUtils.is_duplicated_participants(request.data.get('participants',[])):
+            return handle_400_bad_request('Duplicate member_id found in participants.')
+
+        serializer = ParticipantCreateUpdateSerializer(
+            data=request.data.get('participants', []),
+            many=True,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(event=event)
+        return Response({
+            'status': status.HTTP_201_CREATED,
+            'message': f'Participants added in event {event_id}',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='remove-participants')
+    def remove_participants(self, request, pk=None):
+        """
+        여러 명의 참가자를 한 번에 삭제
+        한 명만 삭제할 경우 DELETE 메소드도 가능하지만 여러 명을 한 번에 삭제하기 위해 POST 메소드로 설정
+        요청데이터: { "participant_ids": [1, 2, 3] }
+        """
+        event_id = self.kwargs.get('pk')
+        try:
+            event = self.get_object()
+            self.check_object_permissions(request, event.club)
+        except Event.DoesNotExist:
+            return handle_404_not_found('event', event_id)
+
+        ids = request.data.get('participant_ids', [])
+        deleted, _ = Participant.objects.filter(event=event, id__in=ids).delete()
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': f'{deleted} participants removed in event {event.id}',
+        })
+
+    @action(detail=True, methods=['patch'], url_path='update-participants')
+    def update_participants(self, request, pk=None):
+        """
+        참가자의 조 변경
+        요청데이터: { "participants": [ {"id":1, "group_type":2}, {"id":3, "group_type":1}, … ] }
+        """
+        event_id = self.kwargs.get('pk')
+        try:
+            event = self.get_object()
+            self.check_object_permissions(request, event.club)
+        except Event.DoesNotExist:
+            return handle_404_not_found('event', event_id)
+
+        updated = []
+        for data in request.data.get('participants', []):
+            try:
+                inst = Participant.objects.get(event=event, pk=data['id'])
+            except Participant.DoesNotExist:
+                continue
+            serializer = ParticipantCreateUpdateSerializer(
+                inst, data=data, partial=True, context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            updated.append(serializer.data)
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': f'{len(updated)} participants updated in event {event.id}',
+            'data': updated
+        })
 
     # 이벤트 개인전 결과 조회 (GET)
     @action(detail=True, methods=['get'], url_path='individual-results')
