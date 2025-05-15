@@ -7,7 +7,7 @@ auth/api.py
 목적: participants_view.py 파일 내의 복잡성을 줄이고, 인증 관련 로직을 별도의 파일로 분리하기 위해 만든 파일
 기능: JWT 인증을 사용한 로그인, 로그아웃, 토큰 갱신, 액세스 토큰 만료시 리프레시 토큰과 함께 반환하도록 설정
 """
-
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response    # API의 응답
@@ -17,6 +17,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt  # CSRF
 
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken # RefreshToken
+
+import logging
 
 User = get_user_model() # 사용자 모델을 변수에 할당
 
@@ -37,28 +39,48 @@ class LoginApi(APIView):
         password        = request.data.get('password')
         fcm_token       = request.data.get('fcm_token')
 
-        # 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
-        if not userid_or_email or not password:
+        # 1. 이메일이나 비밀번호가 없을 경우 -> 400 bad request 응답
+        if not userid_or_email and not password:
+            logging.error(f"[LOGIN ERROR]Username or email and password are required")
             return Response({
                 "status" : status.HTTP_400_BAD_REQUEST,
-                "message": "username/email and password required"
+                "message": "username/email 과 password가 필요합니다"
             }, status=status.HTTP_400_BAD_REQUEST)
-
-        # 사용자 인증
-        user = authenticate(username=userid_or_email, password=password)
-
-        ## 사용자가 없는 경우 -> 404 not found 응답
-        if user is None:
+        
+        elif not userid_or_email:
+            logging.error(f"[LOGIN ERROR]Username or email is required")
             return Response({
-                "status" : status.HTTP_404_NOT_FOUND,
-                "message": "User does not exist(Not Found)"
+                "status" : status.HTTP_400_BAD_REQUEST,
+                "message": "username/email이 필요합니다"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        elif not password:
+            logging.error(f"[LOGIN ERROR]Password is required")
+            return Response({
+                "status" : status.HTTP_400_BAD_REQUEST,
+                "message": "password가 필요합니다"
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # 2. 이메일 (또는 username)으로 사용자 검색 
+        # 사용자가 없는 경우 -> 404 not found 응답
+        try:
+            user = User.objects.get(
+                Q(user_id__exact=userid_or_email) |
+                Q(email__exact=userid_or_email)
+            )
+        except User.DoesNotExist:
+            logging.error(f"[LOGIN ERROR]User does not exist: {userid_or_email}")
+            return Response({
+                "status": status.HTTP_404_NOT_FOUND,
+                "message": "Email 또는 Username을 찾을 수 없습니다."
             }, status=status.HTTP_404_NOT_FOUND)
 
-        ## 비밀번호가 일치하지 않는 경우 -> 400 bad request응답
+        # 3. 비밀번호 검증 (비밀번호가 일치하지 않는 경우 -> 400 bad request)
         if not user.check_password(password):
+            logging.error(f"[LOGIN ERROR]Password does not match: {userid_or_email}")
             return Response({
                 "status" : status.HTTP_400_BAD_REQUEST,
-                "message": "Passwords do not match"
+                "message": "비밀번호가 일치하지 않습니다."
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # FCM 토큰이 비어 있거나 다르면 업데이트
