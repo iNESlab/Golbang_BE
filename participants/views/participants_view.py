@@ -67,6 +67,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             event_id = request.data.get("event_id")
             participant_id = request.data.get("participant_id")
             if score is None or event_id is None:
+                print("score or event_id 필드가 필요합니다.")
                 return handle_400_bad_request("score or event_id 필드가 필요합니다.")
             
              # 🟡 Redis에서 참가자 정보 가져오기
@@ -85,8 +86,12 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             async_to_sync(self.update_hole_score_in_redis(participant=participant_redis, hole_number=hole_number, score=score))
             async_to_sync(self.update_rankings_in_redis(event_id=event_id))
 
-            update_participant_redis = async_to_sync(self.get_participant_from_redis(event_id, participant_id))
-             # ✅ Celery 마이그레이션 관리도 호출 (기존 WebSocket 로직 그대로)
+            update_participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redis(event_id, participant_id))
+            if update_participant_redis is None:
+                print(f"존재하지 않는 참가자입니다. participant_id: {participant_id}")
+                return handle_404_not_found(f'존재하지 않은 참가자입니다. participant_id: {participant_id}')
+            
+            # ✅ Celery 마이그레이션 관리도 호출 (기존 WebSocket 로직 그대로)
             async_to_sync(self.save_celery_event_from_redis_to_mysql(event_id, is_count_incr=False))
 
             response_data = asdict(update_participant_redis)
@@ -98,6 +103,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             }
             return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
+            print(f"Error in input_score: {str(e)}")
             return handle_400_bad_request({'error': str(e)})
         
     @action(detail=True, methods=["get"], url_path="group/stroke")
