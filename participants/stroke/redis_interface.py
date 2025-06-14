@@ -172,9 +172,7 @@ class RedisInterface:
         user_handicap = participant.user_handicap or 0  # 핸디캡이 None일 경우 0으로 처리
 
         key = f'participant:{participant_id}:hole:{hole_number}'
-        redis_sum_key = f'event:{event_id}:participant:{participant_id}:sum_score'
-        redis_handicap_key = f'event:{event_id}:participant:{participant_id}:handicap_score'
-
+        participant_key = f'event:{event_id}:participant:{participant_id}'
         # 이전 점수 불러오기
         prev_score_raw = redis_client.get(key)
         prev_score = int(prev_score_raw) if prev_score_raw is not None else 0
@@ -190,14 +188,14 @@ class RedisInterface:
             redis_client.expire(key, 172800)
 
         # 현재 sum_score 불러오기
-        curr_sum_str = redis_client.get(redis_sum_key)
+        data = redis_client.hgetall(participant_key)
+        curr_sum_str = data.get("sum_score")
         curr_sum = int(curr_sum_str) if curr_sum_str is not None else 0
         new_sum = curr_sum + delta
 
         # sum_score 및 handicap_score 반영
-        redis_client.set(redis_sum_key, new_sum)
-        redis_client.set(redis_handicap_key, new_sum - user_handicap)
-
+        redis_client.hset(participant_key, "sum_score", new_sum)
+        redis_client.hset(participant_key, "handicap_score", new_sum - user_handicap)
 
     async def get_hole_checks(self, event_id: int, group_type: str) -> dict[int, bool]:
         """
