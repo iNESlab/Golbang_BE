@@ -78,9 +78,9 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             # 🔵 없으면 MySQL에서 가져와 Redis에 저장
             if participant_redis is None:
                 participant_mysql = Participant.objects.select_related("club_member__user").get(pk=participant_id)
-                if participant_mysql:
+                if participant_mysql is None:
                     logging.info(f"participant_mysql: {participant_mysql}")
-                    return handle_404_not_found(f'존재하지 않은 참가자입니다. participant_id: {participant_id}')
+                    return handle_404_not_found('participant', participant_id)
 
                 participant_redis = async_to_sync(self.save_participant_in_redis)(participant_mysql)
                 print(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
