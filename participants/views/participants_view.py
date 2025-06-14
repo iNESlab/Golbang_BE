@@ -109,7 +109,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             logging.info(f"Error in input_score: {str(e)}")
             return handle_400_bad_request({'error': str(e)})
         
-    @action(detail=True, methods=["get"], url_path="group/stroke")
+    @action(detail=False, methods=["get"], url_path="group/stroke")
     def get_group_stroke(self, request, pk=None):
         try:
             event_id = request.data.get("event_id")
