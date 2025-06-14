@@ -82,7 +82,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                 participant_redis = async_to_sync(self.save_participant_in_redis(participant_mysql))
             
             # ✅ Redis에 스코어 저장 및 랭킹 업데이트
-            async_to_sync(self.update_hole_score_in_redis(participant=participant_redis, hole_number=hole_number, new_score=score))
+            async_to_sync(self.update_hole_score_in_redis(participant=participant_redis, hole_number=hole_number, score=score))
             async_to_sync(self.update_rankings_in_redis(event_id=event_id))
 
             update_participant_redis = async_to_sync(self.get_participant_from_redis(event_id, participant_id))
