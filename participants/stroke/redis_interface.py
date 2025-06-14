@@ -142,16 +142,48 @@ class RedisInterface:
             # NULL 전달 시 Redis에서 키 삭제
             print(f"Score 삭제 → {key}")
             await sync_to_async(redis_client.delete)(key)
-            # TODO: 아래는 디버깅용 코드. 추후 안정화될 경우 삭제 필요
-            # deleted = await sync_to_async(redis_client.delete)(key)
-            # print(f"[디버그] delete → {key}, deleted={deleted}")
-            # still_exists = await sync_to_async(redis_client.exists)(key)
-            # print(f"[디버그] exists after delete → {still_exists}")  # 0 이면 정상 삭제
             return
 
         # 숫자 전달 시 기존 로직
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
+
+    async def update_hole_score_in_redis(self, participant:ParticipantRedisData, hole_number, score):
+        """
+        Redis에 홀 점수를 업데이트하는 함수
+        - 점수 변경분만큼 sum_score, handicap_score 업데이트
+        - score가 None이면 해당 홀 점수를 삭제하고 감산
+        """
+        event_id = participant.event_id
+        participant_id = participant.participant_id
+        user_handicap = participant.user_handicap or 0  # 핸디캡이 None일 경우 0으로 처리
+
+        key = f'participant:{participant_id}:hole:{hole_number}'
+        redis_sum_key = f'event:{event_id}:participant:{participant_id}:sum_score'
+        redis_handicap_key = f'event:{event_id}:participant:{participant_id}:handicap_score'
+
+        # 이전 점수 불러오기
+        prev_score_raw = await sync_to_async(redis_client.get)(key)
+        prev_score = int(prev_score_raw) if prev_score_raw is not None else 0
+
+        # None이면 삭제 및 점수 차이 계산
+        if score is None:
+            print(f"Score 삭제 → {key}")
+            await sync_to_async(redis_client.delete)(key)
+            delta = -prev_score
+        else:
+            delta = int(score) - prev_score
+            await sync_to_async(redis_client.set)(key, score)
+            await sync_to_async(redis_client.expire)(key, 172800)
+
+        # 현재 sum_score 불러오기
+        curr_sum_str = await sync_to_async(redis_client.get)(redis_sum_key)
+        curr_sum = int(curr_sum_str) if curr_sum_str is not None else 0
+        new_sum = curr_sum + delta
+
+        # sum_score 및 handicap_score 반영
+        await sync_to_async(redis_client.set)(redis_sum_key, new_sum)
+        await sync_to_async(redis_client.set)(redis_handicap_key, new_sum - user_handicap)
 
 
     async def get_hole_checks(self, event_id: int, group_type: str) -> dict[int, bool]:
@@ -252,7 +284,7 @@ class RedisInterface:
             previous_score = current_score
             rank += 1  # 다음 순위로 이동
     
-    async def get_event_participants_from_redis(self, event_id, group_type_filter=None):
+    async def get_event_participants_from_redis(self, event_id, group_type_filter=None) -> list[ParticipantRedisData]:
         base_key = f'event:{event_id}:participant:'
         cursor = 0
         keys = []
