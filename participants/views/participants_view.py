@@ -82,7 +82,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                     logging.info(f"participant_mysql: {participant_mysql}")
                     return handle_404_not_found('participant', participant_id)
 
-                participant_redis = async_to_sync(self.save_sync_participant_in_redis)(participant_mysql)
+                participant_redis = self.save_sync_participant_in_redis(participant_mysql)
                 logging.info(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
             
             # ✅ Redis에 스코어 저장 및 랭킹 업데이트
