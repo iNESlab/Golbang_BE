@@ -60,7 +60,13 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
         except Exception as e: # 기타 예외 처리
             return handle_400_bad_request({'error': str(e)})
         
-    @action(detail=False, methods=["post"], url_path="group/stroke")
+    @action(detail=False, methods=["get", "post"], url_path="group/stroke")
+    def group_stroke(self, request, pk=None):
+        if request.method == "GET":
+            self.input_score(request)  # GET 요청은 input_score 로직을 호출
+        elif request.method == "POST":
+            self.get_group_stroke(request)  # POST 요청은 get_group_stroke 로직을 호출
+
     def input_score(self, request, pk=None):
         try:
             score = request.data.get("score")
@@ -109,7 +115,6 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             logging.info(f"Error in input_score: {str(e)}")
             return handle_400_bad_request({'error': str(e)})
         
-    @action(detail=False, methods=["get"], url_path="group/stroke")
     def get_group_stroke(self, request, pk=None):
         try:
             event_id = request.data.get("event_id")
