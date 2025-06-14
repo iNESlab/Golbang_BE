@@ -9,6 +9,7 @@ participants/views/participants_view.py
 
 import asyncio
 from dataclasses import asdict
+import logging
 from asgiref.sync import async_to_sync
 from rest_framework import status
 from rest_framework.decorators import permission_classes
@@ -67,20 +68,22 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             event_id = request.data.get("event_id")
             participant_id = request.data.get("participant_id")
             if score is None or event_id is None:
-                print("score or event_id 필드가 필요합니다.")
+                logging.info("score or event_id 필드가 필요합니다.")
                 return handle_400_bad_request("score or event_id 필드가 필요합니다.")
             
              # 🟡 Redis에서 참가자 정보 가져오기
             participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redis(event_id, participant_id))
-            print(f"participant_redis: {participant_redis}")
+            logging.info(f"participant_redis: {participant_redis}")
 
             # 🔵 없으면 MySQL에서 가져와 Redis에 저장
             if participant_redis is None:
                 participant_mysql = Participant.objects.select_related("club_member__user").get(pk=participant_id)
                 if participant_mysql:
+                    logging.info(f"participant_mysql: {participant_mysql}")
                     return handle_404_not_found(f'존재하지 않은 참가자입니다. participant_id: {participant_id}')
 
                 participant_redis = async_to_sync(self.save_participant_in_redis(participant_mysql))
+                print(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
             
             # ✅ Redis에 스코어 저장 및 랭킹 업데이트
             async_to_sync(self.update_hole_score_in_redis(participant=participant_redis, hole_number=hole_number, score=score))
@@ -88,7 +91,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
 
             update_participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redis(event_id, participant_id))
             if update_participant_redis is None:
-                print(f"존재하지 않는 참가자입니다. participant_id: {participant_id}")
+                logging.info(f"존재하지 않는 참가자입니다. participant_id: {participant_id}")
                 return handle_404_not_found(f'존재하지 않은 참가자입니다. participant_id: {participant_id}')
             
             # ✅ Celery 마이그레이션 관리도 호출 (기존 WebSocket 로직 그대로)
@@ -103,7 +106,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             }
             return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"Error in input_score: {str(e)}")
+            logging.info(f"Error in input_score: {str(e)}")
             return handle_400_bad_request({'error': str(e)})
         
     @action(detail=True, methods=["get"], url_path="group/stroke")
