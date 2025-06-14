@@ -82,21 +82,21 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                     logging.info(f"participant_mysql: {participant_mysql}")
                     return handle_404_not_found('participant', participant_id)
 
-                participant_redis = async_to_sync(self.save_participant_in_redis)(participant_mysql)
-                print(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
+                participant_redis = async_to_sync(self.save_sync_participant_in_redis)(participant_mysql)
+                logging.info(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
             
             # ✅ Redis에 스코어 저장 및 랭킹 업데이트
-            async_to_sync(self.update_hole_score_in_redis)(participant=participant_redis, hole_number=hole_number, score=score)
-            async_to_sync(self.update_rankings_in_redis)(event_id=event_id)
+            self.update_sync_hole_score_in_redis(participant=participant_redis, hole_number=hole_number, score=score)
+            self.update_sync_rankings_in_redis(event_id=event_id)
 
-            update_participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redi)(event_id, participant_id)
+            logging.info("Score updated in Redis successfully")
+            update_participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redis)(event_id, participant_id)
             if update_participant_redis is None:
                 logging.info(f"존재하지 않는 참가자입니다. participant_id: {participant_id}")
                 return handle_404_not_found(f'존재하지 않은 참가자입니다. participant_id: {participant_id}')
             
             # ✅ Celery 마이그레이션 관리도 호출 (기존 WebSocket 로직 그대로)
             async_to_sync(self.save_celery_event_from_redis_to_mysql)(event_id, is_count_incr=False)
-
             response_data = asdict(update_participant_redis)
 
             response_data = {
