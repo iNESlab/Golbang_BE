@@ -119,6 +119,9 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
         try:
             event_id = request.data.get("event_id")
             group_type = request.data.get("group_type")
+            if not event_id or not group_type:
+                return handle_400_bad_request("event_id and group_type are required fields.")
+            
             # 그룹에 속한 모든 참가자를 한 번의 쿼리로 가져옴
             participants = async_to_sync(self.get_group_participants_from_redis)(event_id, group_type)
             print(f'participants: {participants}')
