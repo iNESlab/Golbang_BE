@@ -63,9 +63,9 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
     @action(detail=False, methods=["get", "post"], url_path="group/stroke")
     def group_stroke(self, request, pk=None):
         if request.method == "GET":
-            self.input_score(request)  # GET 요청은 input_score 로직을 호출
+            return self.input_score(request)  # GET 요청은 input_score 로직을 호출
         elif request.method == "POST":
-            self.get_group_stroke(request)  # POST 요청은 get_group_stroke 로직을 호출
+            return self.get_group_stroke(request)  # POST 요청은 get_group_stroke 로직을 호출
 
     def input_score(self, request, pk=None):
         try:
