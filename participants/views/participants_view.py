@@ -124,7 +124,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                 return handle_400_bad_request("event_id and group_type are required fields.")
             
             # 그룹에 속한 모든 참가자를 한 번의 쿼리로 가져옴
-            participants = async_to_sync(self.get_group_participants_from_redis)(event_id, group_type)
+            participants = async_to_sync(self.get_group_participants_from_redis)(event_id, str(group_type))
             print(f'participants: {participants}')
             # 각 참가자의 홀 스코어를 비동기로 병렬 처리
             group_scores = async_to_sync(asyncio.gather)(*[
@@ -151,7 +151,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
         return {
             'participant_id': participant_id,
             'user_name': participant.user_name,
-            'group_type': participant.group_type,
+            'group_type': int(participant.group_type),
             'team_type': participant.team_type,
             'is_group_win': participant.is_group_win,
             'is_group_win_handicap': participant.is_group_win_handicap,
