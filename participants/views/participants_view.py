@@ -103,8 +103,9 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             
             # ✅ Celery 마이그레이션 관리도 호출 (기존 WebSocket 로직 그대로)
             async_to_sync(self.save_celery_event_from_redis_to_mysql)(event_id, is_count_incr=False)
-            response_data = asdict(update_participant_redis)
-
+            response_data = asdict(self.process_participant(update_participant_redis))
+            logging.info(f"response_data: {response_data}")
+            
             response_data = {
                 'status': status.HTTP_200_OK,
                 'message': 'Successfully updated participant score',
