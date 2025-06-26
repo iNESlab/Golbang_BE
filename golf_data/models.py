@@ -47,7 +47,7 @@ class Tee(models.Model):
     각 코스별 홀 및 핸디캡 정보
     '''
     course = models.ForeignKey(GolfCourse, on_delete=models.CASCADE, related_name='tees')
-    tee_name = models.CharField("tee name", max_length=50)  # "Blue", "White"
+    tee_name = models.CharField("tee name", max_length=255)  # "Blue", "White"
     hole_1_par = models.CharField("Hole1 Par", max_length=20, default="0")
     hole_2_par = models.CharField("Hole2 Par", max_length=20, default="0")
     hole_3_par = models.CharField("Hole3 Par", max_length=20, default="0")
