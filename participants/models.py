@@ -89,13 +89,6 @@ class Participant(models.Model):
     def get_handicap_score(self):
         return self.get_total_score() - self.club_member.user.handicap
 
-    def has_complete_scorecard(self) -> bool:
-        """
-        1~18홀까지 모두 점수가 채워져 있는지 여부를 반환.
-        하나라도 None이 있으면 False.
-        """
-        return None not in self.get_scorecard()
-
     def calculate_points(self):
         """
         참가자의 포인트를 계산하여 데이터베이스에 저장한다.
