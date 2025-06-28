@@ -11,6 +11,7 @@ from celery.result import AsyncResult
 
 from asgiref.sync import sync_to_async
 from participants.tasks import save_event_periodically_task
+from participants.utils.ranking_utils import assign_ranks
 import redis
 
 from golbang import settings
@@ -106,7 +107,6 @@ class RedisInterface:
     async def save_participant_in_redis(self, participant: Participant):
         """
         참가자 Redis 캐싱 메서드
-        TODO: 향후 삭제
         """
         key = f'event:{participant.event.pk}:participant:{participant.pk}'
         value = ParticipantRedisData.orm_to_participant_redis(participant=participant).to_redis_dict()
@@ -116,17 +116,6 @@ class RedisInterface:
         data = await sync_to_async(redis_client.hgetall)(key)
 
         return ParticipantRedisData(**data)  # 저장된 값을 반환
-    
-    def save_sync_participant_in_redis(self, participant: Participant):
-        key = f'event:{participant.event.pk}:participant:{participant.pk}'
-        value = ParticipantRedisData.orm_to_participant_redis(participant=participant).to_redis_dict()
-
-        redis_client.hset(key, mapping=value)
-        redis_client.expire(key, 172800)
-        data = redis_client.hgetall(key)
-
-        return ParticipantRedisData(**data)
-
 
     async def get_participant_from_redis(self, event_id, participant_id):
         if event_id is None:
@@ -148,54 +137,23 @@ class RedisInterface:
         """
         Redis에 홀 점수를 업데이트하는 함수
          - score가 None이면 해당 키를 삭제함
-        TODO: 향후 삭제
         """
         key = f'participant:{participant_id}:hole:{hole_number}'
         if score is None:
             # NULL 전달 시 Redis에서 키 삭제
             print(f"Score 삭제 → {key}")
             await sync_to_async(redis_client.delete)(key)
+            # TODO: 아래는 디버깅용 코드. 추후 안정화될 경우 삭제 필요
+            # deleted = await sync_to_async(redis_client.delete)(key)
+            # print(f"[디버그] delete → {key}, deleted={deleted}")
+            # still_exists = await sync_to_async(redis_client.exists)(key)
+            # print(f"[디버그] exists after delete → {still_exists}")  # 0 이면 정상 삭제
             return
 
         # 숫자 전달 시 기존 로직
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
 
-    def update_sync_hole_score_in_redis(self, participant:ParticipantRedisData, hole_number, score):
-        """
-        Redis에 홀 점수를 업데이트하는 함수
-        - 점수 변경분만큼 sum_score, handicap_score 업데이트
-        - score가 None이면 해당 홀 점수를 삭제하고 감산
-        """
-        event_id = participant.event_id
-        participant_id = participant.participant_id
-        user_handicap = participant.user_handicap or 0  # 핸디캡이 None일 경우 0으로 처리
-
-        key = f'participant:{participant_id}:hole:{hole_number}'
-        participant_key = f'event:{event_id}:participant:{participant_id}'
-        # 이전 점수 불러오기
-        prev_score_raw = redis_client.get(key)
-        prev_score = int(prev_score_raw) if prev_score_raw is not None else 0
-
-        # None이면 삭제 및 점수 차이 계산
-        if score is None:
-            print(f"Score 삭제 → {key}")
-            redis_client.delete(key)
-            delta = -prev_score
-        else:
-            delta = int(score) - prev_score
-            redis_client.set(key, score)
-            redis_client.expire(key, 172800)
-
-        # 현재 sum_score 불러오기
-        data = redis_client.hgetall(participant_key)
-        curr_sum_str = data.get("sum_score")
-        curr_sum = int(curr_sum_str) if curr_sum_str is not None else 0
-        new_sum = curr_sum + delta
-
-        # sum_score 및 handicap_score 반영
-        redis_client.hset(participant_key, "sum_score", new_sum)
-        redis_client.hset(participant_key, "handicap_score", new_sum - user_handicap)
 
     async def get_hole_checks(self, event_id: int, group_type: str) -> dict[int, bool]:
         """
@@ -244,76 +202,21 @@ class RedisInterface:
     async def update_rankings_in_redis(self, event_id):
         """
         Redis에 참가자들의 순위를 업데이트
-        #TODO: 향후 삭제
         """
         participants = await self.get_event_participants_from_redis(event_id)
 
         sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score or 0)  # 스코어가 None일 경우 0으로 대체
         sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score or 0)
 
-        self.assign_ranks(sorted_by_sum_score, 'sum_rank')
-        self.assign_ranks(sorted_by_handicap_score, 'handicap_rank')
+        assign_ranks(sorted_by_sum_score, 'sum_rank')
+        assign_ranks(sorted_by_handicap_score, 'handicap_rank')
 
         for participant in participants:
             redis_key = f'event:{event_id}:participant:{participant.participant_id}'
             await sync_to_async(redis_client.hset)(redis_key, "rank", participant.rank)
             await sync_to_async(redis_client.hset)(redis_key, "handicap_rank", participant.handicap_rank)
     
-    def update_sync_rankings_in_redis(self, event_id):
-        """
-        Redis에 참가자들의 순위를 업데이트
-        """
-        participants = self.get_sync_event_participants_from_redis(event_id)
-
-        sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score or 0)  # 스코어가 None일 경우 0으로 대체
-        sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score or 0)
-
-        self.assign_ranks(sorted_by_sum_score, 'sum_rank')
-        self.assign_ranks(sorted_by_handicap_score, 'handicap_rank')
-
-        for participant in participants:
-            redis_key = f'event:{event_id}:participant:{participant.participant_id}'
-            redis_client.hset(redis_key, "rank", participant.rank)
-            redis_client.hset(redis_key, "handicap_rank", participant.handicap_rank)
-
-    def assign_ranks(self, participants, rank_type):
-        """
-        participants 리스트를 정렬된 순서로 받아, 해당 기준으로 순위를 할당.
-        rank_type에 따라 일반 rank 또는 handicap_rank를 설정.
-        """
-        previous_score = None
-        rank = 1
-        tied_rank = 1  # 동점자의 랭크를 별도로 관리
-        rank_field = 'rank' if rank_type == 'sum_rank' else 'handicap_rank'
-
-        logging.info(f'===={rank_type}====')
-        for idx, participant in enumerate(participants):
-            logging.info(f'participant{idx}: {participant}')
-            # 동적으로 rank와 handicap_rank 속성을 추가
-            if not hasattr(participant, 'rank'):
-                participant.rank = None
-            if not hasattr(participant, 'handicap_rank'):
-                participant.handicap_rank = None
-
-            current_score = getattr(participant, rank_type.replace('rank', 'score'))
-            logging.info(f'previous_score: {previous_score}, current_score: {current_score}')
-            # 순위 할당
-            if current_score == previous_score:
-                setattr(participant, rank_field, f"T{tied_rank}")  # 이전 참가자와 동일한 점수라면 T로 표기
-                logging.info(f'current P: rank: {participant.rank}, handicap_rank: {participant.handicap_rank}')
-                setattr(participants[idx - 1], rank_field, f"T{tied_rank}")  # 이전 참가자의 랭크도 T로 업데이트
-                logging.info(
-                    f'previous P: rank: {participants[idx - 1].rank}, handicap_rank: {participants[idx - 1].handicap_rank}')
-
-            else:
-                setattr(participant, rank_field, str(rank))  # 새로운 점수일 경우 일반 순위
-                logging.info(f'current P: rank: {participant.rank}, handicap_rank: {participant.handicap_rank}')
-                tied_rank = rank  # 새로운 점수에서 동점 시작 지점을 설정
-
-            previous_score = current_score
-            rank += 1  # 다음 순위로 이동
-    
-    async def get_event_participants_from_redis(self, event_id, group_type_filter=None) -> list[ParticipantRedisData]:
+    async def get_event_participants_from_redis(self, event_id, group_type_filter=None):
         base_key = f'event:{event_id}:participant:'
         cursor = 0
         keys = []
@@ -334,40 +237,6 @@ class RedisInterface:
                 participant_id = key.split(':')[-1]
                 participant_key = f'{base_key}{participant_id}'
                 data = await sync_to_async(redis_client.hgetall)(participant_key)
-
-                if not data:
-                    continue
-
-                participant_data = ParticipantRedisData(**data)
-                participants.append(participant_data)
-
-            except Exception as e:
-                logging.warning(f"Failed to parse participant from key {key}: {e}")
-                continue
-
-        return participants
-    
-    def get_sync_event_participants_from_redis(self, event_id, group_type_filter=None) -> list[ParticipantRedisData]:
-        base_key = f'event:{event_id}:participant:'
-        cursor = 0
-        keys = []
-
-        while True:
-            cursor, scanned_keys = redis_client.scan(
-                cursor=cursor,
-                match=f'{base_key}*',
-                count=100
-            )
-            keys.extend(scanned_keys)
-            if cursor == 0:
-                break
-
-        participants = []
-        for key in keys:
-            try:
-                participant_id = key.split(':')[-1]
-                participant_key = f'{base_key}{participant_id}'
-                data = redis_client.hgetall(participant_key)
 
                 if not data:
                     continue

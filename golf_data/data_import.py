@@ -13,15 +13,33 @@ from io import BytesIO
 from .models import GolfClub, GolfCourse, Tee
 
 def import_excel_data(file_url):
+    """
+    주어진 URL에서 엑셀 파일을 받아와서
+    GolfClub, GolfCourse, Tee 데이터를 데이터베이스에 저장합니다.
+    주의:
+    - 필수 필드(예: Longitude, Latitude)에 값이 없으면
+      MySQL에 저장하는 과정에서 오류가 발생할 수 있습니다.
+    """
     response = requests.get(file_url)
     response.raise_for_status()
 
     excel_file = BytesIO(response.content)
 
-    # 각 시트를 데이터프레임으로 로드하고 `~` 값을 None으로 변환
     clubs_df = pd.read_excel(excel_file, sheet_name='Golf Clubs').replace('~', None)
     courses_df = pd.read_excel(excel_file, sheet_name='Golf Courses').replace('~', None)
     tees_df = pd.read_excel(excel_file, sheet_name='Tees').replace('~', None)
+
+    # ‘TBD(크롤링 사이트에서 만드는 임시 데이터)’ 로만 구성된 placeholder 행 제거
+    clubs_df = clubs_df[clubs_df['Club Name'] != 'TBD']
+    courses_df = courses_df[
+        (courses_df['Club Name'] != 'TBD') &
+        (courses_df['Course Name'] != 'TBD')
+        ]
+    tees_df = tees_df[
+        (tees_df['Club Name'] != 'TBD') &
+        (tees_df['Course Name'] != 'TBD') &
+        (tees_df['Tee Name'] != 'TBD')
+        ]
 
     # GolfClub 데이터를 데이터베이스에 저장
     for _, row in clubs_df.iterrows():
@@ -63,10 +81,10 @@ def import_excel_data(file_url):
             course=course,
             tee_name=row['Tee Name'],
             defaults={**{
-                f'hole_{i}_par': "0" if row.get(f'Hole{i} Par') in [None, '~', 'N/D'] else row.get(f'Hole{i} Par', "0")
+                f'hole_{i}_par': "0" if row.get(f'Hole{i} Par') in [None, '~', 'N/D', 'nan'] else row.get(f'Hole{i} Par', "0")
                 for i in range(1, 19)
             }, **{
-                f'hole_{i}_handicap': "0" if row.get(f'Hole{i} Handicap') in [None, '~', 'N/D'] else row.get(
+                f'hole_{i}_handicap': "0" if row.get(f'Hole{i} Handicap') in [None, '~', 'N/D', 'nan'] else row.get(
                     f'Hole{i} Handicap', "0")
                 for i in range(1, 19)
             }}
