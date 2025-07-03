@@ -6,7 +6,9 @@ events/utils.py
 역할: events view의 공통 유틸 클래스
 기능: queryset이나 validate 처리 등
 '''
-from datetime import datetime
+from datetime import datetime, date
+
+from dateutil.relativedelta import relativedelta
 from django.db.models import Sum
 
 from participants.models import HoleScore
@@ -34,6 +36,35 @@ class EventUtils:
             return events
 
         return events.filter(participant__status_type__in=['ACCEPT', 'PARTY']) # 특정 상태 타입에 해당하는 이벤트를 반환
+
+    """
+    주어진 시작일로부터 `years`년 후까지,
+    특정 유저가 속한 Event를 조회한 뒤,
+    선택적 status_type 필터를 적용하고 정렬 반환하는 메서드
+    """
+    @staticmethod
+    def get_events_for_period(start_date: date,
+                              years: int,
+                              user,
+                              status_type: str = None):
+
+        end_date = start_date + relativedelta(years=years)
+
+        events = (Event.objects
+              .select_related('golf_club', 'golf_course')
+              .filter(
+                    participant__club_member__user=user,
+                    start_date_time__date__gte=start_date,
+                    start_date_time__date__lt=end_date
+                )
+              .order_by('start_date_time')
+              .distinct()
+              )
+
+        if status_type is None: # 상태 타입이 없을 경우 모든 이벤트 반환
+            return events
+
+        return events.filter(participant__status_type__in=['ACCEPT', 'PARTY'])  # 특정 상태 타입에 해당하는 이벤트를 반환
 
     # 중복된 참가자가 있는지 확인하는 함수
     @staticmethod
