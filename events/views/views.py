@@ -16,11 +16,10 @@ from rest_framework import viewsets
 
 from events.tasks import send_event_creation_notification, send_event_update_notification, schedule_event_notifications
 from clubs.models import ClubMember, Club
-from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
+from clubs.views.club_common import IsClubAdmin
 from participants.models import Participant
 from events.models import Event
-from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer, \
-    ScoreCardSerializer
+from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer, ScoreCardSerializer
 from events.utils import EventUtils
 from participants.serializers import ParticipantCreateUpdateSerializer
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
@@ -40,7 +39,14 @@ class EventViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def get_serializer_class(self):
-        if self.action in ['retrieve','list']:
+        # TODO: 이벤트 상세 조회와 이벤트 전체 조회 시리얼라이저 분리.
+        #  이벤트 상세 조회에서 너무 많은 정보가 담겨 over fetching 되고 있음.
+        #  이를 해결하고자 이벤트 전체 조회용 시리얼라이저 미리 생성. 단, 프론트엔드에서 준비가 되어야 하므로, 준비된 후에 연결할 예정
+        # if self.action == 'retrieve':
+        #     return EventDetailSerializer
+        # elif self.action == 'list':
+        #     return EventListSerializer
+        if self.action in ['retrieve', 'list']:
             return EventDetailSerializer
         elif self.action in ['create', 'update']:
             return EventCreateUpdateSerializer
@@ -156,22 +162,16 @@ class EventViewSet(viewsets.ModelViewSet):
     # 이벤트 리스트 조회
     def list(self, request, *args, **kwargs):
         """
-        GET 요청 시 해당 달 이벤트 목록(Events) 정보 반환
-        요청 데이터: YYYY-MM-DD
+        GET 요청 시 요청한 날짜 기준으로 1년 뒤까지의 이벤트 목록 반환
         응답 데이터: Event (retrieve와 동일) 리스트
         """
         user = self.request.user
-
-
         date_str = request.query_params.get('date')
         if not date_str:
             date_str = str(date.today())
 
         try:
-            # 날짜 문자열을 파싱하여 datetime 객체로 변환
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-            month = date_obj.month
-            year = date_obj.year
+            start_date = datetime.fromisoformat(date_str).date()
         except ValueError:
             return handle_400_bad_request("date(YYYY-MM-DD) 형식을 지켜주세요.")
 
@@ -179,7 +179,13 @@ class EventViewSet(viewsets.ModelViewSet):
         if not (status_type is None or status_type in Participant.StatusType.__members__):
             return handle_400_bad_request("status_type(null or ACCEPT) 형식을 지켜주세요.")
 
-        queryset = EventUtils.get_month_events_queryset(year, month, status_type, user)
+        queryset = EventUtils.get_events_for_period(
+            start_date=start_date,
+            years=1,
+            user=user,
+            status_type=status_type
+        )
+
         serializer = self.get_serializer(queryset, many=True)
         response_data = {
             'status': status.HTTP_200_OK,

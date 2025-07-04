@@ -19,8 +19,8 @@ from rest_framework import serializers
 from accounts.models import User
 from clubs.models import Club
 from clubs.serializers import ClubProfileSerializer
-from golf_data.models import GolfClub
-from golf_data.serializers import GolfClubDetailSerializer
+from golf_data.models import GolfClub, GolfCourse
+from golf_data.serializers import GolfClubBaseSerializer, GolfCourseDetailSerializer
 from participants.models import Participant, HoleScore
 from .models import Event
 from participants.serializers import ParticipantCreateUpdateSerializer, ParticipantDetailSerializer
@@ -35,10 +35,19 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
         required=False,
         source='club'
     )
+    golf_club_id = serializers.PrimaryKeyRelatedField(
+        queryset=GolfClub.objects.all(),
+        source='golf_club'
+    )
+    golf_course_id = serializers.PrimaryKeyRelatedField(
+        queryset=GolfCourse.objects.all(),
+        source='golf_course'
+    )
 
     class Meta:
         model = Event
-        fields = ['event_id', 'club_id', 'participants', 'event_title', 'location', 'site',
+        # TODO: 프론트에서 'golf_club_id', 'golf_course_id' 추가한 이후에 site 제거하기
+        fields = ['event_id', 'club_id', 'participants', 'event_title', 'location', 'site', 'golf_club_id', 'golf_course_id',
                   'start_date_time', 'end_date_time', 'repeat_type', 'game_mode', 'alert_date_time']
         # TODO club_id: param으로 받는 값도 추가해야한다. param -> view (request data에 param 데이터 추가) -> serial
 
@@ -112,9 +121,32 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
             return instance
 
 
+# TODO: 이벤트 상세 조회와 이벤트 전체 조회 시리얼라이저 분리.
+#  이벤트 상세 조회에서 너무 많은 정보가 담겨 over fetching 되고 있음.
+#  이를 해결하고자 이벤트 전체 조회용 시리얼라이저 미리 생성. 단, 프론트엔드에서 준비가 되어야 하므로, 준비된 후에 연결할 예정
+class EventListSerializer(serializers.ModelSerializer):
+    club = ClubProfileSerializer(read_only=True)
+    my_participant_id = serializers.SerializerMethodField(read_only=True)
+    event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
+    user_id = serializers.IntegerField(write_only=True)
+    date = serializers.DateField(write_only=True, required=False)
+    status_type = serializers.CharField(write_only=True, required=False)
+    golf_club_name = serializers.CharField(source='golf_club.club_name', read_only=True)
+    golf_course_name = serializers.CharField(source='golf_course.course_name', read_only=True)
+
+    class Meta:
+        model = Event
+        fields = ['club', 'event_id', 'my_participant_id',
+                  'event_title', 'location', 'site', 'golf_club_name', 'golf_course_name',
+                  'start_date_time', 'end_date_time',
+                  'user_id', 'date', 'status_type']
+
+    def get_my_participant_id(self, obj):
+        self.my_participant_id = obj.participant_set.filter(club_member__user=self.context['request'].user).first().id
+        return self.my_participant_id
+
 class EventDetailSerializer(serializers.ModelSerializer):
     club = ClubProfileSerializer(read_only=True)
-    golf_club = serializers.SerializerMethodField()  # GolfClub 상세 정보를 위한 필드
     my_participant_id = serializers.SerializerMethodField(read_only=True)
     participants = ParticipantDetailSerializer(source='participant_set', many=True, read_only=True)
     event_id = serializers.PrimaryKeyRelatedField(source='id', read_only=True)
@@ -128,22 +160,16 @@ class EventDetailSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(write_only=True)
     date = serializers.DateField(write_only=True, required=False)
     status_type = serializers.CharField(write_only=True, required=False)
+    golf_club = GolfClubBaseSerializer(read_only=True)
+    golf_course = GolfCourseDetailSerializer(read_only=True)
 
     class Meta:
         model = Event
         fields = ['club', 'event_id', 'my_participant_id', 'participants', 'participants_count', 'party_count',
                   'accept_count',
-                  'deny_count', 'pending_count', 'event_title', 'location', 'site', 'golf_club', 'start_date_time',
-                  'end_date_time',
-                  'repeat_type', 'game_mode', 'alert_date_time', 'member_group',
+                  'deny_count', 'pending_count', 'event_title', 'location', 'site', 'golf_club', 'golf_course',
+                  'start_date_time', 'end_date_time', 'repeat_type', 'game_mode', 'alert_date_time', 'member_group',
                   'user_id', 'date', 'status_type']
-
-    def get_golf_club(self, obj):
-        # site 필드와 club_name이 일치하는 GolfClub 객체를 직렬화하여 반환
-        golf_club = GolfClub.objects.filter(club_name=obj.site).first()
-        if golf_club:
-            return GolfClubDetailSerializer(golf_club).data
-        return None
 
     def get_my_participant_id(self, obj):
         self.my_participant_id = obj.participant_set.filter(club_member__user=self.context['request'].user).first().id
