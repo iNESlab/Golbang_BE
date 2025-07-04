@@ -8,7 +8,6 @@ events/views/views.py
 '''
 from datetime import date, datetime
 
-from dateutil.relativedelta import relativedelta
 from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -17,11 +16,10 @@ from rest_framework import viewsets
 
 from events.tasks import send_event_creation_notification, send_event_update_notification, schedule_event_notifications
 from clubs.models import ClubMember, Club
-from clubs.views.club_common import IsClubAdmin, IsMemberOfClub
+from clubs.views.club_common import IsClubAdmin
 from participants.models import Participant
 from events.models import Event
-from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer, \
-    ScoreCardSerializer, EventListSerializer
+from events.serializers import EventCreateUpdateSerializer, EventDetailSerializer, EventResultSerializer, ScoreCardSerializer
 from events.utils import EventUtils
 from participants.serializers import ParticipantCreateUpdateSerializer
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
