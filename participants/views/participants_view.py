@@ -98,8 +98,12 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             logging.info("Score updated in Redis successfully")
             update_participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redis)(event_id, participant_id)
             if update_participant_redis is None:
+                response_data = {
+                    'status': status.HTTP_202_ACCEPTED,
+                    'message': 'Successfully DELETED participant score',
+                }
                 logging.info(f"존재하지 않는 참가자입니다. participant_id: {participant_id}")
-                return handle_404_not_found(f'존재하지 않은 참가자입니다. participant_id: {participant_id}')
+                return Response(response_data, status=status.HTTP_202_ACCEPTED)
             
             # ✅ Celery 마이그레이션 관리도 호출 (기존 WebSocket 로직 그대로)
             async_to_sync(self.save_celery_event_from_redis_to_mysql)(event_id, is_count_incr=False)
