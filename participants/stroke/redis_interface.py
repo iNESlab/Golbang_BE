@@ -189,14 +189,14 @@ class RedisInterface:
         prev_score = int(prev_score_raw) if prev_score_raw is not None else 0
 
         # 점수 삭제 스위치
-        # sw = False 
+        sw = False 
 
         # None이면 삭제 및 점수 차이 계산
         if score is None:
             print(f"Score 삭제 → {key}")
-            # redis_client.delete(key)
+            redis_client.delete(key)
             delta = -prev_score
-            # sw = True
+            sw = True
 
         else:
             delta = int(score) - prev_score
@@ -209,9 +209,9 @@ class RedisInterface:
         curr_sum = int(curr_sum_str) if curr_sum_str is not None else 0
         new_sum = curr_sum + delta
 
-        # if new_sum == 0 and sw:
-        #     print(f"참가자 삭제 → {participant_key}")
-        #     redis_client.delete(participant_key)  # 전체 삭제
+        if new_sum == 0 and sw:
+            print(f"참가자 삭제 → {participant_key}")
+            redis_client.delete(participant_key)  # 전체 삭제
 
         # sum_score 및 handicap_score 반영
         redis_client.hset(participant_key, "sum_score", new_sum)
