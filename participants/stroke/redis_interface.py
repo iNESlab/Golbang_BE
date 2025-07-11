@@ -161,7 +161,7 @@ class RedisInterface:
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
 
-    def update_syncget_sync_event_participants_from_redis_hole_score_in_redis(self, participant:ParticipantRedisData, hole_number, score):
+    def update_sync_hole_score_in_redis(self, participant:ParticipantRedisData, hole_number, score):
         """
         Redis에 홀 점수를 업데이트하는 함수
         - 점수 변경분만큼 sum_score, handicap_score 업데이트
