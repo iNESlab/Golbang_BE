@@ -128,6 +128,17 @@ class RedisInterface:
         return ParticipantRedisData(**data)
 
 
+    def save_sync_participant_in_redis(self, participant: Participant):
+        key = f'event:{participant.event.pk}:participant:{participant.pk}'
+        value = ParticipantRedisData.orm_to_participant_redis(participant=participant).to_redis_dict()
+
+        redis_client.hset(key, mapping=value)
+        redis_client.expire(key, 172800)
+        data = redis_client.hgetall(key)
+
+        return ParticipantRedisData(**data)
+
+
     async def get_participant_from_redis(self, event_id, participant_id):
         if event_id is None:
             # Redis에서 해당 participant_id에 해당하는 모든 키 탐색
@@ -276,6 +287,23 @@ class RedisInterface:
             redis_client.hset(redis_key, "rank", participant.rank)
             redis_client.hset(redis_key, "handicap_rank", participant.handicap_rank)
 
+    def update_sync_rankings_in_redis(self, event_id):
+        """
+        Redis에 참가자들의 순위를 업데이트
+        """
+        participants = self.get_sync_event_participants_from_redis(event_id)
+
+        sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score or 0)  # 스코어가 None일 경우 0으로 대체
+        sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score or 0)
+
+        self.assign_ranks(sorted_by_sum_score, 'sum_rank')
+        self.assign_ranks(sorted_by_handicap_score, 'handicap_rank')
+
+        for participant in participants:
+            redis_key = f'event:{event_id}:participant:{participant.participant_id}'
+            redis_client.hset(redis_key, "rank", participant.rank)
+            redis_client.hset(redis_key, "handicap_rank", participant.handicap_rank)
+
     def assign_ranks(self, participants, rank_type):
         """
         participants 리스트를 정렬된 순서로 받아, 해당 기준으로 순위를 할당.
@@ -312,7 +340,7 @@ class RedisInterface:
 
             previous_score = current_score
             rank += 1  # 다음 순위로 이동
-    
+
     async def get_event_participants_from_redis(self, event_id, group_type_filter=None) -> list[ParticipantRedisData]:
         base_key = f'event:{event_id}:participant:'
         cursor = 0
@@ -347,6 +375,40 @@ class RedisInterface:
 
         return participants
     
+    def get_sync_event_participants_from_redis(self, event_id, group_type_filter=None) -> list[ParticipantRedisData]:
+        base_key = f'event:{event_id}:participant:'
+        cursor = 0
+        keys = []
+
+        while True:
+            cursor, scanned_keys = redis_client.scan(
+                cursor=cursor,
+                match=f'{base_key}*',
+                count=100
+            )
+            keys.extend(scanned_keys)
+            if cursor == 0:
+                break
+
+        participants = []
+        for key in keys:
+            try:
+                participant_id = key.split(':')[-1]
+                participant_key = f'{base_key}{participant_id}'
+                data = redis_client.hgetall(participant_key)
+
+                if not data:
+                    continue
+
+                participant_data = ParticipantRedisData(**data)
+                participants.append(participant_data)
+
+            except Exception as e:
+                logging.warning(f"Failed to parse participant from key {key}: {e}")
+                continue
+
+        return participants
+
     def get_sync_event_participants_from_redis(self, event_id, group_type_filter=None) -> list[ParticipantRedisData]:
         base_key = f'event:{event_id}:participant:'
         cursor = 0

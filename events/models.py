@@ -13,6 +13,8 @@ from django.db import models
 from django.db.models import Sum
 
 from clubs.models import Club, ClubMember
+from golf_data.models import GolfClub, GolfCourse
+
 
 # Create your models here.
 class Event(models.Model):
@@ -36,7 +38,9 @@ class Event(models.Model):
     club            = models.ForeignKey(Club, on_delete=models.CASCADE, related_name='events') # related_name: 역참조
     event_title     = models.CharField("이벤트 제목", max_length=100, default='unknown_event')
     location        = models.CharField("위도/경도", max_length=255, default='unknown_location')
-    site            = models.CharField("장소명", max_length=255, default='unknown_site')
+    site            = models.CharField("장소명", max_length=255, default='unknown_site') # TODO: 모두 이관한 후 삭제 필요
+    golf_club       = models.ForeignKey(GolfClub, on_delete=models.PROTECT, related_name='events', verbose_name="골프장", null=True, blank=True)
+    golf_course     = models.ForeignKey(GolfCourse, on_delete=models.PROTECT, related_name='events', verbose_name="골프 코스", null=True, blank=True)
     start_date_time = models.DateTimeField("시작 시간", default=datetime.now)
     end_date_time   = models.DateTimeField("종료 시간", default=datetime.now)
     repeat_type     = models.CharField("반복 타입", max_length=5, choices=RepeatType.choices, default=RepeatType.NONE)
