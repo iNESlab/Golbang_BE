@@ -73,7 +73,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             hole_number = request.data.get("hole_number")
             event_id = request.data.get("event_id")
             participant_id = request.data.get("participant_id")
-            if score is None or event_id is None:
+            if event_id is None:
                 logging.info("score or event_id 필드가 필요합니다.")
                 return handle_400_bad_request("score or event_id 필드가 필요합니다.")
             
