@@ -14,7 +14,7 @@ from participants.tasks import save_event_periodically_task
 import redis
 
 from golbang import settings
-from participants.models import Participant
+from participants.models import HoleScore, Participant
 from participants.stroke.data_class import EventData, ParticipantRedisData
 
 # Redis 클라이언트 설정
@@ -160,7 +160,13 @@ class RedisInterface:
         await sync_to_async(redis_client.set)(key, score)
         await sync_to_async(redis_client.expire)(key, 172800)
 
-    def update_sync_hole_score_in_redis(self, participant:ParticipantRedisData, hole_number, score):
+    def update_sync_hole_score_in_redis(
+            self, 
+            participant_mysql: Participant,
+            participant:ParticipantRedisData,
+            hole_number, 
+            score
+        ):
         """
         Redis에 홀 점수를 업데이트하는 함수
         - 점수 변경분만큼 sum_score, handicap_score 업데이트
@@ -198,11 +204,27 @@ class RedisInterface:
         if new_sum == 0 and sw:
             print(f"참가자 삭제 → {participant_key}")
             redis_client.delete(participant_key)  # 전체 삭제
-
+            self.reset_participant_score(participant_mysql)
         else:
             # sum_score 및 handicap_score 반영
             redis_client.hset(participant_key, "sum_score", new_sum)
             redis_client.hset(participant_key, "handicap_score", new_sum - user_handicap)
+    
+    def reset_participant_score(self, participant_mysql):
+        # MySQL HoleScore 삭제
+        HoleScore.objects.filter(participant=participant_mysql).delete()
+
+        # 필드 초기화
+        participant_mysql.sum_score = 0
+        participant_mysql.handicap_score = 0
+        participant_mysql.rank = '0'
+        participant_mysql.handicap_rank = '0'
+
+        # 저장
+        participant_mysql.save(update_fields=[
+            "sum_score", "handicap_score", "rank", "handicap_rank"
+        ])
+
 
     async def get_hole_checks(self, event_id: int, group_type: str) -> dict[int, bool]:
         """
