@@ -162,7 +162,6 @@ class RedisInterface:
 
     def update_sync_hole_score_in_redis(
             self, 
-            participant_mysql: Participant,
             participant:ParticipantRedisData,
             hole_number, 
             score
@@ -204,14 +203,16 @@ class RedisInterface:
         if new_sum == 0 and sw:
             print(f"참가자 삭제 → {participant_key}")
             redis_client.delete(participant_key)  # 전체 삭제
-            self.reset_participant_score(participant_mysql)
+
+            self.reset_participant_score(participant_id=participant_id)  # MySQL에서 초기화
         else:
             # sum_score 및 handicap_score 반영
             redis_client.hset(participant_key, "sum_score", new_sum)
             redis_client.hset(participant_key, "handicap_score", new_sum - user_handicap)
     
-    def reset_participant_score(self, participant_mysql):
+    def reset_participant_score(sel, participant_id):
         # MySQL HoleScore 삭제
+        participant_mysql = Participant.objects.select_related("club_member__user").get(pk=participant_id)
         HoleScore.objects.filter(participant=participant_mysql).delete()
 
         # 필드 초기화
