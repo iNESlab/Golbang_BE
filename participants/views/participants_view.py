@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
-from participants.models import Participant
+from participants.models import HoleScore, Participant
 from participants.serializers import ParticipantCreateUpdateSerializer
 from utils.error_handlers import handle_400_bad_request, handle_404_not_found, handle_401_unauthorized
 from participants.stroke.data_class import ParticipantRedisData
@@ -92,9 +92,10 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                     logging.info(f"participant_mysql: {participant_mysql}")
                     return handle_404_not_found('participant', participant_id)
                 
-                # 참가자 정보를 읽을 때, sum_score를 초기화
+                # 참가자 정보를 읽을 때, sum_score, holeScore 초기화
+                HoleScore.objects.filter(participant=participant_mysql).delete()
+                
                 participant_mysql.sum_score = 0
-
                 participant_redis = self.save_sync_participant_in_redis(participant_mysql)
                 logging.info(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
             
