@@ -127,18 +127,6 @@ class RedisInterface:
 
         return ParticipantRedisData(**data)
 
-
-    def save_sync_participant_in_redis(self, participant: Participant):
-        key = f'event:{participant.event.pk}:participant:{participant.pk}'
-        value = ParticipantRedisData.orm_to_participant_redis(participant=participant).to_redis_dict()
-
-        redis_client.hset(key, mapping=value)
-        redis_client.expire(key, 172800)
-        data = redis_client.hgetall(key)
-
-        return ParticipantRedisData(**data)
-
-
     async def get_participant_from_redis(self, event_id, participant_id):
         if event_id is None:
             # Redis에서 해당 participant_id에 해당하는 모든 키 탐색
@@ -204,9 +192,7 @@ class RedisInterface:
             redis_client.expire(key, 172800)
 
         # 현재 sum_score 불러오기
-        data = redis_client.hgetall(participant_key)
-        curr_sum_str = data.get("sum_score")
-        curr_sum = int(curr_sum_str) if curr_sum_str is not None else 0
+        curr_sum = int(redis_client.hget(participant_key, "sum_score") or 0)
         new_sum = curr_sum + delta
 
         if new_sum == 0 and sw:
