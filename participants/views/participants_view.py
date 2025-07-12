@@ -71,6 +71,10 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
         try:
             score = request.data.get("score")
             hole_number = request.data.get("hole_number")
+
+            if not 1 <= hole_number <= 18:
+                return handle_400_bad_request("유효한 hole_number (1~18)를 입력해주세요.")
+
             event_id = request.data.get("event_id")
             participant_id = request.data.get("participant_id")
             if event_id is None:
@@ -87,6 +91,9 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                 if participant_mysql is None:
                     logging.info(f"participant_mysql: {participant_mysql}")
                     return handle_404_not_found('participant', participant_id)
+                
+                # 참가자 정보를 읽을 때, sum_score를 초기화
+                participant_mysql.sum_score = 0
 
                 participant_redis = self.save_sync_participant_in_redis(participant_mysql)
                 logging.info(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
