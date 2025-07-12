@@ -162,7 +162,6 @@ class RedisInterface:
 
     def update_sync_hole_score_in_redis(
             self, 
-            participant_mysql: Participant,
             participant:ParticipantRedisData,
             hole_number, 
             score
@@ -204,14 +203,16 @@ class RedisInterface:
         if new_sum == 0 and sw:
             print(f"참가자 삭제 → {participant_key}")
             redis_client.delete(participant_key)  # 전체 삭제
-            self.reset_participant_score(participant_mysql)
+
+            self.reset_participant_score(participant_id=participant_id)  # MySQL에서 초기화
         else:
             # sum_score 및 handicap_score 반영
             redis_client.hset(participant_key, "sum_score", new_sum)
             redis_client.hset(participant_key, "handicap_score", new_sum - user_handicap)
     
-    def reset_participant_score(self, participant_mysql):
+    def reset_participant_score(sel, participant_id):
         # MySQL HoleScore 삭제
+        participant_mysql = Participant.objects.select_related("club_member__user").get(pk=participant_id)
         HoleScore.objects.filter(participant=participant_mysql).delete()
 
         # 필드 초기화
@@ -287,30 +288,13 @@ class RedisInterface:
             redis_key = f'event:{event_id}:participant:{participant.participant_id}'
             await sync_to_async(redis_client.hset)(redis_key, "rank", participant.rank)
             await sync_to_async(redis_client.hset)(redis_key, "handicap_rank", participant.handicap_rank)
-    
-    def update_sync_rankings_in_redis(self, event_id):
-        """
-        Redis에 참가자들의 순위를 업데이트
-        """
-        participants = self.get_sync_event_participants_from_redis(event_id)
-
-        sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score or 0)  # 스코어가 None일 경우 0으로 대체
-        sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score or 0)
-
-        self.assign_ranks(sorted_by_sum_score, 'sum_rank')
-        self.assign_ranks(sorted_by_handicap_score, 'handicap_rank')
-
-        for participant in participants:
-            redis_key = f'event:{event_id}:participant:{participant.participant_id}'
-            redis_client.hset(redis_key, "rank", participant.rank)
-            redis_client.hset(redis_key, "handicap_rank", participant.handicap_rank)
 
     def update_sync_rankings_in_redis(self, event_id):
         """
         Redis에 참가자들의 순위를 업데이트
         """
         participants = self.get_sync_event_participants_from_redis(event_id)
-
+        logging.info(f"event_id: {event_id}: update_rankings: {participants}")
         sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score or 0)  # 스코어가 None일 경우 0으로 대체
         sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score or 0)
 
@@ -416,51 +400,17 @@ class RedisInterface:
                 data = redis_client.hgetall(participant_key)
 
                 if not data:
+                    logging.info(f"Empty participant data for key: {key}")
                     continue
 
                 participant_data = ParticipantRedisData(**data)
                 participants.append(participant_data)
 
             except Exception as e:
-                logging.warning(f"Failed to parse participant from key {key}: {e}")
+                logging.info(f"Failed to parse participant from key {key}: {e}")
                 continue
 
         return participants
-
-    def get_sync_event_participants_from_redis(self, event_id, group_type_filter=None) -> list[ParticipantRedisData]:
-        base_key = f'event:{event_id}:participant:'
-        cursor = 0
-        keys = []
-
-        while True:
-            cursor, scanned_keys = redis_client.scan(
-                cursor=cursor,
-                match=f'{base_key}*',
-                count=100
-            )
-            keys.extend(scanned_keys)
-            if cursor == 0:
-                break
-
-        participants = []
-        for key in keys:
-            try:
-                participant_id = key.split(':')[-1]
-                participant_key = f'{base_key}{participant_id}'
-                data = redis_client.hgetall(participant_key)
-
-                if not data:
-                    continue
-
-                participant_data = ParticipantRedisData(**data)
-                participants.append(participant_data)
-
-            except Exception as e:
-                logging.warning(f"Failed to parse participant from key {key}: {e}")
-                continue
-
-        return participants
-
 
     async def get_group_participants_from_redis(self, event_id, group_type_filter=None):
         """

@@ -85,9 +85,6 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redis)(event_id, participant_id)
             logging.info(f"participant_redis: {participant_redis}")
 
-            # 🔵 없으면 MySQL에서 가져와 Redis에 저장
-            participant_mysql: Participant = None
-
             if participant_redis is None:
                 participant_mysql = Participant.objects.select_related("club_member__user").get(pk=participant_id)
                 if participant_mysql is None:
@@ -101,7 +98,6 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             
             # ✅ Redis에 스코어 저장 및 랭킹 업데이트
             self.update_sync_hole_score_in_redis(
-                participant_mysql=participant_mysql,
                 participant=participant_redis, 
                 hole_number=hole_number, 
                 score=score, 
