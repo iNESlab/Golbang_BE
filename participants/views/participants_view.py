@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.decorators import action
 
-from participants.models import Participant
+from participants.models import HoleScore, Participant
 from participants.serializers import ParticipantCreateUpdateSerializer
 from utils.error_handlers import handle_400_bad_request, handle_404_not_found, handle_401_unauthorized
 from participants.stroke.data_class import ParticipantRedisData
@@ -81,25 +81,31 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                 logging.info("score or event_id 필드가 필요합니다.")
                 return handle_400_bad_request("score or event_id 필드가 필요합니다.")
             
-             # 🟡 Redis에서 참가자 정보 가져오기
+            # 🟡 Redis에서 참가자 정보 가져오기
             participant_redis: ParticipantRedisData = async_to_sync(self.get_participant_from_redis)(event_id, participant_id)
             logging.info(f"participant_redis: {participant_redis}")
 
             # 🔵 없으면 MySQL에서 가져와 Redis에 저장
+            participant_mysql: Participant = None
+
             if participant_redis is None:
                 participant_mysql = Participant.objects.select_related("club_member__user").get(pk=participant_id)
                 if participant_mysql is None:
                     logging.info(f"participant_mysql: {participant_mysql}")
                     return handle_404_not_found('participant', participant_id)
                 
-                # 참가자 정보를 읽을 때, sum_score를 초기화
+                # 참가자 정보를 읽을 때, sum_score 초기화                
                 participant_mysql.sum_score = 0
-
                 participant_redis = self.save_sync_participant_in_redis(participant_mysql)
                 logging.info(f"participant_redis saved: {participant_redis}, type: {type(participant_redis)}")
             
             # ✅ Redis에 스코어 저장 및 랭킹 업데이트
-            self.update_sync_hole_score_in_redis(participant=participant_redis, hole_number=hole_number, score=score)
+            self.update_sync_hole_score_in_redis(
+                participant_mysql=participant_mysql,
+                participant=participant_redis, 
+                hole_number=hole_number, 
+                score=score, 
+            )
             self.update_sync_rankings_in_redis(event_id=event_id)
 
             logging.info("Score updated in Redis successfully")
