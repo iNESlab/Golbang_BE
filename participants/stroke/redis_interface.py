@@ -293,7 +293,7 @@ class RedisInterface:
         Redis에 참가자들의 순위를 업데이트
         """
         participants = self.get_sync_event_participants_from_redis(event_id)
-
+        logging.info(f"event_id: {event_id}: update_rankings: {participants}")
         sorted_by_sum_score = sorted(participants, key=lambda p: p.sum_score or 0)  # 스코어가 None일 경우 0으로 대체
         sorted_by_handicap_score = sorted(participants, key=lambda p: p.handicap_score or 0)
 

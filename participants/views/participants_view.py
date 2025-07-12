@@ -106,6 +106,7 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
                 hole_number=hole_number, 
                 score=score, 
             )
+            logging.info(f"Score updated in Redis for participant_id: {participant_id}")
             self.update_sync_rankings_in_redis(event_id=event_id)
 
             logging.info("Score updated in Redis successfully")
