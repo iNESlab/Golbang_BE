@@ -4,7 +4,7 @@ services:     # 컨테이너 지정
     container_name: web
     image: "${DOCKER_USERNAME}/web:${VERSION}"
     build:
-      context: .  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
+      context: ./django  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
       dockerfile: Dockerfile.prod  # 배포용 Dockerfile 지정
     restart: always
     ports:
@@ -12,6 +12,17 @@ services:     # 컨테이너 지정
     env_file: #
       - .env
       # - ./golbang_firebase_sdk.json # Firebase Admin SDK 키 파일
+  
+    nginx:
+      image: "${DOCKER_USERNAME}/nginx:${VERSION}"
+      build: ./nginx
+      restart: always
+      environment:
+        - SERVER_NAME=${SERVER_NAME}
+      ports:
+        - "80:80"
+      depends_on:
+        - web
 
   redis:
     container_name: redis
@@ -26,7 +37,7 @@ services:     # 컨테이너 지정
   celery:   # celery 작업자
     container_name: celery
     image: "${DOCKER_USERNAME}/celery:${VERSION}"
-    build: .
+    build: ./django
     command: celery -A golbang worker -l info
     env_file:
       - .env
@@ -34,7 +45,7 @@ services:     # 컨테이너 지정
   celery-beat:   # 주기적으로 업데이트
     container_name: celery-beat
     image: "${DOCKER_USERNAME}/celery-beat:${VERSION}"
-    build: .
+    build: ./django
     command: celery -A golbang beat -l info
     env_file:
       - .env

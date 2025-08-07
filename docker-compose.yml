@@ -4,7 +4,7 @@ services:     # 컨테이너 지정
 
   web:
     container_name: web
-    build: .  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
+    build: ./django  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
     restart: always
     volumes:  # 파일 시스템 정의
       - .:/app
@@ -43,7 +43,7 @@ services:     # 컨테이너 지정
 
   celery:   # celery 작업자
     container_name: celery
-    build: .
+    build: ./django
     command: celery -A golbang worker -l info
     volumes:
       - .:/app
@@ -52,7 +52,7 @@ services:     # 컨테이너 지정
 
   celery-beat:   # 주기적으로 업데이트
     container_name: celery-beat
-    build: .
+    build: ./django
     command: celery -A golbang beat -l info
     volumes:
       - .:/app
