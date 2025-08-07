@@ -1,0 +1,11 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ines.golbang",
+      "sha256_cert_fingerprints":
+        ["E5:94:9F:A3:82:D0:FC:FB:8F:D6:C3:A6:0F:1E:B3:7C:12:A3:80:B0:EC:02:44:0F:BB:3E:0D:53:35:A2:25:41"]
+    }
+  }
+]
