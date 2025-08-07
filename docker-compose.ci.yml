@@ -13,16 +13,16 @@ services:     # 컨테이너 지정
       - .env
       # - ./golbang_firebase_sdk.json # Firebase Admin SDK 키 파일
   
-    nginx:
-      image: "${DOCKER_USERNAME}/nginx:${VERSION}"
-      build: ./nginx
-      restart: always
-      environment:
-        - SERVER_NAME=${SERVER_NAME}
-      ports:
-        - "80:80"
-      depends_on:
-        - web
+  nginx:
+    image: "${DOCKER_USERNAME}/nginx:${VERSION}"
+    build: ./nginx
+    restart: always
+    environment:
+      - SERVER_NAME=${SERVER_NAME}
+    ports:
+      - "80:80"
+    depends_on:
+      - web
 
   redis:
     container_name: redis
