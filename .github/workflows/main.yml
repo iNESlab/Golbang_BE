@@ -21,7 +21,7 @@ jobs:
           docker-compose --version  # 설치 확인
       
       - name: Save JSON data from secret to file
-        run:  echo '${{ secrets.FIREBASE_SDK_JSON }}' > serviceAccountKey.json
+        run:  echo '${{ secrets.FIREBASE_SDK_JSON }}' > ./django/serviceAccountKey.json
 
       - name: Create .env file from SERVER_ENV_FILE secret
         run: |
