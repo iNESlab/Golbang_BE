@@ -15,9 +15,6 @@ services:     # 컨테이너 지정
   nginx:
     image: "${DOCKER_USERNAME}/nginx:${VERSION}"
     restart: always
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - ./nginx/static:/usr/share/nginx/html
     environment:
       - SERVER_NAME=${SERVER_NAME}
     ports:
