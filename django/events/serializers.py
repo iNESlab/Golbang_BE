@@ -246,18 +246,19 @@ class UserResultSerializer(serializers.ModelSerializer):
             return scorecard if scorecard else []
 
 
-class EventResultSerializer(serializers.ModelSerializer):
+class EventResultSerializer(serializers.ModelSerializer): #TODO: 여기서부터 작업 시작
     """
     이벤트 결과를 반환하는 시리얼라이저
     """
     participants = serializers.SerializerMethodField()  # 참가자 리스트를 반환
     event_id = serializers.IntegerField(source='id', read_only=True)  # 여기서 'id' 필드를 'event_id'로 매핑
     user = serializers.SerializerMethodField()  # 사용자의 정보를 반환
+    golf_course = GolfCourseDetailSerializer(read_only=True)
 
     class Meta:
         model = Event
         fields = ['user', 'event_id', 'event_title', 'location', 'site', 'start_date_time', 'end_date_time',
-                  'game_mode', 'participants']
+                  'game_mode', 'participants', 'golf_course',]
 
     def get_participants(self, obj):
         # 컨텍스트에서 참가자 리스트를 가져와 정렬
