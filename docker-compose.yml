@@ -11,7 +11,7 @@ services:     # 컨테이너 지정
     ports:
       - "8000:8000"
     env_file: #
-      - .env
+      - ./django/.env
 
   db:
     container_name: db
