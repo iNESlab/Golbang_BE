@@ -11,12 +11,6 @@ from django.conf import settings
 from utils.tempfile_helpers import handle_uploaded_file
 
 
-# ----- 계산 관련 상수/도우미 -----
-
-DEFAULT_PAR_VALUES = np.array(
-    [4, 4, 5, 3, 4, 3, 4, 4, 5, 4, 4, 4, 3, 4, 5, 3, 4, 5],
-    dtype=float,
-)
 
 def _parse_selected_holes(selected_holes) -> np.ndarray:
     """
@@ -128,7 +122,7 @@ def _extract_scores_matrix(df: pd.DataFrame) -> np.ndarray:
 
 # ----- 메인 처리 함수 -----
 
-def process_excel_file(uploaded_file, selected_holes):
+def process_excel_file(uploaded_file, selected_holes, par_list):
     """
     업로드된 엑셀 파일을 처리:
       1) 임시 저장 → DataFrame 로드
@@ -147,7 +141,7 @@ def process_excel_file(uploaded_file, selected_holes):
 
     # 3) 파라미터 정리
     designated_idxs = _parse_selected_holes(selected_holes)  # 길이 12, 0-index
-    par = DEFAULT_PAR_VALUES
+    par = par_list
 
     # 플레이어별 18홀 리스트로 변환 (scores_by_player)
     # 현재 시트 구조가 "par 대비 스코어(±)" 라는 가정 유지

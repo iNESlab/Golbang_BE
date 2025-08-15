@@ -1,5 +1,7 @@
 import os
 
+import numpy as np
+
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -21,8 +23,27 @@ class FileUploadAPIView(APIView):
     renderer_classes = [JSONRenderer, TemplateHTMLRenderer]
     template_name = 'calculator/upload_form.html'
 
+    # --- 유틸: par 배열 파싱 (par=4&par=5&par=3 / par=4,5,3 모두 지원) ---
+    def _parse_par_array(self, request):
+        # 1) 반복 키 방식
+        par_values = request.GET.getlist('par')  # ['4','5','3']
+        # 정수로 변환 + 유효 범위 필터(1~18)
+        cleaned = []
+        for v in par_values:
+            try:
+                cleaned.append(float(v))  # 실수 변환만 (Nan 대비)
+            except (TypeError, ValueError):
+                continue
+        # 비어 있으면 기본 1~18
+        return np.array(cleaned, dtype=float) if cleaned else np.array([4] * 18, dtype=float)
+
     def get(self, request, format=None):
-        context = {"message": None, "hole_range": range(1, 19)}
+        par_list = self._parse_par_array(request)  # <-- 여기서 par 배열 반영
+        context = {
+            "message": None, 
+            "hole_range": range(1, 19), 
+            "par_list": par_list
+        }
         return Response(context, template_name=self.template_name)
 
     def post(self, request, format=None):
@@ -31,7 +52,8 @@ class FileUploadAPIView(APIView):
             uploaded_file = serializer.validated_data['upload_file']
             selected_holes = serializer.validated_data.get('selected_holes')
             try:
-                output_path = process_excel_file(uploaded_file, selected_holes)  # OpenAI API를 이용한 신페리오 핸디캡 계산 결과
+                par_list = self._parse_par_array(request)  # 필요시 넘기기
+                output_path = process_excel_file(uploaded_file, selected_holes, par_list) 
                 download_url = f"/calculator/download/?path={os.path.basename(output_path)}"
                 print(f"download_url:{download_url}")
                 return Response({

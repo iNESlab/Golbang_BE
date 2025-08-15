@@ -299,7 +299,7 @@
         $('#loading').show();
         var formData = new FormData(this);
         $.ajax({
-          url: $(this).attr('action'),
+          url: $(this).attr('action')+ window.location.search,
           type: 'POST',
           data: formData,
           processData: false,
