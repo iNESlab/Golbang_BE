@@ -246,7 +246,7 @@ class UserResultSerializer(serializers.ModelSerializer):
             return scorecard if scorecard else []
 
 
-class EventResultSerializer(serializers.ModelSerializer): #TODO: 여기서부터 작업 시작
+class EventResultSerializer(serializers.ModelSerializer):
     """
     이벤트 결과를 반환하는 시리얼라이저
     """
