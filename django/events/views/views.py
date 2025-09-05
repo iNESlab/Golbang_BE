@@ -90,7 +90,8 @@ class EventViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
-
+    
+    # 이벤트 수정 메서드
     def update(self, request, *args, **kwargs):
         """
         PUT 요청 시 이벤트(Event) 수정
@@ -121,6 +122,34 @@ class EventViewSet(viewsets.ModelViewSet):
             'message': 'Successfully updated',
             'data': serializer.data
         }
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+    # 이벤트 종료 메서드
+    def partial_update(self, request, *args, **kwargs):
+        """
+        PATCH 요청 시 이벤트(Event) 종료
+        """
+        event_id = self.kwargs.get('pk')
+
+        try:
+            event = Event.objects.get(pk=event_id)
+            self.check_object_permissions(request, event.club)
+        except Event.DoesNotExist:
+            return handle_404_not_found('event', event_id)
+
+        # 이벤트 종료 처리
+        event.end_date_time = datetime.now()
+        event.save()
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully ended',
+            'data': {
+                'event_id': event.id,
+                'end_date_time': event.end_date_time
+            }
+        }
+        print(f"===== event id {event.id} ended at {event.end_date_time}")
         return Response(response_data, status=status.HTTP_200_OK)
 
     # 이벤트 조회 메서드

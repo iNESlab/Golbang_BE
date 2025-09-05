@@ -39,6 +39,10 @@ class FileUploadAPIView(APIView):
 
     def get(self, request, format=None):
         par_list = self._parse_par_array(request)  # <-- 여기서 par 배열 반영
+
+        if isinstance(par_list, np.ndarray):
+           par_list = par_list.tolist()
+           
         context = {
             "message": None, 
             "hole_range": range(1, 19), 

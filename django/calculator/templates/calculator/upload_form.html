@@ -129,19 +129,6 @@
     .hole-group .btn-check {
       display: none;
     }
-    .hole-group label {
-      width: 50px;
-      height: 50px;
-      margin: 5px;
-      padding: 0;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 50px;
-      border: 2px solid #4caf50;
-      color: #4caf50;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
     .hole-group input:checked + label {
       background-color: #4caf50;
       color: #fff;
@@ -150,6 +137,49 @@
     #holeSelection {
       display: none;
     }
+    .hole-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 6px;
+    }
+
+  /* 동그라미(라벨) */
+  .hole-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid #4caf50;
+    color: #4caf50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;   /* par 숫자 크기 */
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  /* 체크 시 스타일 */
+  .hole-group .btn-check:checked + .hole-circle {
+    background-color: #4caf50;
+    color: #fff;
+  }
+
+  /* 원 밑 캡션(몇 홀인지) */
+  .hole-num {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #666;
+    line-height: 1;
+  }
+
+  /* 기존 .hole-group label 설정은 더 이상 필요 없으니 충돌 방지 */
+  .hole-group label {
+    margin: 0; /* spacing은 .hole-item에서 처리 */
+    border: none; /* 테두리는 .hole-circle에서 */
+  }
     /* 안내 메시지 스타일 */
     #instruction {
       margin-bottom: 10px;
@@ -206,16 +236,18 @@
           </div>
           <!-- 홀 선택 영역: 파일 선택 후 나타남 -->
           <div id="holeSelection" class="mb-3">
-            <p>선택할 12개의 홀을 클릭하세요:</p>
+            <p>선택할 12개의 홀을 클릭하세요(녹색 숫자: Par):</p>
             <div class="hole-group">
               {% for i in hole_range %}
-                <input type="checkbox" class="btn-check hole-checkbox" id="hole-{{ i }}" value="{{ i }}" autocomplete="off">
-                <label for="hole-{{ i }}">{{ i }}</label>
+                <div class="hole-item">
+                  <input type="checkbox" class="btn-check hole-checkbox" id="hole-{{ i }}" value="{{ i }}" autocomplete="off">
+                  <label for="hole-{{ i }}" class="hole-circle" data-hole="{{ i }}">-</label>
+                  <div class="hole-num">{{ i }}홀</div>
+                </div>
               {% endfor %}
             </div>
             <!-- Hidden input에 선택된 홀 번호 저장 (쉼표 구분) -->
             <input type="hidden" name="selected_holes" id="selectedHoles">
-            <small class="form-text text-muted">총 12개를 선택해야 합니다.</small>
           </div>
           <!-- 제출 버튼: 텍스트 "계산하기", 기본 비활성화 -->
           <button type="submit" id="submitButton" class="btn btn-calc px-4 py-2 w-100" disabled>계산하기</button>
@@ -253,6 +285,8 @@
       </p>
     </div>
   </footer>
+  
+  {{ par_list|json_script:"par-list-data" }}
 
   <!-- jQuery (CDN) -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -325,6 +359,38 @@
           }
         });
       });
+
+      // 서버에서 주입된 par_list 읽기 (길이 18 가정)
+      let PAR_LIST = [];
+      try {
+        PAR_LIST = JSON.parse(document.getElementById('par-list-data').textContent);
+      } catch (_) {}
+
+      // 동그라미 안 텍스트를 par로 채우기
+      // 길이 검증 + UI 가드
+      if (!Array.isArray(PAR_LIST) || PAR_LIST.length !== 18) {
+        $('#messageSection').html(
+          '<div class="alert alert-warning mt-3">par 정보가 올바르지 않습니다. (18개 필요)</div>'
+        );
+        // 홀 선택/제출 비활성화
+        $('#holeSelection').hide();
+        $('#submitButton').prop('disabled', true);
+      } else {
+        // 동그라미 안 텍스트를 par로 채우기 (3.0 -> 3으로 표시)
+        $('.hole-circle').each(function () {
+          const holeNum = Number($(this).data('hole')); // 1..18
+          const idx = holeNum - 1;
+          let par = PAR_LIST[idx];
+          // 숫자 표시 포맷
+          if (typeof par === 'number') {
+            par = Number.isInteger(par) ? String(par) : String(par);
+            par = par.replace?.(/\.0$/, '') || par; // "3.0" -> "3"
+          } else if (par == null) {
+            par = '-';
+          }
+          $(this).text(par);
+        });
+      }
     });
   </script>
 </body>
