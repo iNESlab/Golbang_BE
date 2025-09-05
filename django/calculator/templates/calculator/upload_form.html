@@ -236,7 +236,7 @@
           </div>
           <!-- 홀 선택 영역: 파일 선택 후 나타남 -->
           <div id="holeSelection" class="mb-3">
-            <p>선택할 12개의 홀을 클릭하세요:</p>
+            <p>선택할 12개의 홀을 클릭하세요(녹색 숫자: Par):</p>
             <div class="hole-group">
               {% for i in hole_range %}
                 <div class="hole-item">
@@ -248,7 +248,6 @@
             </div>
             <!-- Hidden input에 선택된 홀 번호 저장 (쉼표 구분) -->
             <input type="hidden" name="selected_holes" id="selectedHoles">
-            <small class="form-text text-muted">총 12개를 선택해야 합니다.</small>
           </div>
           <!-- 제출 버튼: 텍스트 "계산하기", 기본 비활성화 -->
           <button type="submit" id="submitButton" class="btn btn-calc px-4 py-2 w-100" disabled>계산하기</button>
