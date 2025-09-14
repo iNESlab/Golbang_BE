@@ -12,6 +12,8 @@ golbang/urls.py
 
 from django.contrib import admin
 from django.urls import include, path, re_path
+from django.conf import settings
+from django.conf.urls.static import static
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from golbang.views import health_check
@@ -39,6 +41,7 @@ urlpatterns = [
     path('api/v1/participants/', include('participants.urls')), # participatns 앱의 URL
     path('api/v1/golfcourses/', include('golf_data.urls')),  # golf_data 앱의 URL
     path('api/v1/notifications/', include('notifications.urls')),  # notifications 앱의 URL
+    path('api/v1/chat/', include('chat.urls')),  # chat 앱의 URL
 
     path('api/v1/feedbacks/', include('feedbacks.urls')),  # 사용자 피드백 앱의 URL
 
@@ -51,3 +54,9 @@ urlpatterns = [
     re_path(r'^swagger/$', schema_view_v1.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^redoc/$', schema_view_v1.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
+
+# HLS 스트림 파일을 위한 로컬 static 서빙 (개발 환경에서만)
+if settings.DEBUG:
+    urlpatterns += static('/static/hls/', document_root=settings.BASE_DIR / 'static' / 'hls')
+    # 라디오 임시 파일 서빙
+    urlpatterns += static('/media/', document_root=settings.MEDIA_ROOT)

@@ -175,6 +175,59 @@ class ClubViewSet(viewsets.ModelViewSet):
 
         club = serializer.save()  # 유효한 데이터인 경우 모임 생성
 
+        # 🔧 추가: 모임 생성 시 채팅방 자동 생성
+        from chat.models import ChatRoom, ChatMessage
+        try:
+            chat_room, created = ChatRoom.objects.get_or_create(
+                chat_room_type='CLUB',
+                club_id=club.id,
+                defaults={
+                    'chat_room_name': f'{club.name} 채팅방',
+                    'is_active': True
+                }
+            )
+            if created:
+                print(f"✅ 모임 채팅방 자동 생성 완료: {chat_room.chat_room_name} (ID: {chat_room.id})")
+                
+                # 🔧 추가: 채팅방 생성 시 시스템 메시지 자동 전송
+                try:
+                    system_message = ChatMessage.objects.create(
+                        chat_room=chat_room,
+                        sender_id=0,  # 시스템 메시지
+                        sender_name='시스템',
+                        content=f'🎉 {club.name} 모임이 생성되었습니다!',
+                        message_type='SYSTEM',
+                        is_read=False
+                    )
+                    print(f"✅ 시스템 메시지 생성 완료: {system_message.content}")
+                except Exception as e:
+                    print(f"❌ 시스템 메시지 생성 실패: {e}")
+            else:
+                print(f"ℹ️ 모임 채팅방이 이미 존재합니다: {chat_room.chat_room_name} (ID: {chat_room.id})")
+        except Exception as e:
+            print(f"❌ 모임 채팅방 생성 실패: {e}")
+
+        # 🎵 추가: 모임 생성 시 기본 이벤트 자동 생성 (라디오 방송용)
+        from events.models import Event
+        from django.utils import timezone
+        from datetime import timedelta
+        try:
+            # 현재 시간부터 24시간 후까지의 기본 이벤트 생성
+            now = timezone.now()
+            default_event = Event.objects.create(
+                club=club,
+                event_title=f'{club.name} 기본 이벤트',
+                location='0,0',  # 기본 위치
+                site='기본 장소',
+                start_date_time=now,  # 지금부터 시작
+                end_date_time=now + timedelta(days=1),  # 24시간 후 종료
+                repeat_type='NONE',
+                game_mode='SP'
+            )
+            print(f"✅ 모임 기본 이벤트 자동 생성 완료: {default_event.event_title} (ID: {default_event.id})")
+        except Exception as e:
+            print(f"❌ 모임 기본 이벤트 생성 실패: {e}")
+
         ## ClubMember
         # 일반 멤버와 관리자 리스트
         members = data.get('members', [])

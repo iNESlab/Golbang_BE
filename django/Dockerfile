@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     libmariadb-dev \
     qt5-qmake \
     qtbase5-dev \
+    ffmpeg \
     && apt-get clean
 
 # 필요 패키지 복사 및 설치

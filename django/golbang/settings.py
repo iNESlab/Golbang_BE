@@ -96,8 +96,10 @@ OPENAI_API_KEY = env('OPENAI_API_KEY')
 # 중복된 STATIC_URL 제거
 # Static files (CSS, JavaScript, Images)
 # STATIC_URL = '/static/' # 이 부분은 S3를 사용하지 않을 경우에만 활성화
-# MEDIA_ROOT 제거 (S3 사용 시 필요 없음)
+# 🚫 라디오 기능 비활성화 - 안드로이드에서 사용하지 않음
+# 로컬 개발용 MEDIA 설정 (라디오 임시 파일용)
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# LOCAL_MEDIA_URL = '/media/'
 
 # Application definition
 INSTALLED_APPS = [
@@ -125,6 +127,7 @@ INSTALLED_APPS = [
     'notifications',
     'feedbacks',
     'calculator',
+    'chat',  # 🔧 추가: 채팅 앱
 
     # ==========
     # DRF (Django Rest Framework)
@@ -347,6 +350,17 @@ DATABASES = {
         'PASSWORD': env('MYSQL_DB_PASSWORD'),
         'HOST': env('MYSQL_DB_HOST'),
         'PORT': env('MYSQL_DB_PORT'),
+        # 🔧 추가: 커넥션 풀 설정 (Max Connection 에러 방지)
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+            'autocommit': True,
+        },
+        'CONN_MAX_AGE': 0,        # 연결 재사용 안함 (WebSocket 환경에서 안전)
+        'MAX_CONNS': 50,          # 최대 연결 수 제한 (기본값)
+        'POOL_SIZE': 20,          # 커넥션 풀 크기 (기본값)
+        'POOL_TIMEOUT': 30,       # 커넥션 대기 시간 (초)
+        'POOL_RECYCLE': 3600,     # 커넥션 재활용 시간 (초)
     }
 }
 
