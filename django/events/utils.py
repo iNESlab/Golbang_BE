@@ -51,11 +51,12 @@ class EventUtils:
         end_date = start_date + relativedelta(years=years)
 
         events = (Event.objects
-              .select_related('golf_club', 'golf_course')
+              .select_related('golf_club', 'golf_course', 'club')
+              .prefetch_related('participant_set__club_member__user')
               .filter(
                     participant__club_member__user=user,
-                    start_date_time__date__gte=start_date,
-                    start_date_time__date__lt=end_date
+                    start_date_time__gte=start_date,
+                    start_date_time__lt=end_date
                 )
               .order_by('start_date_time')
               .distinct()

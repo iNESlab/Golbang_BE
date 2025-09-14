@@ -128,3 +128,4 @@ class HoleScore(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, null=False, blank=False)
     hole_number = models.IntegerField("홀 번호", default=1)
     score = models.IntegerField("홀 점수", default=0)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)

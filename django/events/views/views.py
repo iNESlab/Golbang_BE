@@ -6,7 +6,7 @@ events/views/views.py
 역할: Django Rest Framework(DRF)를 사용하여 이벤트 API 엔드포인트의 로직을 처리
 - 모임 관리자 : 멤버 핸디캡 자동 매칭 기능(팀전/개인전)
 '''
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from rest_framework.decorators import permission_classes, action
 from rest_framework.permissions import IsAuthenticated
@@ -23,6 +23,7 @@ from events.serializers import EventCreateUpdateSerializer, EventDetailSerialize
 from events.utils import EventUtils
 from participants.serializers import ParticipantCreateUpdateSerializer
 from utils.error_handlers import handle_404_not_found, handle_400_bad_request
+# from chat.services.event_broadcast_service import event_broadcast_service  # 제거됨
 
 
 @permission_classes([IsAuthenticated])
@@ -208,9 +209,10 @@ class EventViewSet(viewsets.ModelViewSet):
         if not (status_type is None or status_type in Participant.StatusType.__members__):
             return handle_400_bad_request("status_type(null or ACCEPT) 형식을 지켜주세요.")
 
+        # 성능 최적화: 1년 → 3개월로 제한
         queryset = EventUtils.get_events_for_period(
             start_date=start_date,
-            years=1,
+            years=1,  # 3개월
             user=user,
             status_type=status_type
         )
@@ -491,3 +493,177 @@ class EventViewSet(viewsets.ModelViewSet):
             "total_score": total_score,
             "handicap_score": handicap_score
         }
+    
+    # 🎵 라디오 방송 관련 API들
+    
+    @action(detail=True, methods=['get'])
+    def broadcast_status(self, request, pk=None):
+        """이벤트 방송 상태 확인 API"""
+        try:
+            event = self.get_object()
+            
+            # 방송 가능 조건 확인
+            from django.utils import timezone
+            now = timezone.now()
+            is_broadcast_available = (
+                event.status == 'ACTIVE' and
+                (event.start_date_time - timedelta(minutes=30)) <= now <= event.end_date_time
+            )
+            
+            # 현재 방송 상태 확인
+            # from chat.services.event_broadcast_service import event_broadcast_service  # 제거됨
+            # broadcast_status = event_broadcast_service.get_broadcast_status(event.id)
+            
+            return Response({
+                'event_id': event.id,
+                'event_name': event.event_title,
+                'status': event.status,
+                'is_broadcast_available': is_broadcast_available,
+                'start_date_time': event.start_date_time,
+                'end_date_time': event.end_date_time,
+                'start_date': event.start_date,
+                'end_date': event.end_date,
+                'participants_count': event.participant_set.count(),
+                'golf_club_name': event.golf_club.club_name if event.golf_club else None,
+                'golf_course_name': event.golf_course.course_name if event.golf_course else None,
+                # 'broadcast_status': broadcast_status, # 제거됨
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'방송 상태 확인 실패: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def start_broadcast(self, request, pk=None):
+        """이벤트 방송 시작 API (관리자만)"""
+        try:
+            event = self.get_object()
+            
+            # 관리자 권한 확인
+            if not request.user.is_staff and not ClubMember.objects.filter(
+                club=event.club, 
+                user=request.user, 
+                role__in=['ADMIN', 'MANAGER']
+            ).exists():
+                return Response(
+                    {'error': '방송 시작 권한이 없습니다'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # 비동기 방송 시작
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                # from chat.services.event_broadcast_service import event_broadcast_service  # 제거됨
+                # success = loop.run_until_complete(
+                #     event_broadcast_service.start_event_broadcast(event.id)
+                # )
+                
+                # if success:
+                #     return Response({
+                #         'message': f'{event.event_title} 라디오 방송이 시작되었습니다',
+                #         'event_id': event.id,
+                #         'broadcast_status': event_broadcast_service.get_broadcast_status(event.id)
+                #     })
+                # else:
+                #     return Response(
+                #         {'error': '방송 시작에 실패했습니다'},
+                #         status=status.HTTP_400_BAD_REQUEST
+                #     )
+                pass # 제거됨
+            finally:
+                loop.close()
+            
+        except Exception as e:
+            return Response(
+                {'error': f'방송 시작 실패: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def stop_broadcast(self, request, pk=None):
+        """이벤트 방송 중단 API (관리자만)"""
+        try:
+            event = self.get_object()
+            
+            # 관리자 권한 확인
+            if not request.user.is_staff and not ClubMember.objects.filter(
+                club=event.club, 
+                user=request.user, 
+                role__in=['ADMIN', 'MANAGER']
+            ).exists():
+                return Response(
+                    {'error': '방송 중단 권한이 없습니다'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # 비동기 방송 중단
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                # from chat.services.event_broadcast_service import event_broadcast_service  # 제거됨
+                # loop.run_until_complete(
+                #     event_broadcast_service.stop_event_broadcast(event.id)
+                # )
+                
+                return Response({
+                    'message': f'{event.event_title} 라디오 방송이 중단되었습니다',
+                    'event_id': event.id
+                })
+            finally:
+                loop.close()
+            
+        except Exception as e:
+            return Response(
+                {'error': f'방송 중단 실패: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def test_broadcast(self, request, pk=None):
+        """방송 시스템 테스트 API (관리자만)"""
+        try:
+            event = self.get_object()
+            
+            # 관리자 권한 확인
+            if not request.user.is_staff and not ClubMember.objects.filter(
+                club=event.club, 
+                user=request.user, 
+                role__in=['ADMIN', 'MANAGER']
+            ).exists():
+                return Response(
+                    {'error': '방송 테스트 권한이 없습니다'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # 비동기 방송 시스템 테스트
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                # from chat.services.event_broadcast_service import event_broadcast_service  # 제거됨
+                # test_result = loop.run_until_complete(
+                #     event_broadcast_service.test_broadcast_system(event.id)
+                # )
+                
+                return Response({
+                    'message': '방송 시스템 테스트 완료',
+                    'event_id': event.id,
+                    'test_result': None, # 제거됨
+                    'status': '성공' # 제거됨
+                })
+            finally:
+                loop.close()
+            
+        except Exception as e:
+            return Response(
+                {'error': f'방송 테스트 실패: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

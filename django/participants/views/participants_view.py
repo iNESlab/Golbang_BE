@@ -116,6 +116,18 @@ class ParticipantViewSet(viewsets.ModelViewSet, RedisInterface, MySQLInterface):
             
             # ✅ Celery 마이그레이션 관리도 호출 (기존 WebSocket 로직 그대로)
             async_to_sync(self.save_celery_event_from_redis_to_mysql)(event_id, is_count_incr=False)
+            """
+            # ✅ 임시: 직접 MySQL에 HoleScore 저장 (해설 감지를 위해)
+            try:
+                HoleScore.objects.update_or_create(
+                    participant_id=participant_id,
+                    hole_number=hole_number,
+                    defaults={'score': score}
+                )
+                logging.info(f"✅ HoleScore saved to MySQL: participant={participant_id}, hole={hole_number}, score={score}")
+            except Exception as mysql_error:
+                logging.error(f"❌ Failed to save HoleScore to MySQL: {mysql_error}")
+            """
             response_data = async_to_sync(self.process_participant)(update_participant_redis)
             logging.info(f"response_data: {response_data}")
             
