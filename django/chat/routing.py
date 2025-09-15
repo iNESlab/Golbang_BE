@@ -7,16 +7,16 @@ from . import consumers
 
 websocket_urlpatterns = [
     # 이벤트 채팅방: /ws/chat/event_{event_id}/
-    re_path(r'ws/chat/event_(?P<room_name>\d+)/$', consumers.ChatConsumer.as_asgi()),
+    re_path(r'event_(?P<room_name>\d+)/$', consumers.ChatConsumer.as_asgi()),
     
     # 클럽 채팅방: /ws/chat/club_{club_id}/
-    re_path(r'ws/chat/club_(?P<room_name>\d+)/$', consumers.ChatConsumer.as_asgi()),
+    re_path(r'club_(?P<room_name>\d+)/$', consumers.ChatConsumer.as_asgi()),
     
     # 전체 채팅방: /ws/chat/global/
-    re_path(r'ws/chat/global/$', consumers.ChatConsumer.as_asgi()),
+    re_path(r'global/$', consumers.ChatConsumer.as_asgi()),
     
     # 일반 채팅방: /ws/chat/{room_name}/
-    re_path(r'ws/chat/(?P<room_name>\w+)/$', consumers.ChatConsumer.as_asgi()),
+    re_path(r'(?P<room_name>\w+)/$', consumers.ChatConsumer.as_asgi()),
     
     # 🚫 라디오 기능 비활성화 - 안드로이드에서 사용하지 않음
     # 🎵 RTMP 라디오 (신규): /ws/rtmp-radio/club/{club_id}/
