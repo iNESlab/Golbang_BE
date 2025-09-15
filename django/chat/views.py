@@ -553,7 +553,19 @@ def toggle_message_pin(request):
             )
         
         try:
-            message = ChatMessage.objects.get(id=message_id)
+            # UUID 형태가 아닌 경우 (관리자 메시지 등) 처리
+            import uuid
+            try:
+                # UUID 형태인지 확인
+                uuid.UUID(str(message_id))
+                message = ChatMessage.objects.get(id=message_id)
+            except ValueError:
+                # UUID가 아닌 경우, 다른 방법으로 찾기 (예: 타임스탬프 기반)
+                print(f"⚠️ UUID가 아닌 메시지 ID: {message_id}")
+                return Response(
+                    {'error': f'유효하지 않은 메시지 ID 형식입니다: {message_id}'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except ChatMessage.DoesNotExist:
             return Response(
                 {'error': '메시지를 찾을 수 없습니다'}, 
@@ -763,17 +775,29 @@ def block_user(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # 이미 차단된 사용자인지 확인
+        # 이미 차단된 사용자인지 확인 (활성/비활성 모두 검사)
         existing_block = UserBlock.objects.filter(
             blocker=request.user,
             blocked_user=blocked_user,
-            is_active=True
         ).first()
         
         if existing_block:
+            if existing_block.is_active:
+                # 이미 활성 상태로 차단되어 있음
+                return Response(
+                    {'error': '이미 차단된 사용자입니다'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # 과거에 차단했다가 해제한 기록 -> 재활성화
+            existing_block.is_active = True
+            existing_block.reason = reason
+            existing_block.save(update_fields=['is_active', 'reason'])
             return Response(
-                {'error': '이미 차단된 사용자입니다'}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    'message': f'{blocked_user.name}님을 다시 차단했습니다',
+                    'block_id': str(existing_block.id)
+                },
+                status=status.HTTP_200_OK
             )
         
         # 차단 생성
@@ -845,6 +869,7 @@ def unblock_user(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_blocked_users(request):
@@ -860,8 +885,7 @@ def get_blocked_users(request):
         blocked_list = []
         for block in blocked_users:
             blocked_list.append({
-                'block_id': str(block.id),
-                'user_id': block.blocked_user.id,
+                'user_id': block.blocked_user.user_id,  # user_id 필드 사용
                 'user_name': block.blocked_user.name,
                 'reason': block.reason,
                 'blocked_at': block.created_at.isoformat()
@@ -874,6 +898,30 @@ def get_blocked_users(request):
     except Exception as e:
         return Response(
             {'error': f'차단된 사용자 목록 조회 실패: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def clear_all_blocked_users(request):
+    """모든 차단된 사용자 해제 (개발/테스트용)"""
+    try:
+        from .models import UserBlock
+        
+        # 현재 사용자가 차단한 모든 사용자 해제
+        blocked_count = UserBlock.objects.filter(
+            blocker=request.user,
+            is_active=True
+        ).update(is_active=False)
+        
+        return Response({
+            'message': f'{blocked_count}명의 차단을 모두 해제했습니다'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'전체 차단 해제 실패: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

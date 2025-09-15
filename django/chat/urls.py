@@ -31,6 +31,7 @@ urlpatterns = [
     path('block-user/', views.block_user, name='block_user'),
     path('unblock-user/', views.unblock_user, name='unblock_user'),
     path('blocked-users/', views.get_blocked_users, name='get_blocked_users'),
+    path('clear-blocked-users/', views.clear_all_blocked_users, name='clear_all_blocked_users'),
     path('report-message/', views.report_message, name='report_message'),
     path('check-blocked/<int:user_id>/', views.check_user_blocked, name='check_user_blocked'),
 ]

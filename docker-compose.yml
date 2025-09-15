@@ -13,6 +13,16 @@ services:     # 컨테이너 지정
     env_file: #
       - ./django/.env
 
+  nginx:
+    build: ./nginx
+    restart: always
+    environment:
+      - SERVER_NAME=localhost
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+
   db:
     container_name: db
     image: mariadb:latest
