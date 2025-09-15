@@ -13,7 +13,7 @@ accounts/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from accounts.social_login import google_callback, google_login, kakao_callback, kakao_login, naver_callback, naver_login
+from accounts.social_login import google_callback, google_login, mobile_google_login, integrate_google_account
 from .views import signup_first_step, signup_second_step, social_login, login_success, \
     PasswordManagementView, UserInfoViewSet
 from auth.api import LoginApi, RefreshJWTToken, LogoutApi
@@ -34,10 +34,12 @@ urlpatterns = [
     path('social-login/', social_login, name='social_login'),
     path('google-login/', google_login, name='google_login'),
     path('google-callback/', google_callback, name='google_callback'),
-    path('naver-login/', naver_login, name='naver_login'),
-    path('naver-callback/', naver_callback, name='naver_callback'),
-    path('kakao-login/', kakao_login, name='kakao_login'),
-    path('kakao-callback/', kakao_callback, name='kakao_callback'),
+    path('google-login-mobile/', mobile_google_login, name='mobile_google_login'),  # 모바일용 구글 로그인
+    path('integrate-google-account/', integrate_google_account, name='integrate_google_account'),  # Google 계정 통합
+    # path('naver-login/', naver_login, name='naver_login'),  # 사용하지 않음
+    # path('naver-callback/', naver_callback, name='naver_callback'),  # 사용하지 않음
+    # path('kakao-login/', kakao_login, name='kakao_login'),  # 사용하지 않음
+    # path('kakao-callback/', kakao_callback, name='kakao_callback'),  # 사용하지 않음
     path('login-success/', login_success, name='login_success'), # 소셜 로그인 성공 엔드포인트
 
     # 회원정보 조회 및 수정 엔드포인트

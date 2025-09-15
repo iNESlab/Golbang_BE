@@ -62,13 +62,20 @@ class ClubSerializer(serializers.ModelSerializer):
     클럽의 모든 정보를 포함한 JSON 응답을 생성
     '''
     members = ClubMemberSerializer(many=True, read_only=True, source='clubmember_set')
+    members_count = serializers.SerializerMethodField()  # 클럽 멤버 수
     is_admin = serializers.SerializerMethodField()  # 현재 요청 사용자가 클럽 관리자 여부 반환
 
     class Meta:
         model = Club
         # TODO: id -> club_id
-        fields = ('id', 'name', 'description', 'image', 'members', 'created_at', 'is_admin')
+        fields = ('id', 'name', 'description', 'image', 'members', 'members_count', 'created_at', 'is_admin')
 
+    def get_members_count(self, obj):
+        '''
+        클럽 멤버 수를 반환
+        '''
+        return obj.clubmember_set.count()
+    
     def get_is_admin(self, obj):
         '''
         현재 요청 사용자가 클럽 관리자 여부를 확인

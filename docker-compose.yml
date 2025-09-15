@@ -7,11 +7,21 @@ services:     # 컨테이너 지정
     build: ./django  # . 은 디폴트 -> 프로젝트 내의 "Dockerfile"이라는 이름을 알아서 찾아 빌드해줌
     restart: always
     volumes:  # 파일 시스템 정의
-      - .:/app
+      - ./django:/app
     ports:
       - "8000:8000"
     env_file: #
       - ./django/.env
+
+  nginx:
+    build: ./nginx
+    restart: always
+    environment:
+      - SERVER_NAME=localhost
+    ports:
+      - "80:80"
+    depends_on:
+      - web
 
   db:
     container_name: db
@@ -58,6 +68,23 @@ services:     # 컨테이너 지정
       - .:/app
     env_file:
       - .env
+
+  # 🚫 라디오 기능 비활성화 - 안드로이드에서 사용하지 않음
+  # nginx-rtmp:   # 미디어 서버
+  #   container_name: nginx-rtmp
+  #   build: ./nginx
+  #   restart: always
+  #   ports:
+  #     - "80:80"      # HTTP (HLS 서빙)
+  #     - "1935:1935"  # RTMP (스트림 인제스트)
+  #   volumes:
+  #     - ./nginx/hls:/var/hls              # HLS 세그먼트 저장소
+  #     - ./django/static:/app/static       # Django 정적 파일
+  #     - ./django/media:/app/media         # Django 미디어 파일
+  #   depends_on:
+  #     - web
+  #   networks:
+  #     - default
 
 volumes:
   dbdata:
