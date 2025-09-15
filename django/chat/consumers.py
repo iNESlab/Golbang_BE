@@ -168,12 +168,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def _send_user_info(self):
         """연결된 사용자 정보를 클라이언트에 전송"""
         try:
+            # 클럽 관리자 여부 확인
+            is_admin = await self._check_club_admin()
+            
             user_info_data = {
                 'type': 'user_info',
                 'user_id': self.user.user_id,
                 'user_name': self.user.name,
                 'display_name': getattr(self.user, 'display_name', self.user.name),
-                'is_admin': getattr(self.user, 'is_admin', False),
+                'is_admin': is_admin,
                 'connection_suffix': str(datetime.now().microsecond)[:6]
             }
             
@@ -183,6 +186,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
             
         except Exception as e:
             logger.error(f"사용자 정보 전송 오류: {e}")
+    
+    @database_sync_to_async
+    def _check_club_admin(self):
+        """클럽 관리자 여부 확인"""
+        try:
+            if self.chat_room and self.chat_room.chat_room_type == 'CLUB' and self.chat_room.club_id:
+                from clubs.models import Club, ClubMember
+                club = Club.objects.get(id=self.chat_room.club_id)
+                club_member = ClubMember.objects.get(user=self.user, club=club)
+                is_admin = club_member.role == "admin"
+                logger.info(f"🔍 클럽 관리자 확인: 사용자={self.user.user_id}, 클럽={club.id}, 역할={club_member.role}, 관리자={is_admin}")
+                return is_admin
+            else:
+                # 일반 채팅방의 경우
+                from .models import ChatRoomParticipant
+                participant = ChatRoomParticipant.objects.filter(
+                    chat_room=self.chat_room,
+                    user=self.user,
+                    is_active=True
+                ).first()
+                is_admin = participant and participant.role in ['ADMIN', 'MODERATOR']
+                logger.info(f"🔍 일반 채팅방 관리자 확인: 사용자={self.user.user_id}, 관리자={is_admin}")
+                return is_admin
+        except Exception as e:
+            logger.error(f"관리자 확인 오류: {e}")
+            return False
     
     async def _handle_chat_message(self, data):
         """채팅 메시지 처리"""
