@@ -10,6 +10,7 @@ clubs/views/club_common.py
 - 모임: 생성, 조회, 특정 모임 조회, 특정 모임의 멤버 조회
 누구나 모임을 생성하고, 자신이 속한 모임을 조회하고, 모임 초대 수락/거절 가능
 '''
+from sympy import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -37,12 +38,12 @@ class IsMemberOfClub(BasePermission):
     def has_permission(self, request, view):
         # 요청한 사용자가 어떤 모임의 멤버인지 확인 (뷰 수준, 리스트 뷰, 생성 뷰에 사용)
         # ex. 모임 목록 보기
-        return ClubMember.objects.filter(user=request.user).exists()
+        return ClubMember.objects.filter(user=request.user, status_type='active').exists()
 
     def has_object_permission(self, request, view, obj):
         # 요청한 사용자가 특정 모임의 멤버인지 확인 (객체 수준, 특정 모임 객체 조회, 수정, 삭제 등에 사용)
         # ex. 특정 모임 정보 보기
-        return ClubMember.objects.filter(club=obj, user=request.user).exists()
+        return ClubMember.objects.filter(club=obj, user=request.user, status_type='active').exists()
 
 # class IsClubAdmin(BasePermission):
 #     '''
@@ -100,7 +101,7 @@ class ClubViewSet(viewsets.ModelViewSet):
     def get_queryset(self): # 데이터베이스로부터 가져온 객체 목록
         user = self.request.user
         # 현재 요청한 사용자가 속한 모임만 반환
-        return Club.objects.filter(members=user)
+        return Club.objects.filter(members=user, clubmember__status_type='active').distinct()
 
 
     '''
@@ -285,6 +286,28 @@ class ClubViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_200_OK)
+    
+    # 모임 검색 API
+    @action(detail=False, methods=['get'], url_path='search', url_name='search_clubs')
+    def search_clubs(self, request):
+        query = request.query_params.get('club_name', '').strip()
+
+        if not query:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': '검색어(club_name)를 입력해주세요.',
+                'data': []
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # name / description 기준으로 검색
+        clubs = Club.objects.filter(name__icontains=query)[:10]  # 🔥 최대 10개까지만 잘라서 반환
+
+        serializer = ClubSerializer(clubs, many=True, context={'request': request})
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved search results',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
 
     # 멤버리스트 조회 메서드
     @action(detail=True, methods=['get'], url_path='members', url_name='members')
@@ -294,11 +317,38 @@ class ClubViewSet(viewsets.ModelViewSet):
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
-        members = ClubMember.objects.filter(club=club) # 해당 모임의 모든 멤버 저장
-        serializer = ClubMemberSerializer(members, many=True) # 멤버 리스트 직렬화
+        members = ClubMember.objects.filter(club=club, status_type='active') # 해당 모임의 모든 멤버 저장
+        serializer = ClubMemberSerializer(members, many=True, context={'request': request}) # 멤버 리스트 직렬화
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved members',
             'data': serializer.data
         }
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+    # 모임 참가 신청 API
+    @action(detail=True, methods=['post'], url_path='apply', url_name='apply_club')
+    def apply_club(self, request, pk=None):
+        try:
+            club = self.get_object() # 모임 객체
+        except Http404: # 모임이 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('Club', pk)
+
+        user = request.user # JWT 토큰을 통해 인증된 사용자 정보를 가져옴
+
+        if ClubMember.objects.filter(club=club, user=user).exists(): # 이미 멤버인 경우, 400 반환
+            return handle_400_bad_request('User is already a member of the club')
+
+        member = ClubMember(club=club, user_id=user.pk, role='member', status_type='pending')
+        member.save()
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully applied to join the club',
+            'data': {
+                'club_member_id': member.id,
+                'status_type': member.status_type
+            }
+        }
+
         return Response(response_data, status=status.HTTP_200_OK)
