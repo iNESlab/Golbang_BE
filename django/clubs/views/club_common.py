@@ -10,6 +10,7 @@ clubs/views/club_common.py
 - 모임: 생성, 조회, 특정 모임 조회, 특정 모임의 멤버 조회
 누구나 모임을 생성하고, 자신이 속한 모임을 조회하고, 모임 초대 수락/거절 가능
 '''
+from sympy import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -285,6 +286,28 @@ class ClubViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_200_OK)
+    
+    # 모임 검색 API
+    @action(detail=False, methods=['get'], url_path='search', url_name='search_clubs')
+    def search_clubs(self, request):
+        query = request.query_params.get('club_name', '').strip()
+
+        if not query:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': '검색어(club_name)를 입력해주세요.',
+                'data': []
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # name / description 기준으로 검색
+        clubs = Club.objects.filter(name__icontains=query)[:10]  # 🔥 최대 10개까지만 잘라서 반환
+
+        serializer = ClubSerializer(clubs, many=True, context={'request': request})
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully retrieved search results',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
 
     # 멤버리스트 조회 메서드
     @action(detail=True, methods=['get'], url_path='members', url_name='members')
