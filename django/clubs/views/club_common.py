@@ -317,7 +317,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
-        members = ClubMember.objects.filter(club=club, status_type='active') # 해당 모임의 모든 멤버 저장
+        members = ClubMember.objects.filter(club=club) # 해당 모임의 모든 멤버 조회, 초대 수락 전도 포함
         serializer = ClubMemberSerializer(members, many=True, context={'request': request}) # 멤버 리스트 직렬화
         response_data = {
             'status': status.HTTP_200_OK,

@@ -41,7 +41,7 @@ class ClubMemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClubMember
-        fields = ('user','member_id', 'role', 'is_current_user_admin')
+        fields = ('user','member_id', 'role', 'status_type','is_current_user_admin')
 
 
     def get_is_current_user_admin(self, obj):
