@@ -207,6 +207,7 @@ class ClubAdminViewSet(ClubViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # 모임 내 특정 멤버 역할 변경 메서드
+    # TODO: admin, member로 요청하는게 더 간단함. 현재는 너무 억지로 A, M으로 바꾸고 있음 -> 이전에 대문자로 쓰자 했던건 admin을 대문자로 쓰자는거였음
     @action(detail=True, methods=['patch'], url_path=r'members/(?P<member_id>\d+)/role', url_name='update_role')
     def update_role(self, request, pk=None, member_id=None):
         try:
@@ -219,7 +220,7 @@ class ClubAdminViewSet(ClubViewSet):
         if not role_type or role_type not in ['A', 'M']: # 유효하지 않은 데이터인 경우, 400 반환
             return handle_400_bad_request('Invalid role_type value. Please specify \'A\' for admin or \'M\' for member')
 
-        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
+        member = ClubMember.objects.filter(club=club, id=member_id).first()
 
         if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
             return handle_404_not_found('Club Member', member_id)
@@ -233,6 +234,34 @@ class ClubAdminViewSet(ClubViewSet):
                 'club_id': club.id,
                 'member_id': member_id,
                 'role': 'admin' if role_type == 'A' else 'member'
+            }
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+    # 멤버 초대 수락 메서드
+    @action(detail=True, methods=['patch'], url_path=r'members/(?P<member_id>\d+)/status', url_name='update_status')
+    def update_status_type(self, request, pk=None, member_id=None):
+        try:
+            club = self.get_object() # 모임 객체
+        except Http404: # 모임이 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('Club', pk)
+
+        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
+        if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
+            return handle_404_not_found('Club Member', member_id)
+    
+        if not member.status_type != 'pending': # 유효하지 않은 데이터인 경우, 400 반환
+            return handle_400_bad_request('Invalid status_type(\'pending\') value.')
+
+        member.status_type = 'active' # 역할 변경
+        member.save()
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'status updated successfully',
+            'data': {
+                'club_id': club.id,
+                'member_id': member_id,
+                'status_type': member.status_type
             }
         }
         return Response(response_data, status=status.HTTP_200_OK)

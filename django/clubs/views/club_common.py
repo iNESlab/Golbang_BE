@@ -302,3 +302,30 @@ class ClubViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         }
         return Response(response_data, status=status.HTTP_200_OK)
+    
+    # 모임 참가 신청 API
+    @action(detail=True, methods=['post'], url_path='apply', url_name='apply_club')
+    def apply_club(self, request, pk=None):
+        try:
+            club = self.get_object() # 모임 객체
+        except Http404: # 모임이 존재하지 않는 경우, 404 반환
+            return handle_404_not_found('Club', pk)
+
+        user = request.user # JWT 토큰을 통해 인증된 사용자 정보를 가져옴
+
+        if ClubMember.objects.filter(club=club, user=user).exists(): # 이미 멤버인 경우, 400 반환
+            return handle_400_bad_request('User is already a member of the club')
+
+        member = ClubMember(club=club, user_id=user.pk, role='member', status_type='pending')
+        member.save()
+
+        response_data = {
+            'status': status.HTTP_200_OK,
+            'message': 'Successfully applied to join the club',
+            'data': {
+                'club_member_id': member.id,
+                'status_type': member.status_type
+            }
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
