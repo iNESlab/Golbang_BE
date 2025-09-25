@@ -101,7 +101,7 @@ class ClubViewSet(viewsets.ModelViewSet):
     def get_queryset(self): # 데이터베이스로부터 가져온 객체 목록
         user = self.request.user
         # 현재 요청한 사용자가 속한 모임만 반환
-        return Club.objects.filter(members=user)
+        return Club.objects.filter(members=user, clubmember__status_type='active').distinct()
 
 
     '''
