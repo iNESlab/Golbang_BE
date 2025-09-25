@@ -37,12 +37,12 @@ class IsMemberOfClub(BasePermission):
     def has_permission(self, request, view):
         # 요청한 사용자가 어떤 모임의 멤버인지 확인 (뷰 수준, 리스트 뷰, 생성 뷰에 사용)
         # ex. 모임 목록 보기
-        return ClubMember.objects.filter(user=request.user).exists()
+        return ClubMember.objects.filter(user=request.user, status_type='active').exists()
 
     def has_object_permission(self, request, view, obj):
         # 요청한 사용자가 특정 모임의 멤버인지 확인 (객체 수준, 특정 모임 객체 조회, 수정, 삭제 등에 사용)
         # ex. 특정 모임 정보 보기
-        return ClubMember.objects.filter(club=obj, user=request.user).exists()
+        return ClubMember.objects.filter(club=obj, user=request.user, status_type='active').exists()
 
 # class IsClubAdmin(BasePermission):
 #     '''
@@ -294,8 +294,8 @@ class ClubViewSet(viewsets.ModelViewSet):
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
-        members = ClubMember.objects.filter(club=club) # 해당 모임의 모든 멤버 저장
-        serializer = ClubMemberSerializer(members, many=True) # 멤버 리스트 직렬화
+        members = ClubMember.objects.filter(club=club, status_type='active') # 해당 모임의 모든 멤버 저장
+        serializer = ClubMemberSerializer(members, many=True, context={'request': request}) # 멤버 리스트 직렬화
         response_data = {
             'status': status.HTTP_200_OK,
             'message': 'Successfully retrieved members',

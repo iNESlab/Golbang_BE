@@ -35,7 +35,7 @@ class IsClubAdmin(IsMemberOfClub):
         # 먼저 사용자가 모임의 멤버인지 확인한 후 (IsMemberOfClub에서 상속받아 사용)
         if super().has_object_permission(request, view, obj):
             # 요청한 사용자가 모임의 관리자 역할을 하는지 추가로 확인
-            return ClubMember.objects.filter(club=obj, user=request.user, role='admin').exists()
+            return ClubMember.objects.filter(club=obj, user=request.user, role='admin', status_type='active').exists()
         return False
 
 class ClubAdminViewSet(ClubViewSet):
@@ -172,7 +172,8 @@ class ClubAdminViewSet(ClubViewSet):
             return handle_400_bad_request('All users are already members of the club')
 
         # 신규 ClubMember 객체 생성 (Bulk Create 사용)
-        new_members = [ClubMember(club=club, user_id=account_id, role='member') for account_id in new_users]
+        # TODO: 향후, 초대받은 유저가 수락하는 기능도 만들 때, status_type = 'pending'으로 변경해야함
+        new_members = [ClubMember(club=club, user_id=account_id, role='member', status_type='active') for account_id in new_users]
         with transaction.atomic():  # 트랜잭션 사용
             ClubMember.objects.bulk_create(new_members)
 
