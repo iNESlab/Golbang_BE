@@ -250,7 +250,7 @@ class ClubAdminViewSet(ClubViewSet):
         if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
             return handle_404_not_found('Club Member', member_id)
     
-        if not member.status_type != 'pending': # 유효하지 않은 데이터인 경우, 400 반환
+        if member.status_type != 'pending': # 유효하지 않은 데이터인 경우, 400 반환
             return handle_400_bad_request('Invalid status_type(\'pending\') value.')
 
         member.status_type = 'active' # 역할 변경
