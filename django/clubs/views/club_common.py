@@ -330,7 +330,7 @@ class ClubViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='apply', url_name='apply_club')
     def apply_club(self, request, pk=None):
         try:
-            club = self.get_object() # 모임 객체
+            club = Club.objects.get(pk=pk) # 신청할 모임 객체
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
