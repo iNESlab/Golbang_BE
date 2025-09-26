@@ -300,7 +300,7 @@ class ClubViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # name / description 기준으로 검색
-        clubs = Club.objects.filter(name__icontains=query)[:10]  # 🔥 최대 10개까지만 잘라서 반환
+        clubs = Club.objects.filter(name__icontains=query)[:50]  # TODO: 모임이 많아지면, 페이징 필요
 
         serializer = ClubSerializer(clubs, many=True, context={'request': request})
         return Response({
