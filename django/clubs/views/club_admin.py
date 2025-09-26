@@ -246,7 +246,7 @@ class ClubAdminViewSet(ClubViewSet):
         except Http404: # 모임이 존재하지 않는 경우, 404 반환
             return handle_404_not_found('Club', pk)
 
-        member = ClubMember.objects.filter(club=club, user_id=member_id).first()
+        member = ClubMember.objects.filter(club=club, id=member_id).first()
         if not member: # 사용자가 해당 모임의 멤버가 아닌 경우, 404 반환
             return handle_404_not_found('Club Member', member_id)
     
