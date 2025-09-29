@@ -210,12 +210,12 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
         from chat.models import ChatNotificationSettings
         # 채팅방 타입에 따라 FCM 토큰 가져오기
         if chat_room.chat_room_type == 'CLUB':
-            # 모임 채팅방 - 채팅방에 참여하지 않은 멤버들에게만 알림 전송
+            # 모임 채팅방 - 모든 클럽 멤버에게 알림 전송
             from clubs.models import Club
             from chat.models import ChatRoomParticipant
             club = Club.objects.get(id=chat_room.club_id)
             
-            # 채팅방에 참여한 사용자들 조회
+            # 채팅방에 참여한 사용자들 조회 (참고용)
             participants = ChatRoomParticipant.objects.filter(
                 chat_room=chat_room,
                 is_active=True
@@ -223,7 +223,7 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
             
             logger.info(f"🔍 채팅방 참여자 ID 목록: {list(participants)}")
             
-            # 참여하지 않은 멤버들의 FCM 토큰만 가져오기
+            # 🔧 수정: 모든 클럽 멤버의 FCM 토큰 가져오기
             all_tokens = get_fcm_tokens_for_club_members(club)
             
             # 🔧 디버그: 전체 클럽 멤버 정보 출력
@@ -251,22 +251,22 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
                     users = User.objects.filter(fcm_token=token_data)
                     if users.exists():
                         user = users.first()  # 첫 번째 사용자만 선택
-                        if user.id not in participants:  # 참여하지 않은 사용자만
-                            # 🔧 주석처리: 알림 설정 확인 (테스트용)
-                            # try:
-                            #     notification_setting = ChatNotificationSettings.objects.get(
-                            #         user=user,
-                            #         chat_room=chat_room
-                            #     )
-                            #     if not notification_setting.is_enabled:
-                            #         logger.info(f"🔕 사용자 {user.name}의 알림이 비활성화됨")
-                            #         continue
-                            # except ChatNotificationSettings.DoesNotExist:
-                            #     # 설정이 없으면 기본값(True)으로 처리
-                            #     logger.info(f"🔔 사용자 {user.name}의 알림 설정 없음, 기본값(활성화) 적용")
-                            
-                            tokens.append(token_data)
-                            processed_tokens.add(token_data)
+                        # 🔧 수정: 클럽 채팅방에서는 모든 클럽 멤버에게 알림 전송
+                        # 🔧 주석처리: 알림 설정 확인 (테스트용)
+                        # try:
+                        #     notification_setting = ChatNotificationSettings.objects.get(
+                        #         user=user,
+                        #         chat_room=chat_room
+                        #     )
+                        #     if not notification_setting.is_enabled:
+                        #         logger.info(f"🔕 사용자 {user.name}의 알림이 비활성화됨")
+                        #         continue
+                        # except ChatNotificationSettings.DoesNotExist:
+                        #     # 설정이 없으면 기본값(True)으로 처리
+                        #     logger.info(f"🔔 사용자 {user.name}의 알림 설정 없음, 기본값(활성화) 적용")
+                        
+                        tokens.append(token_data)
+                        processed_tokens.add(token_data)
                 except Exception as e:
                     logger.warning(f"사용자 조회 실패 (토큰: {token_data[:10]}...): {e}")
                     continue
@@ -392,8 +392,12 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
         # 채팅방 타입에 따라 추가 데이터 설정
         if chat_room.chat_room_type == 'CLUB':
             additional_data["club_id"] = str(chat_room.club_id)
+            additional_data["chat_room_id"] = str(chat_room.club_id)  # 🔧 추가: 채팅방 ID
+            additional_data["chat_room_type"] = "CLUB"  # 🔧 추가: 채팅방 타입
         elif chat_room.chat_room_type == 'EVENT':
             additional_data["event_id"] = str(chat_room.event_id)
+            additional_data["chat_room_id"] = str(chat_room.event_id)  # 🔧 추가: 채팅방 ID
+            additional_data["chat_room_type"] = "EVENT"  # 🔧 추가: 채팅방 타입
         
         logger.info(f"채팅 메시지 알림 전송: {title} - {body}")
         logger.info(f"전송할 FCM 토큰 수: {len(tokens)}")
