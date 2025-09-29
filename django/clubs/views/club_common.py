@@ -38,7 +38,12 @@ class IsMemberOfClub(BasePermission):
     def has_permission(self, request, view):
         # 요청한 사용자가 어떤 모임의 멤버인지 확인 (뷰 수준, 리스트 뷰, 생성 뷰에 사용)
         # ex. 모임 목록 보기
-        return ClubMember.objects.filter(user=request.user, status_type='active').exists()
+        # 🔧 수정: 거절됨을 제외한 모든 상태의 멤버가 클럽 목록을 볼 수 있도록 허용
+        return ClubMember.objects.filter(
+            user=request.user
+        ).exclude(
+            status_type='rejected'
+        ).exists()
 
     def has_object_permission(self, request, view, obj):
         # 🔧 수정: 거절됨을 제외한 모든 상태의 멤버가 클럽 정보를 볼 수 있도록 허용
