@@ -5,6 +5,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.conf import settings
+from PIL import Image
+import io
+import uuid
 from .models import ChatRoom, ChatMessage, MessageReadStatus, ChatNotification, ChatReaction
 from .serializers import ChatMessageSerializer, ChatNotificationSerializer
 # 🚫 라디오 기능 비활성화 - 안드로이드에서 사용하지 않음
@@ -519,11 +525,13 @@ def get_unread_count(request):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # 해당 채팅방의 모든 메시지 중 읽지 않은 메시지 개수 계산
+        # 해당 채팅방의 모든 메시지 중 읽지 않은 메시지 개수 계산 (자신이 보낸 메시지 제외)
         unread_count = ChatMessage.objects.filter(
             chat_room=chat_room
         ).exclude(
-            read_statuses__user=request.user
+            sender=request.user  # 🔧 수정: 자신이 보낸 메시지 제외
+        ).exclude(
+            read_statuses__user=request.user  # 읽음 상태가 있는 메시지 제외
         ).count()
         
         print(f"🔍 채팅방 {chat_room_id}의 안읽은 메시지 개수: {unread_count}")
@@ -659,7 +667,9 @@ def get_all_unread_counts(request):
             unread_count = ChatMessage.objects.filter(
                 chat_room=chat_room
             ).exclude(
-                messagereadstatus__user=request.user
+                sender=request.user  # 🔧 수정: 자신이 보낸 메시지 제외
+            ).exclude(
+                messagereadstatus__user=request.user  # 읽음 상태가 있는 메시지 제외
             ).count()
             
             if unread_count > 0:
@@ -1058,6 +1068,263 @@ def get_pinned_messages(request):
         
     except Exception as e:
         return Response(
-            {'error': f'고정된 메시지 조회 실패: {str(e)}'}, 
+            {'error': f'고정된 메시지 조회 실패: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_chat_image(request):
+    """채팅 이미지 업로드"""
+    try:
+        # 이미지 파일 확인
+        if 'image' not in request.FILES:
+            return Response(
+                {'error': '이미지 파일이 필요합니다'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        image_file = request.FILES['image']
+
+        # 파일 타입 검증
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+        if image_file.content_type not in allowed_types:
+            return Response(
+                {'error': '지원하지 않는 이미지 형식입니다 (JPEG, PNG, GIF, WebP만 허용)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 파일 크기 제한 (10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if image_file.size > max_size:
+            return Response(
+                {'error': '이미지 파일이 너무 큽니다 (최대 10MB)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 고유한 파일명 생성
+        file_extension = image_file.name.split('.')[-1].lower()
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+
+        # S3에 업로드할 경로
+        s3_path = f"chat_images/{unique_filename}"
+
+        # PIL을 사용하여 이미지 처리 및 압축
+        try:
+            image = Image.open(image_file)
+
+            # EXIF 회전 정보 적용 (JPEG의 경우)
+            if hasattr(image, '_getexif') and image._getexif():
+                from PIL import ImageOps
+                image = ImageOps.exif_transpose(image)
+
+            # 이미지 리사이징 (최대 1920x1080, 화질 유지)
+            max_width, max_height = 1920, 1080
+            if image.width > max_width or image.height > max_height:
+                image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+
+            # 메모리에 저장
+            output = io.BytesIO()
+            if image_file.content_type == 'image/jpeg':
+                image.save(output, format='JPEG', quality=85, optimize=True)
+            elif image_file.content_type == 'image/png':
+                image.save(output, format='PNG', optimize=True)
+            elif image_file.content_type == 'image/webp':
+                image.save(output, format='WebP', quality=85)
+            else:
+                image.save(output, format=file_extension.upper())
+
+            output.seek(0)
+            processed_image = ContentFile(output.getvalue(), name=unique_filename)
+
+        except Exception as e:
+            # PIL 처리 실패 시 원본 파일 사용
+            processed_image = image_file
+
+        # S3에 업로드
+        file_path = default_storage.save(s3_path, processed_image)
+        file_url = default_storage.url(file_path)
+
+        # 썸네일 생성 (선택적)
+        thumbnail_url = None
+        try:
+            # 썸네일용 이미지 생성
+            image.seek(0)  # PIL 이미지 다시 읽기
+            thumbnail = image.copy()
+            thumbnail.thumbnail((300, 300), Image.Resampling.LANCZOS)
+
+            # 썸네일 저장
+            thumbnail_output = io.BytesIO()
+            if image_file.content_type == 'image/jpeg':
+                thumbnail.save(thumbnail_output, format='JPEG', quality=80, optimize=True)
+            elif image_file.content_type == 'image/png':
+                thumbnail.save(thumbnail_output, format='PNG', optimize=True)
+            elif image_file.content_type == 'image/webp':
+                thumbnail.save(thumbnail_output, format='WebP', quality=80)
+            else:
+                thumbnail.save(thumbnail_output, format=file_extension.upper())
+
+            thumbnail_output.seek(0)
+            thumbnail_file = ContentFile(thumbnail_output.getvalue(), name=f"thumb_{unique_filename}")
+
+            # 썸네일 S3 업로드
+            thumbnail_path = f"chat_images/thumbnails/{unique_filename}"
+            thumbnail_saved_path = default_storage.save(thumbnail_path, thumbnail_file)
+            thumbnail_url = default_storage.url(thumbnail_saved_path)
+
+        except Exception as e:
+            # 썸네일 생성 실패 시 무시
+            print(f"썸네일 생성 실패: {e}")
+
+        return Response({
+            'success': True,
+            'image_url': file_url,
+            'thumbnail_url': thumbnail_url,
+            'filename': unique_filename,
+            'size': processed_image.size,
+            'content_type': image_file.content_type
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response(
+            {'error': f'이미지 업로드 실패: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+# 🔧 추가: 채팅방 알림 설정 API
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chat_notification_settings(request):
+    """사용자의 모든 채팅방 알림 설정 조회"""
+    try:
+        from .models import ChatNotificationSettings
+        
+        settings = ChatNotificationSettings.objects.filter(user=request.user)
+        serializer = ChatNotificationSettingsSerializer(settings, many=True)
+        
+        return Response({
+            'success': True,
+            'settings': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'알림 설정 조회 실패: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_chat_notification(request):
+    """채팅방 알림 설정 토글"""
+    try:
+        from .models import ChatNotificationSettings, ChatRoom
+        from .serializers import ChatNotificationSettingsSerializer
+        
+        chat_room_id = request.data.get('chat_room_id')
+        if not chat_room_id:
+            return Response(
+                {'error': 'chat_room_id가 필요합니다'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 채팅방 조회 (UUID가 아닌 경우 클럽 ID로 조회)
+        try:
+            # UUID 형식인지 확인
+            import uuid
+            try:
+                uuid.UUID(chat_room_id)
+                chat_room = ChatRoom.objects.get(id=chat_room_id)
+            except ValueError:
+                # UUID가 아닌 경우 클럽 ID로 조회
+                chat_room = ChatRoom.objects.get(club_id=int(chat_room_id), chat_room_type='CLUB')
+        except ChatRoom.DoesNotExist:
+            return Response(
+                {'error': '채팅방을 찾을 수 없습니다'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 기존 설정 조회 또는 생성
+        setting, created = ChatNotificationSettings.objects.get_or_create(
+            user=request.user,
+            chat_room=chat_room,
+            defaults={'is_enabled': True}
+        )
+        
+        # 토글
+        setting.is_enabled = not setting.is_enabled
+        setting.save()
+        
+        serializer = ChatNotificationSettingsSerializer(setting)
+        
+        return Response({
+            'success': True,
+            'message': f'알림이 {"활성화" if setting.is_enabled else "비활성화"}되었습니다',
+            'setting': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'알림 설정 변경 실패: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chat_room_info(request):
+    """채팅방 정보 조회 (알림 설정 포함)"""
+    try:
+        from .models import ChatNotificationSettings
+        from .serializers import ChatNotificationSettingsSerializer
+        
+        chat_room_id = request.GET.get('chat_room_id')
+        if not chat_room_id:
+            return Response(
+                {'error': 'chat_room_id가 필요합니다'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # 채팅방 조회 (UUID가 아닌 경우 클럽 ID로 조회)
+        try:
+            # UUID 형식인지 확인
+            import uuid
+            try:
+                uuid.UUID(chat_room_id)
+                chat_room = ChatRoom.objects.get(id=chat_room_id)
+            except ValueError:
+                # UUID가 아닌 경우 클럽 ID로 조회
+                chat_room = ChatRoom.objects.get(club_id=int(chat_room_id), chat_room_type='CLUB')
+        except ChatRoom.DoesNotExist:
+            return Response(
+                {'error': '채팅방을 찾을 수 없습니다'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 사용자의 알림 설정 조회
+        try:
+            notification_setting = ChatNotificationSettings.objects.get(
+                user=request.user,
+                chat_room=chat_room
+            )
+            is_notification_enabled = notification_setting.is_enabled
+        except ChatNotificationSettings.DoesNotExist:
+            is_notification_enabled = True  # 기본값
+        
+        return Response({
+            'success': True,
+            'chat_room': {
+                'id': str(chat_room.id),
+                'name': chat_room.chat_room_name,
+                'type': chat_room.chat_room_type,
+                'is_notification_enabled': is_notification_enabled
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'채팅방 정보 조회 실패: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

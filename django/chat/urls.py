@@ -34,4 +34,12 @@ urlpatterns = [
     path('clear-blocked-users/', views.clear_all_blocked_users, name='clear_all_blocked_users'),
     path('report-message/', views.report_message, name='report_message'),
     path('check-blocked/<int:user_id>/', views.check_user_blocked, name='check_user_blocked'),
+
+    # 이미지 업로드
+    path('upload-image/', views.upload_chat_image, name='upload_chat_image'),
+    
+    # 🔧 추가: 채팅방 알림 설정
+    path('notification-settings/', views.get_chat_notification_settings, name='get_chat_notification_settings'),
+    path('toggle-notification/', views.toggle_chat_notification, name='toggle_chat_notification'),
+    path('room-info/', views.get_chat_room_info, name='get_chat_room_info'),
 ]

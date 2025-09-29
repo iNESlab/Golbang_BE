@@ -138,6 +138,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # 메시지 타입별 처리
             if message_type == 'chat_message' or message_type == 'message':
                 await self._handle_chat_message(data)
+            elif message_type == 'image_message':
+                await self._handle_image_message(data)
             elif message_type == 'heartbeat':
                 await self._handle_heartbeat(data)
             elif message_type == 'typing_start':
@@ -173,14 +175,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             
             user_info_data = {
                 'type': 'user_info',
-                'user_id': self.user.user_id,
+                'user_id': str(self.user.id),  # 🔧 수정: 숫자 ID로 변경하여 에코 메시지 방지
                 'user_name': self.user.name,
                 'display_name': getattr(self.user, 'display_name', self.user.name),
                 'is_admin': is_admin,
                 'connection_suffix': str(datetime.now().microsecond)[:6]
             }
-            
-            logger.info(f"📨 USER_INFO 메시지 전송: {user_info_data}")
+
+            # 🔧 추가: 사용자 ID 변경 확인을 위한 로그
+            logger.info(f"👤 사용자 정보 전송: 기존 user_id={self.user.user_id} -> 새로운 user_id={user_info_data['user_id']}")
             
             await self.send(text_data=json.dumps(user_info_data))
             
@@ -219,17 +222,35 @@ class ChatConsumer(AsyncWebsocketConsumer):
             content = data.get('content', '').strip()
             if not content:
                 return
-            
+
             message_type = data.get('message_type', 'TEXT')
-            
+
             # 메시지 저장
             message = await self._save_message(content, message_type)
             if not message:
                 return
-            
+
             logger.info(f"💬 메시지 저장: {self.user.name} -> {content[:50]}...")
-            
+
             # 그룹에 메시지 브로드캐스트
+            # 프로필 이미지 URL 처리 (실시간 우선 - 프로필 변경 즉시 반영)
+            profile_image_url = None
+            if message.sender.profile_image:  # 항상 최신 프로필 우선
+                profile_image_url = message.sender.profile_image.url
+            elif message.sender_profile_image:  # 캐싱된 값 백업 (이미지 없을 때)
+                profile_image_url = message.sender_profile_image
+
+            # 🔧 추가: WebSocket 전송 데이터 로그
+            websocket_data = {
+                'id': str(message.id),
+                'sender_id': str(message.sender.id),
+                'sender_unique_id': message.sender_unique_id or str(message.sender.id),
+                'sender_name': message.sender.name,
+                'sender_profile_image': profile_image_url,
+                'content': message.content[:50] + '...' if len(message.content) > 50 else message.content
+            }
+            logger.info(f"📨 WebSocket 전송: {websocket_data}")
+
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -238,17 +259,65 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'id': str(message.id),  # 🔧 수정: UUID를 문자열로 변환
                         'content': message.content,
                         'sender': message.sender.name,
-                        'sender_id': message.sender.user_id,  # 🔧 수정: 기존 데이터와 호환되는 user_id 사용
+                        'sender_id': str(message.sender.id),  # 🔧 수정: 숫자 ID로 변경
+                        'sender_unique_id': message.sender_unique_id or str(message.sender.id),  # 🔧 추가: 고유 ID
                         'sender_name': message.sender.name,
+                        'sender_profile_image': profile_image_url,  # 🔧 추가: 프로필 이미지
                         'message_type': message.message_type,
                         'created_at': message.created_at.isoformat(),
                         'is_pinned': message.is_pinned,
                     }
                 }
             )
-            
+
         except Exception as e:
             logger.error(f"채팅 메시지 처리 오류: {e}")
+
+    async def _handle_image_message(self, data):
+        """이미지 메시지 처리"""
+        try:
+            image_data = data.get('data', {})
+            if not image_data:
+                logger.error("❌ 이미지 데이터가 없음")
+                return
+
+            logger.info(f"🖼️ 이미지 메시지 수신: filename={image_data.get('filename', 'unknown')}, url={image_data.get('image_url', 'no_url')}")
+
+            # 이미지 데이터를 JSON 문자열로 변환하여 저장 (이미 dict 형태임)
+            content = json.dumps(image_data)
+            logger.info(f"🖼️ 저장할 content: {content[:200]}...")
+
+            # 메시지 저장 (IMAGE 타입으로)
+            message = await self._save_message(content, 'IMAGE')
+            if not message:
+                logger.error("❌ 메시지 저장 실패")
+                return
+
+            logger.info(f"🖼️ 이미지 메시지 저장 성공: id={message.id}, sender={self.user.name}")
+
+            # 그룹에 메시지 브로드캐스트
+            broadcast_data = {
+                'type': 'chat_message',
+                'message': {
+                    'id': str(message.id),
+                    'content': message.content,  # 이미 JSON 문자열임
+                    'sender': message.sender.name,
+                    'sender_id': message.sender.user_id,
+                    'sender_name': message.sender.name,
+                    'message_type': message.message_type,
+                    'created_at': message.created_at.isoformat(),
+                    'is_pinned': message.is_pinned,
+                }
+            }
+
+            logger.info(f"📡 이미지 메시지 브로드캐스트: {broadcast_data['message']['message_type']}")
+            await self.channel_layer.group_send(self.room_group_name, broadcast_data)
+
+        except Exception as e:
+            logger.error(f"이미지 메시지 처리 오류: {e}")
+            logger.error(f"수신된 데이터: {data}")
+            import traceback
+            logger.error(f"트레이스백: {traceback.format_exc()}")
     
     async def _handle_heartbeat(self, data):
         """하트비트 처리"""
@@ -540,13 +609,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def _save_message(self, content, message_type='TEXT'):
         """메시지 저장"""
         try:
+            # 🔧 추가: 발신자 프로필 정보 캐싱
+            sender_profile_image_url = None
+            if self.user.profile_image:
+                sender_profile_image_url = self.user.profile_image.url
+            
             message = ChatMessage.objects.create(
                 chat_room=self.chat_room,
                 sender=self.user,
+                sender_unique_id=str(self.user.id),  # 🔧 수정: 숫자 ID로 변경
+                sender_profile_image=sender_profile_image_url,  # 🔧 추가: 프로필 이미지 URL 저장
                 content=content,
                 message_type=message_type,
                 created_at=timezone.now()
             )
+
+            # 🔧 추가: 상세 로그 (프로필 이미지 포함)
+            logger.info(f"💾 메시지 저장 완료: user_id={self.user.user_id} -> sender_unique_id={message.sender_unique_id}")
+            logger.info(f"🖼️ 프로필 이미지: 캐싱={message.sender_profile_image}, 실시간={self.user.profile_image.url if self.user.profile_image else '없음'}")
+            
+            # 🔧 추가: FCM 알림 전송
+            try:
+                from utils.push_fcm_notification import send_chat_message_notification
+                send_chat_message_notification(
+                    chat_room=self.chat_room,
+                    sender_name=self.user.name,
+                    message_content=content,
+                    sender_id=self.user.id
+                )
+                logger.info("📱 FCM 알림 전송 완료")
+            except Exception as e:
+                logger.error(f"❌ FCM 알림 전송 실패: {e}")
+            
             return message
             
         except Exception as e:
@@ -663,14 +757,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
                 
                 for message in messages:
-                    sender_id = message.sender.user_id if message.sender.user_id else "unknown"
-                    
-                    logger.info(f"🔍 메시지 {message.id}: sender={message.sender.email}, sender_id={sender_id}, sender_name={message.sender.name}")
-                    
+                    sender_id = str(message.sender.id)  # 🔧 수정: 숫자 ID
+                    sender_unique_id = message.sender_unique_id or str(message.sender.id)  # 🔧 추가: 고유 ID
+
+                    # 프로필 이미지 처리 (실시간 우선 - 프로필 변경 즉시 반영)
+                    profile_image_url = None
+                    if message.sender.profile_image:  # 항상 최신 프로필 우선
+                        profile_image_url = message.sender.profile_image.url
+                    elif message.sender_profile_image:  # 캐싱된 값 백업 (이미지 없을 때)
+                        profile_image_url = message.sender_profile_image
+
+                    logger.info(f"🔍 메시지 {message.id}: sender={message.sender.email}, sender_id={sender_id}, sender_unique_id={sender_unique_id}, sender_name={message.sender.name}")
+
                     batch_data['messages'].append({
                         'id': message.id,
                         'sender': message.sender.name,
                         'sender_id': sender_id,
+                        'sender_unique_id': sender_unique_id,  # 🔧 추가: 고유 ID
+                        'sender_name': message.sender.name,
+                        'sender_profile_image': profile_image_url,  # 🔧 추가: 프로필 이미지
                         'content': message.content,
                         'message_type': message.message_type,
                         'created_at': message.created_at.isoformat(),
@@ -690,15 +795,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
             messages = ChatMessage.objects.filter(
                 chat_room=self.chat_room
             ).select_related('sender').order_by('-created_at')[:limit]
+
             
             # JSON 직렬화 가능한 딕셔너리 리스트로 변환
             message_list = []
             for msg in reversed(messages):
+                # 프로필 이미지 URL 처리 (실시간 우선 - 프로필 변경 즉시 반영)
+                profile_image_url = None
+                if msg.sender.profile_image:  # 항상 최신 프로필 우선
+                    profile_image_url = msg.sender.profile_image.url
+                elif msg.sender_profile_image:  # 캐싱된 값 백업 (이미지 없을 때)
+                    profile_image_url = msg.sender_profile_image
+
                 message_list.append({
                     'id': str(msg.id),
                     'sender': msg.sender.name,
-                    'sender_id': msg.sender.user_id if msg.sender.user_id else "unknown",
+                    'sender_id': str(msg.sender.id),  # 🔧 수정: 숫자 ID로 변경
+                    'sender_unique_id': msg.sender_unique_id or str(msg.sender.id),  # 🔧 추가: 고유 ID
                     'sender_name': msg.sender.name,
+                    'sender_profile_image': profile_image_url,  # 🔧 추가: 프로필 이미지
                     'content': msg.content,
                     'message_type': msg.message_type,
                     'created_at': msg.created_at.isoformat(),
