@@ -36,15 +36,17 @@ class ClubMember(models.Model):
         ('admin', 'A'),
     )
     STATUS_CHOICES_TYPE = (
-        ('pending', '초대 수락 대기'),
-        ('active', '정상 멤버'),
-        ('banned', '차단'),
+        ('invited', '초대됨'),      # 관리자가 초대
+        ('applied', '가입신청'),    # 사용자가 신청
+        ('active', '활성'),        # 승인됨
+        ('rejected', '거절됨'),     # 거절됨
+        ('banned', '차단됨'),       # 차단됨
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES_TYPE, default='member')
-    status_type = models.CharField(max_length=10, choices=STATUS_CHOICES_TYPE, default='pending')
+    status_type = models.CharField(max_length=10, choices=STATUS_CHOICES_TYPE, default='active')
     total_points = models.IntegerField(default=0)
     total_rank = models.CharField("모임 내 전체 랭킹", max_length=10, default="0", null=True, blank=True)
     total_handicap_rank = models.CharField("모임 내 전체 핸디캡 적용 랭킹", max_length=10, default="0", null=True, blank=True)

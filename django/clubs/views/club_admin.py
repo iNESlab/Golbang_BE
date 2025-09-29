@@ -172,13 +172,21 @@ class ClubAdminViewSet(ClubViewSet):
             return handle_400_bad_request('All users are already members of the club')
 
         # 신규 ClubMember 객체 생성 (Bulk Create 사용)
-        # TODO: 향후, 초대받은 유저가 수락하는 기능도 만들 때, status_type = 'pending'으로 변경해야함
-        new_members = [ClubMember(club=club, user_id=account_id, role='member', status_type='active') for account_id in new_users]
+        # 🔧 수정: 초대받은 유저는 'invited' 상태로 생성
+        new_members = [ClubMember(club=club, user_id=account_id, role='member', status_type='invited') for account_id in new_users]
         with transaction.atomic():  # 트랜잭션 사용
             ClubMember.objects.bulk_create(new_members)
 
         # 새로 추가된 멤버를 user_id 기준으로 다시 조회 (select_related로 user 정보 포함)
         created_members = ClubMember.objects.filter(club=club, user_id__in=list(new_users)).select_related('user')
+
+        # 🔧 추가: 초대 알림 전송
+        try:
+            from utils.push_fcm_notification import send_club_invitation_notification
+            for member in created_members:
+                send_club_invitation_notification(club, member.user, request.user.name)
+        except Exception as e:
+            logger.error(f"클럽 초대 알림 전송 실패: {e}")
 
         # 생성된 ClubMember들을 시리얼라이즈
         serializer = ClubMemberSerializer(created_members, many=True, context={'request': request})

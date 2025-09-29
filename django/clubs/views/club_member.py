@@ -100,3 +100,208 @@ class ClubMemberViewSet(ClubViewSet):
         member.delete() # 멤버 삭제
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # 🔧 추가: 초대 취소 API (관리자만 가능)
+    @action(detail=True, methods=['post'], url_path='cancel-invitation', url_name='cancel_invitation')
+    def cancel_invitation(self, request, pk=None):
+        """
+        관리자가 특정 사용자의 초대를 취소하는 API
+        """
+        try:
+            club = self.get_object()
+        except Http404:
+            return handle_404_not_found('Club', pk)
+
+        # 관리자 권한 확인
+        if not ClubMember.objects.filter(club=club, user=request.user, role='admin').exists():
+            return Response({
+                'status': status.HTTP_403_FORBIDDEN,
+                'message': '관리자만 초대를 취소할 수 있습니다.',
+                'data': {}
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return handle_400_bad_request('user_id가 필요합니다.')
+
+        try:
+            member = ClubMember.objects.get(club=club, user_id=user_id, status_type='invited')
+            member.delete()
+            
+            return Response({
+                'status': status.HTTP_200_OK,
+                'message': '초대가 취소되었습니다.',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user_id,
+                    'action': 'invitation_cancelled'
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except ClubMember.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': '초대된 사용자를 찾을 수 없습니다.',
+                'data': {}
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    # 🔧 추가: 가입 신청 승인 API (관리자만 가능)
+    @action(detail=True, methods=['post'], url_path='approve-application', url_name='approve_application')
+    def approve_application(self, request, pk=None):
+        """
+        관리자가 가입 신청을 승인하는 API
+        """
+        try:
+            club = self.get_object()
+        except Http404:
+            return handle_404_not_found('Club', pk)
+
+        # 관리자 권한 확인
+        if not ClubMember.objects.filter(club=club, user=request.user, role='admin').exists():
+            return Response({
+                'status': status.HTTP_403_FORBIDDEN,
+                'message': '관리자만 가입 신청을 승인할 수 있습니다.',
+                'data': {}
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return handle_400_bad_request('user_id가 필요합니다.')
+
+        try:
+            member = ClubMember.objects.get(club=club, user_id=user_id, status_type='applied')
+            member.status_type = 'active'
+            member.save()
+            
+            # 🔧 추가: 가입 승인 알림 전송
+            try:
+                from utils.push_fcm_notification import send_club_application_result_notification
+                send_club_application_result_notification(club, member.user, True)
+            except Exception as e:
+                logger.error(f"가입 승인 알림 전송 실패: {e}")
+            
+            return Response({
+                'status': status.HTTP_200_OK,
+                'message': '가입 신청이 승인되었습니다.',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user_id,
+                    'status_type': 'active',
+                    'action': 'application_approved'
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except ClubMember.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': '가입 신청자를 찾을 수 없습니다.',
+                'data': {}
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    # 🔧 추가: 가입 신청 거절 API (관리자만 가능)
+    @action(detail=True, methods=['post'], url_path='reject-application', url_name='reject_application')
+    def reject_application(self, request, pk=None):
+        """
+        관리자가 가입 신청을 거절하는 API
+        """
+        try:
+            club = self.get_object()
+        except Http404:
+            return handle_404_not_found('Club', pk)
+
+        # 관리자 권한 확인
+        if not ClubMember.objects.filter(club=club, user=request.user, role='admin').exists():
+            return Response({
+                'status': status.HTTP_403_FORBIDDEN,
+                'message': '관리자만 가입 신청을 거절할 수 있습니다.',
+                'data': {}
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return handle_400_bad_request('user_id가 필요합니다.')
+
+        try:
+            member = ClubMember.objects.get(club=club, user_id=user_id, status_type='applied')
+            member.status_type = 'rejected'
+            member.save()
+            
+            # 🔧 추가: 가입 거절 알림 전송
+            try:
+                from utils.push_fcm_notification import send_club_application_result_notification
+                send_club_application_result_notification(club, member.user, False)
+            except Exception as e:
+                logger.error(f"가입 거절 알림 전송 실패: {e}")
+            
+            return Response({
+                'status': status.HTTP_200_OK,
+                'message': '가입 신청이 거절되었습니다.',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user_id,
+                    'status_type': 'rejected',
+                    'action': 'application_rejected'
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except ClubMember.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': '가입 신청자를 찾을 수 없습니다.',
+                'data': {}
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    # 🔧 추가: 멤버 상태 변경 API (관리자만 가능)
+    @action(detail=True, methods=['post'], url_path='change-status', url_name='change_member_status')
+    def change_member_status(self, request, pk=None):
+        """
+        관리자가 멤버의 상태를 변경하는 API
+        """
+        try:
+            club = self.get_object()
+        except Http404:
+            return handle_404_not_found('Club', pk)
+
+        # 관리자 권한 확인
+        if not ClubMember.objects.filter(club=club, user=request.user, role='admin').exists():
+            return Response({
+                'status': status.HTTP_403_FORBIDDEN,
+                'message': '관리자만 멤버 상태를 변경할 수 있습니다.',
+                'data': {}
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get('user_id')
+        new_status = request.data.get('status_type')
+        
+        if not user_id or not new_status:
+            return handle_400_bad_request('user_id와 status_type이 필요합니다.')
+
+        # 유효한 상태 타입 확인
+        valid_statuses = ['invited', 'applied', 'active', 'rejected', 'banned']
+        if new_status not in valid_statuses:
+            return handle_400_bad_request(f'유효하지 않은 상태입니다. 가능한 값: {", ".join(valid_statuses)}')
+
+        try:
+            member = ClubMember.objects.get(club=club, user_id=user_id)
+            old_status = member.status_type
+            member.status_type = new_status
+            member.save()
+            
+            return Response({
+                'status': status.HTTP_200_OK,
+                'message': f'멤버 상태가 {old_status}에서 {new_status}로 변경되었습니다.',
+                'data': {
+                    'club_id': club.id,
+                    'user_id': user_id,
+                    'old_status': old_status,
+                    'new_status': new_status,
+                    'action': 'status_changed'
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except ClubMember.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': '멤버를 찾을 수 없습니다.',
+                'data': {}
+            }, status=status.HTTP_404_NOT_FOUND)

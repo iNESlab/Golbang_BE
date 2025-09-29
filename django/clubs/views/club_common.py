@@ -41,9 +41,14 @@ class IsMemberOfClub(BasePermission):
         return ClubMember.objects.filter(user=request.user, status_type='active').exists()
 
     def has_object_permission(self, request, view, obj):
-        # 요청한 사용자가 특정 모임의 멤버인지 확인 (객체 수준, 특정 모임 객체 조회, 수정, 삭제 등에 사용)
-        # ex. 특정 모임 정보 보기
-        return ClubMember.objects.filter(club=obj, user=request.user, status_type='active').exists()
+        # 🔧 수정: 거절됨을 제외한 모든 상태의 멤버가 클럽 정보를 볼 수 있도록 허용
+        # ex. 특정 모임 정보 보기 (초대됨, 신청함, 가입됨 모두 허용)
+        return ClubMember.objects.filter(
+            club=obj, 
+            user=request.user
+        ).exclude(
+            status_type='rejected'
+        ).exists()
 
 # class IsClubAdmin(BasePermission):
 #     '''
@@ -100,8 +105,12 @@ class ClubViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self): # 데이터베이스로부터 가져온 객체 목록
         user = self.request.user
-        # 현재 요청한 사용자가 속한 모임만 반환
-        return Club.objects.filter(members=user).distinct()
+        # 🔧 수정: 거절됨을 제외한 모든 상태의 클럽 반환 (초대됨, 신청함, 가입됨)
+        return Club.objects.filter(
+            clubmember__user=user
+        ).exclude(
+            clubmember__status_type='rejected'
+        ).distinct()
 
 
     '''
@@ -190,19 +199,19 @@ class ClubViewSet(viewsets.ModelViewSet):
             if created:
                 print(f"✅ 모임 채팅방 자동 생성 완료: {chat_room.chat_room_name} (ID: {chat_room.id})")
                 
-                # 🔧 추가: 채팅방 생성 시 시스템 메시지 자동 전송
-                try:
-                    system_message = ChatMessage.objects.create(
-                        chat_room=chat_room,
-                        sender_id=0,  # 시스템 메시지
-                        sender_name='시스템',
-                        content=f'🎉 {club.name} 모임이 생성되었습니다!',
-                        message_type='SYSTEM',
-                        is_read=False
-                    )
-                    print(f"✅ 시스템 메시지 생성 완료: {system_message.content}")
-                except Exception as e:
-                    print(f"❌ 시스템 메시지 생성 실패: {e}")
+                # 🔧 추가: 채팅방 생성 시 시스템 메시지 자동 전송 (주석처리 - sender_name 오류)
+                # try:
+                #     system_message = ChatMessage.objects.create(
+                #         chat_room=chat_room,
+                #         sender_id=0,  # 시스템 메시지
+                #         sender_name='시스템',
+                #         content=f'🎉 {club.name} 모임이 생성되었습니다!',
+                #         message_type='SYSTEM',
+                #         is_read=False
+                #     )
+                #     print(f"✅ 시스템 메시지 생성 완료: {system_message.content}")
+                # except Exception as e:
+                #     print(f"❌ 시스템 메시지 생성 실패: {e}")
             else:
                 print(f"ℹ️ 모임 채팅방이 이미 존재합니다: {chat_room.chat_room_name} (ID: {chat_room.id})")
         except Exception as e:
@@ -249,7 +258,7 @@ class ClubViewSet(viewsets.ModelViewSet):
 
             if ClubMember.objects.filter(club=club, user_id=admin_id).exists():
                 continue  # 중복 관리자는 추가하지 않음
-            ClubMember.objects.create(club=club, user_id=admin_id, role='admin')
+            ClubMember.objects.create(club=club, user_id=admin_id, role='admin', status_type='active')
 
 
         for member_id in members:
@@ -258,7 +267,7 @@ class ClubViewSet(viewsets.ModelViewSet):
 
             if ClubMember.objects.filter(club=club, user_id=member_id).exists():
                 continue  # 중복 멤버는 추가하지 않음 (또는 이미 관리자로 추가되어 있는 경우)
-            ClubMember.objects.create(club=club, user_id=member_id, role='member')
+            ClubMember.objects.create(club=club, user_id=member_id, role='member', status_type='invited')
 
         # 응답 반환 후 비동기적으로 FCM 알림 전송
         send_club_creation_notification.delay(club.id)
@@ -326,29 +335,159 @@ class ClubViewSet(viewsets.ModelViewSet):
         }
         return Response(response_data, status=status.HTTP_200_OK)
     
-    # 모임 참가 신청 API
-    @action(detail=True, methods=['post'], url_path='apply', url_name='apply_club')
+    # 🔧 추가: 모임 가입 신청 API
+    @action(detail=True, methods=['post'], url_path='apply')
     def apply_club(self, request, pk=None):
+        """
+        사용자가 클럽에 가입 신청하는 API
+        """
         try:
-            club = Club.objects.get(pk=pk) # 신청할 모임 객체
-        except Http404: # 모임이 존재하지 않는 경우, 404 반환
+            # 🔧 수정: apply_club에서는 모든 클럽에 접근 가능해야 함
+            club = Club.objects.get(pk=pk)
+        except Club.DoesNotExist:
             return handle_404_not_found('Club', pk)
 
-        user = request.user # JWT 토큰을 통해 인증된 사용자 정보를 가져옴
+        user = request.user
 
-        if ClubMember.objects.filter(club=club, user=user).exists(): # 이미 멤버인 경우, 400 반환
-            return handle_400_bad_request('User is already a member of the club')
+        # 이미 멤버인지 확인
+        existing_member = ClubMember.objects.filter(club=club, user=user).first()
+        if existing_member:
+            if existing_member.status_type == 'active':
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': '이미 클럽의 활성 멤버입니다.',
+                    'data': {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            elif existing_member.status_type == 'applied':
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': '이미 가입 신청이 진행 중입니다.',
+                    'data': {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            elif existing_member.status_type == 'invited':
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': '이미 초대받은 상태입니다. 초대를 수락해주세요.',
+                    'data': {}
+                }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                # 기존 멤버가 있으면 상태를 'applied'로 변경
+                existing_member.status_type = 'applied'
+                existing_member.save()
+        else:
+            # 새로운 멤버 생성
+            ClubMember.objects.create(
+                club=club,
+                user=user,
+                role='member',
+                status_type='applied'
+            )
 
-        member = ClubMember(club=club, user_id=user.pk, role='member', status_type='pending')
-        member.save()
+        # 🔧 추가: 가입 신청 알림 전송
+        try:
+            from utils.push_fcm_notification import send_club_application_notification
+            send_club_application_notification(club, user)
+        except Exception as e:
+            logger.error(f"가입 신청 알림 전송 실패: {e}")
 
-        response_data = {
-            'status': status.HTTP_200_OK,
-            'message': 'Successfully applied to join the club',
+        return Response({
+            'status': status.HTTP_201_CREATED,
+            'message': '가입 신청이 완료되었습니다. 관리자의 승인을 기다려주세요.',
             'data': {
-                'club_member_id': member.id,
-                'status_type': member.status_type
+                'club_id': club.id,
+                'user_id': user.id,
+                'status_type': 'applied',
+                'action': 'application_submitted'
             }
-        }
+        }, status=status.HTTP_201_CREATED)
 
-        return Response(response_data, status=status.HTTP_200_OK)
+    # 🔧 추가: 초대 수락/거절 API (사용자용)
+    @action(detail=True, methods=['post'], url_path='respond-invitation')
+    def respond_invitation(self, request, pk=None):
+        """
+        사용자가 초대에 응답하는 API (수락/거절)
+        """
+        try:
+            club = self.get_object()
+        except Http404:
+            return handle_404_not_found('Club', pk)
+
+        user = request.user
+        response_type = request.data.get('response')  # 'accepted' or 'declined'
+
+        if response_type not in ['accepted', 'declined']:
+            return handle_400_bad_request('response는 "accepted" 또는 "declined"이어야 합니다.')
+
+        try:
+            member = ClubMember.objects.get(club=club, user=user, status_type='invited')
+            
+            if response_type == 'accepted':
+                member.status_type = 'active'
+                member.save()
+                
+                return Response({
+                    'status': status.HTTP_200_OK,
+                    'message': '초대를 수락했습니다. 클럽에 가입되었습니다.',
+                    'data': {
+                        'club_id': club.id,
+                        'user_id': user.id,
+                        'status_type': 'active',
+                        'action': 'invitation_accepted'
+                    }
+                }, status=status.HTTP_200_OK)
+            else:
+                member.delete()
+                
+                return Response({
+                    'status': status.HTTP_200_OK,
+                    'message': '초대를 거절했습니다.',
+                    'data': {
+                        'club_id': club.id,
+                        'user_id': user.id,
+                        'action': 'invitation_declined'
+                    }
+                }, status=status.HTTP_200_OK)
+                
+        except ClubMember.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': '초대를 찾을 수 없습니다.',
+                'data': {}
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    # 🔧 추가: 신청 취소 API
+    @action(detail=True, methods=['post'], url_path='cancel-application')
+    def cancel_application(self, request, pk=None):
+        """
+        사용자가 가입 신청을 취소하는 API
+        """
+        try:
+            # 🔧 수정: cancel_application에서는 모든 클럽에 접근 가능해야 함
+            club = Club.objects.get(pk=pk)
+        except Club.DoesNotExist:
+            return handle_404_not_found('Club', pk)
+
+        user = request.user
+
+        # 신청 상태인 멤버 찾기
+        try:
+            member = ClubMember.objects.get(club=club, user=user, status_type='applied')
+        except ClubMember.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': '신청 내역을 찾을 수 없습니다.',
+                'data': {}
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # 신청 취소 (멤버 삭제)
+        member.delete()
+
+        return Response({
+            'status': status.HTTP_200_OK,
+            'message': '신청이 취소되었습니다.',
+            'data': {
+                'club_id': club.id,
+                'club_name': club.name,
+                'action': 'application_cancelled'
+            }
+        }, status=status.HTTP_200_OK)
