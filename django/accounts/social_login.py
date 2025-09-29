@@ -382,8 +382,279 @@ def integrate_google_account(request):
             'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
             'message': f'Internal server error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+###############
+# 애플 로그인
+###############
+import jwt
+import base64
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
+def get_apple_public_keys():
+    """
+    애플 공개키 가져오기
+    """
+    try:
+        response = requests.get('https://appleid.apple.com/auth/keys')
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f"애플 공개키 가져오기 실패: {e}")
+        raise Exception(f"애플 공개키 가져오기 실패: {e}")
+
+def verify_apple_id_token(identity_token, client_id):
+    """
+    애플 ID 토큰 검증
+    """
+    try:
+        # 1. 애플 공개키 가져오기
+        apple_public_keys = get_apple_public_keys()
+        
+        # 2. 토큰 헤더에서 kid 추출
+        unverified_header = jwt.get_unverified_header(identity_token)
+        kid = unverified_header.get('kid')
+        
+        if not kid:
+            raise Exception("토큰 헤더에서 kid를 찾을 수 없습니다")
+        
+        # 3. 해당 kid의 공개키 찾기
+        public_key = None
+        for key in apple_public_keys['keys']:
+            if key['kid'] == kid:
+                public_key = key
+                break
+        
+        if not public_key:
+            raise Exception("애플 공개키를 찾을 수 없습니다")
+        
+        # 4. 공개키를 PEM 형식으로 변환
+        import base64
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        
+        # JWK를 RSA 공개키로 변환
+        n = base64.urlsafe_b64decode(public_key['n'] + '==')
+        e = base64.urlsafe_b64decode(public_key['e'] + '==')
+        
+        # RSA 공개키 생성
+        public_numbers = rsa.RSAPublicNumbers(
+            int.from_bytes(e, 'big'),
+            int.from_bytes(n, 'big')
+        )
+        public_key_obj = public_numbers.public_key()
+        
+        # PEM 형식으로 변환
+        pem_public_key = public_key_obj.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        
+        # 5. JWT 토큰 디버깅 (audience 확인)
+        import base64
+        import json
+        
+        # JWT 토큰을 수동으로 파싱하여 payload 확인
+        parts = identity_token.split('.')
+        if len(parts) != 3:
+            raise Exception("잘못된 JWT 토큰 형식")
+        
+        # payload 디코딩 (base64url)
+        payload_encoded = parts[1]
+        # base64url 패딩 추가
+        payload_encoded += '=' * (4 - len(payload_encoded) % 4)
+        payload_decoded = base64.urlsafe_b64decode(payload_encoded)
+        payload = json.loads(payload_decoded)
+        
+        print(f"🔍 JWT 토큰 audience: {payload.get('aud')}")
+        print(f"🔍 설정된 CLIENT_ID: {client_id}")
+        
+        # 6. 공개키로 JWT 검증 (실제 audience 사용)
+        decoded_token = jwt.decode(
+            identity_token,
+            pem_public_key,
+            algorithms=['RS256'],
+            audience=payload.get('aud'),  # 실제 audience 사용
+            issuer='https://appleid.apple.com'
+        )
+        
+        return decoded_token
+        
+    except Exception as e:
+        print(f"애플 ID 토큰 검증 실패: {e}")
+        raise Exception(f"애플 ID 토큰 검증 실패: {e}")
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def mobile_apple_login(request):
+    """
+    Flutter 앱에서 호출하는 애플 로그인 API
+    애플 ID 토큰을 검증하고 JWT 토큰을 반환
+    """
+    try:
+        # Flutter 앱에서 전송한 데이터
+        identity_token = request.data.get('identity_token')
+        user_identifier = request.data.get('user_identifier')
+        email = request.data.get('email')
+        full_name = request.data.get('full_name', '애플 사용자')
+        
+        if not identity_token:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'identity_token이 필요합니다'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 애플 ID 토큰 검증
+        apple_user_info = verify_apple_id_token(
+            identity_token, 
+            settings.SOCIAL_AUTH_APPLE_CLIENT_ID
+        )
+        
+        # 사용자 정보 추출
+        apple_user_id = apple_user_info.get('sub')  # 애플 사용자 고유 ID
+        apple_email = apple_user_info.get('email') or email  # 토큰에서 이메일이 없으면 요청에서 가져옴
+        
+        if not apple_email:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': '이메일 정보를 찾을 수 없습니다'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # 기존 사용자 확인
+            user = User.objects.get(email=apple_email)
+            
+            if user.provider == 'apple' or user.login_type == 'hybrid':
+                # 이미 애플 로그인으로 가입된 사용자 또는 통합된 사용자
+                response = Response(status=status.HTTP_200_OK)  # 200: 기존 사용자 로그인
+                refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+                
+                response.data = {
+                    'status': status.HTTP_200_OK,
+                    'message': '기존 사용자 로그인 성공',
+                    'login_type': 'existing',  # 프론트에서 구분용
+                    'data': {
+                        'access_token': access_token,
+                        'refresh_token': str(refresh),
+                        'user_exists': True,
+                        'user_id': user.user_id,
+                        'user_name': user.name,
+                        'login_type': user.login_type,
+                        'provider': user.provider,
+                        'needs_integration': False,
+                    }
+                }
+                
+                # 리프레시 토큰을 쿠키에 설정
+                response.set_cookie(
+                    key="refreshtoken",
+                    value=str(refresh),
+                    httponly=True,
+                    secure=True,
+                    samesite="None",
+                )
+                
+                return response
+            else:
+                # 아직 통합되지 않은 계정이면 통합 옵션 제공
+                return Response({
+                    'status': status.HTTP_200_OK,
+                    'message': 'User already exists',
+                    'data': {
+                        'user_exists': True,
+                        'existing_user_id': user.user_id,
+                        'existing_user_name': user.name or 'Unknown',
+                        'login_type': user.login_type or 'general',
+                        'provider': user.provider or 'none',
+                        'needs_integration': True,  # 통합 필요 표시
+                    }
+                }, content_type='application/json; charset=utf-8')
+                
+        except User.DoesNotExist:
+            # 새로운 사용자라면 생성 후 JWT 토큰 반환
+            response = Response(status=status.HTTP_201_CREATED)
+            
+            # user_id 생성 (UUID + 이메일 앞부분으로 고유성 보장)
+            import uuid
+            unique_suffix = str(uuid.uuid4())[:8]  # UUID 앞 8자리만 사용
+            user_id = f"{apple_email.split('@')[0]}_{unique_suffix}_apple"
+            
+            return create_user_and_login(
+                response, 
+                apple_email, 
+                user_id, 
+                full_name, 
+                'apple'
+            )
             
     except Exception as e:
+        print(f"애플 로그인 오류: {e}")
+        return Response({
+            'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+            'message': f'Internal server error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def integrate_apple_account(request):
+    """
+    기존 계정을 애플 계정과 통합하는 API
+    """
+    try:
+        email = request.data.get('email')
+        identity_token = request.data.get('identity_token')
+        full_name = request.data.get('full_name')
+        
+        if not email or not identity_token:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'email and identity_token are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 애플 ID 토큰 검증
+        apple_user_info = verify_apple_id_token(
+            identity_token, 
+            settings.SOCIAL_AUTH_APPLE_CLIENT_ID
+        )
+        
+        try:
+            # 기존 사용자 찾기
+            user = User.objects.get(email=email)
+            
+            # 애플 계정 정보로 업데이트 (하이브리드 로그인 지원)
+            user.login_type = 'hybrid'  # 일반 로그인 + 소셜 로그인 모두 지원
+            user.provider = 'apple'
+            if full_name and not user.name:
+                user.name = full_name
+            user.save()
+            
+            print(f"✅ 애플 계정 통합 완료: {user.email} -> provider: {user.provider}, login_type: {user.login_type}")
+            
+            # JWT 토큰 생성하여 반환
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            
+            return Response({
+                'status': status.HTTP_200_OK,
+                'message': 'Account integration successful',
+                'data': {
+                    'access_token': access_token,
+                    'refresh_token': str(refresh),
+                    'user_exists': False,  # 통합 완료
+                    'integrated_user_id': user.user_id,
+                    'integrated_user_name': user.name,
+                }
+            }, content_type='application/json; charset=utf-8')
+            
+        except User.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+    except Exception as e:
+        print(f"애플 계정 통합 오류: {e}")
         return Response({
             'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
             'message': f'Internal server error: {str(e)}'

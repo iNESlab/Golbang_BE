@@ -127,7 +127,8 @@ INSTALLED_APPS = [
     'notifications',
     'feedbacks',
     'calculator',
-    'chat',  # 🔧 추가: 채팅 앱
+    'chat',  # 🔧 채팅 앱
+    # 'broadcast',  # 🔧 추가: 방송 앱
 
     # ==========
     # DRF (Django Rest Framework)
@@ -332,6 +333,12 @@ SOCIAL_AUTH_KAKAO_SCOPE = [
     'account_email',
     'profile_nickname',
 ]
+
+# Apple Sign-In 설정
+SOCIAL_AUTH_APPLE_CLIENT_ID = env('SOCIAL_AUTH_APPLE_CLIENT_ID', default='')  # Bundle ID
+SOCIAL_AUTH_APPLE_TEAM_ID = env('SOCIAL_AUTH_APPLE_TEAM_ID', default='')
+SOCIAL_AUTH_APPLE_KEY_ID = env('SOCIAL_AUTH_APPLE_KEY_ID', default='')
+SOCIAL_AUTH_APPLE_PRIVATE_KEY = env('SOCIAL_AUTH_APPLE_PRIVATE_KEY', default='')
 
 
 # oauth2_settings.DEFAULTS['ACCESS_TOKEN_EXPIRE_SECONDS'] = 1.577e7
