@@ -99,9 +99,12 @@ class ClubViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         # 액션에 따라 필요한 권한 설정
         permission_classes = [IsAuthenticated]  # 기본 권한: 인증된 사용자
-        if self.action in ['retrieve', 'list']:
-            # 모임을 조회하거나 목록을 볼 때는 모임의 멤버여야 함
+        if self.action == 'retrieve':
+            # 개별 모임 조회 시에는 모임의 멤버여야 함
             permission_classes.append(IsMemberOfClub)
+        elif self.action == 'list':
+            # 모임 목록 조회는 인증된 사용자라면 누구나 가능 (빈 목록 포함)
+            pass  # IsAuthenticated만 적용
         elif self.action in ['partial_update', 'destroy', 'invite_member', 'remove_member', 'update_role']:
             # 모임을 수정, 삭제하거나 멤버를 초대, 삭제, 관리자로 등록/삭제할 때는 모임의 관리자여야 함
             permission_classes.extend([IsMemberOfClub, IsClubAdmin])
