@@ -374,6 +374,7 @@ def integrate_google_account(request):
         email = request.data.get('email')
         id_token = request.data.get('id_token')
         display_name = request.data.get('display_name')
+        fcm_token = request.data.get('fcm_token')  # 🔧 추가: FCM 토큰 받기
         
         if not email or not id_token:
             return Response({
@@ -390,6 +391,10 @@ def integrate_google_account(request):
             user.provider = 'google'
             if display_name and not user.name:
                 user.name = display_name
+            # 🔧 추가: FCM 토큰 업데이트 (토큰이 제공된 경우에만)
+            if fcm_token and fcm_token.strip():
+                user.fcm_token = fcm_token
+                print(f"🔔 Google 계정 통합 시 FCM 토큰 업데이트: {fcm_token[:20]}...")
             user.save()
             
             print(f"✅ 계정 통합 완료: {user.email} -> provider: {user.provider}, login_type: {user.login_type}")

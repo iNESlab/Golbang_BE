@@ -180,11 +180,15 @@ class ClubAdminViewSet(ClubViewSet):
         # 새로 추가된 멤버를 user_id 기준으로 다시 조회 (select_related로 user 정보 포함)
         created_members = ClubMember.objects.filter(club=club, user_id__in=list(new_users)).select_related('user')
 
-        # 🔧 추가: 초대 알림 전송
+        # 🔧 추가: 초대 알림 전송 (초대한 사람 제외)
         try:
             from utils.push_fcm_notification import send_club_invitation_notification
             for member in created_members:
-                send_club_invitation_notification(club, member.user, request.user.name)
+                # 초대한 사람은 알림을 받지 않음
+                if member.user.id != request.user.id:
+                    send_club_invitation_notification(club, member.user, request.user.name)
+                else:
+                    logger.info(f"초대한 사람({request.user.name})은 알림을 받지 않습니다.")
         except Exception as e:
             logger.error(f"클럽 초대 알림 전송 실패: {e}")
 

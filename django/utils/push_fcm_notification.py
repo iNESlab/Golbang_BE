@@ -21,14 +21,21 @@ if not firebase_admin._apps:
     except Exception as e:
         logger.error(f'Firebase 초기화 중 오류 발생: {e}')
 
-def get_fcm_tokens_for_club_members(club):
+def get_fcm_tokens_for_club_members(club, exclude_user_ids=None):
     '''
     주어진 클럽의 모든 멤버의 FCM 토큰을 가져오는 함수
 
     :param club: 클럽(모임) 객체
+    :param exclude_user_ids: 제외할 사용자 ID 리스트 (선택사항)
     :return: 클럽(모임) 멤버들의 FCM 토큰 리스트
     '''
-    tokens = ClubMember.objects.filter(club=club).values_list('user__fcm_token', flat=True)
+    queryset = ClubMember.objects.filter(club=club)
+    
+    # 제외할 사용자 ID가 있으면 제외
+    if exclude_user_ids:
+        queryset = queryset.exclude(user_id__in=exclude_user_ids)
+    
+    tokens = queryset.values_list('user__fcm_token', flat=True)
     return [token for token in tokens if token]
 
 
@@ -515,6 +522,14 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
             "sender_id": str(sender_id),
             "sender_name": sender_name,
         }
+        
+        # 🔧 추가: 메시지 타입 정보 추가
+        try:
+            message_data = json.loads(message_content)
+            if message_data.get('type') == 'image':
+                additional_data["message_type"] = "IMAGE"
+        except (json.JSONDecodeError, TypeError):
+            additional_data["message_type"] = "TEXT"
         
         # 채팅방 타입에 따라 추가 데이터 설정
         if chat_room.chat_room_type == 'CLUB':
