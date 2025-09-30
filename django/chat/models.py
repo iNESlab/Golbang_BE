@@ -36,6 +36,28 @@ class ChatRoom(models.Model):
     def __str__(self):
         return f"{self.get_chat_room_type_display()}: {self.chat_room_name}"
 
+
+class ChatNotificationSettings(models.Model):
+    """채팅방별 사용자 알림 설정"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_notification_settings', verbose_name='사용자')
+    chat_room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='notification_settings', verbose_name='채팅방')
+    is_enabled = models.BooleanField(default=True, verbose_name='알림 활성화')
+    created_at = models.DateTimeField(default=timezone.now, verbose_name='생성일')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='수정일')
+    
+    class Meta:
+        db_table = 'chat_notification_settings'
+        verbose_name = '채팅 알림 설정'
+        verbose_name_plural = '채팅 알림 설정들'
+        unique_together = ['user', 'chat_room']  # 사용자당 채팅방당 하나의 설정만
+        indexes = [
+            models.Index(fields=['user', 'chat_room']),
+            models.Index(fields=['is_enabled']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.name} - {self.chat_room.chat_room_name}: {'ON' if self.is_enabled else 'OFF'}"
+
 class ChatMessage(models.Model):
     MESSAGE_TYPE_CHOICES = [
         ('TEXT', '텍스트'),
@@ -48,6 +70,10 @@ class ChatMessage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     chat_room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='messages', verbose_name='채팅방')
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_messages', verbose_name='발신자')
+    
+    # 🔧 추가: 발신자 정보 캐싱 필드들
+    sender_unique_id = models.CharField(max_length=150, null=True, blank=True, verbose_name='발신자 고유 ID')
+    sender_profile_image = models.CharField(max_length=500, null=True, blank=True, verbose_name='발신자 프로필 이미지 URL')
     
     message_type = models.CharField(max_length=20, choices=MESSAGE_TYPE_CHOICES, default='TEXT', verbose_name='메시지 타입')
     content = models.TextField(verbose_name='메시지 내용')

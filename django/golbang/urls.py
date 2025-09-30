@@ -42,6 +42,7 @@ urlpatterns = [
     path('api/v1/golfcourses/', include('golf_data.urls')),  # golf_data 앱의 URL
     path('api/v1/notifications/', include('notifications.urls')),  # notifications 앱의 URL
     path('api/v1/chat/', include('chat.urls')),  # chat 앱의 URL
+    # path('broadcast/', include('broadcast.urls')),  # broadcast 앱의 URL (AI 중계 방송)
 
     path('api/v1/feedbacks/', include('feedbacks.urls')),  # 사용자 피드백 앱의 URL
 

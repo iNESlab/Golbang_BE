@@ -77,7 +77,13 @@ def send_club_creation_notification(club_id):
     """
     try:
         club = Club.objects.get(id=club_id)
-        fcm_tokens = get_fcm_tokens_for_club_members(club)
+        
+        # 🔧 수정: 생성자(관리자) 제외하고 FCM 토큰 가져오기
+        from clubs.models import ClubMember
+        admin_members = ClubMember.objects.filter(club=club, role='admin').values_list('user_id', flat=True)
+        logger.info(f"모임 생성자(관리자) ID들: {list(admin_members)}")
+        
+        fcm_tokens = get_fcm_tokens_for_club_members(club, exclude_user_ids=list(admin_members))
         logger.info(f"Retrieved fcm_tokens: {fcm_tokens}")
 
         # 모임 이름을 포함한 메시지 생성
@@ -99,8 +105,8 @@ def send_club_creation_notification(club_id):
             send_fcm_notifications(fcm_tokens, message_title, message_body, club_id=club.id)
             logger.info(f"모임 생성 알림 전송 성공")
 
-            # 알림 전송 성공 후 Redis에 저장
-            user_ids = club.members.values_list('id', flat=True)  # 모든 멤버 ID 가져오기
+            # 🔧 수정: 생성자(관리자) 제외하고 Redis에 저장
+            user_ids = club.members.exclude(id__in=admin_members).values_list('id', flat=True)  # 생성자 제외한 멤버 ID만
             print(f"user_ids: {user_ids}")
             for user_id in user_ids:
                 print(f"user_id: {user_id}")

@@ -41,7 +41,7 @@ class ClubMemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClubMember
-        fields = ('user','member_id', 'role', 'is_current_user_admin')
+        fields = ('user','member_id', 'role', 'status_type','is_current_user_admin')
 
 
     def get_is_current_user_admin(self, obj):
@@ -61,20 +61,21 @@ class ClubSerializer(serializers.ModelSerializer):
     Club 모델을 직렬화하는 클래스
     클럽의 모든 정보를 포함한 JSON 응답을 생성
     '''
-    members = ClubMemberSerializer(many=True, read_only=True, source='clubmember_set')
+    members = ClubMemberSerializer(many=True, read_only=True, source='clubmember_set')  # 클럽 멤버 정보
     members_count = serializers.SerializerMethodField()  # 클럽 멤버 수
     is_admin = serializers.SerializerMethodField()  # 현재 요청 사용자가 클럽 관리자 여부 반환
+    unread_count = serializers.SerializerMethodField()  # 🔧 추가: 읽지 않은 메시지 개수
 
     class Meta:
         model = Club
         # TODO: id -> club_id
-        fields = ('id', 'name', 'description', 'image', 'members', 'members_count', 'created_at', 'is_admin')
+        fields = ('id', 'name', 'description', 'image', 'members', 'members_count', 'created_at', 'is_admin', 'unread_count')
 
     def get_members_count(self, obj):
         '''
         클럽 멤버 수를 반환
         '''
-        return obj.clubmember_set.count()
+        return obj.clubmember_set.filter(status_type='active').count()
     
     def get_is_admin(self, obj):
         '''
@@ -86,8 +87,48 @@ class ClubSerializer(serializers.ModelSerializer):
 
         current_user = request.user
         # ClubMember 중 현재 사용자가 admin인 경우 True 반환
-        return obj.clubmember_set.filter(user=current_user, role='admin').exists()
 
+        return obj.clubmember_set.filter(user=current_user, role='admin', status_type='active').exists()
+
+    
+    def get_unread_count(self, obj):
+        '''
+        클럽 채팅방의 읽지 않은 메시지 개수를 반환
+        '''
+        try:
+            from chat.models import ChatRoom, ChatMessage
+            
+            request = self.context.get('request')
+            if not request:
+                return 0
+                
+            current_user = request.user
+            
+            # 클럽에 해당하는 채팅방 찾기
+            try:
+                chat_room = ChatRoom.objects.get(
+                    chat_room_type='CLUB',
+                    club_id=obj.id
+                )
+                
+                # 읽지 않은 메시지 개수 계산 (자신이 보낸 메시지 제외)
+                unread_count = ChatMessage.objects.filter(
+                    chat_room=chat_room
+                ).exclude(
+                    sender=current_user  # 🔧 수정: 자신이 보낸 메시지 제외
+                ).exclude(
+                    read_statuses__user=current_user  # 읽음 상태가 있는 메시지 제외
+                ).count()
+                
+                return unread_count
+                
+            except ChatRoom.DoesNotExist:
+                # 채팅방이 없으면 0 반환
+                return 0
+                
+        except Exception as e:
+            # 오류 발생 시 0 반환
+            return 0
 
 class ClubCreateUpdateSerializer(serializers.ModelSerializer):
     '''
