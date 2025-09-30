@@ -505,10 +505,30 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
         
         # 이미지 메시지인지 확인
         import json
+        is_image_message = False
         try:
             message_data = json.loads(message_content)
-            if message_data.get('type') == 'image':
+            
+            # 이중 JSON 구조 처리
+            # 1단계: 최상위에서 이미지 정보 확인
+            if (message_data.get('type') == 'image' or 
+                'image_url' in message_data or 
+                'filename' in message_data):
+                is_image_message = True
                 body = f"{sender_name}: 사진을 보냈습니다"
+            # 2단계: content 필드 안의 JSON 확인
+            elif 'content' in message_data and isinstance(message_data['content'], str):
+                try:
+                    content_data = json.loads(message_data['content'])
+                    if (content_data.get('type') == 'image' or 
+                        'image_url' in content_data or 
+                        'filename' in content_data):
+                        is_image_message = True
+                        body = f"{sender_name}: 사진을 보냈습니다"
+                    else:
+                        body = f"{sender_name}: {message_content[:50]}{'...' if len(message_content) > 50 else ''}"
+                except (json.JSONDecodeError, TypeError):
+                    body = f"{sender_name}: {message_content[:50]}{'...' if len(message_content) > 50 else ''}"
             else:
                 body = f"{sender_name}: {message_content[:50]}{'...' if len(message_content) > 50 else ''}"
         except (json.JSONDecodeError, TypeError):
@@ -523,13 +543,11 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
             "sender_name": sender_name,
         }
         
-        # 🔧 추가: 메시지 타입 정보 추가
-        try:
-            message_data = json.loads(message_content)
-            if message_data.get('type') == 'image':
-                additional_data["message_type"] = "IMAGE"
-        except (json.JSONDecodeError, TypeError):
-            additional_data["message_type"] = "TEXT"
+        # 메시지 타입 정보 추가
+        if is_image_message:
+            additional_data["msgType"] = "IMAGE"
+        else:
+            additional_data["msgType"] = "TEXT"
         
         # 채팅방 타입에 따라 추가 데이터 설정
         if chat_room.chat_room_type == 'CLUB':
