@@ -296,6 +296,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             logger.info(f"🖼️ 이미지 메시지 저장 성공: id={message.id}, sender={self.user.name}")
 
             # 그룹에 메시지 브로드캐스트
+            # 프로필 이미지 URL 처리 (실시간 우선 - 프로필 변경 즉시 반영)
+            profile_image_url = None
+            if message.sender.profile_image:  # 항상 최신 프로필 우선
+                profile_image_url = message.sender.profile_image.url
+            elif message.sender_profile_image:  # 캐싱된 값 백업 (이미지 없을 때)
+                profile_image_url = message.sender_profile_image
+
             broadcast_data = {
                 'type': 'chat_message',
                 'message': {
@@ -303,7 +310,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'content': message.content,  # 이미 JSON 문자열임
                     'sender': message.sender.name,
                     'sender_id': message.sender.user_id,
+                    'sender_unique_id': message.sender_unique_id or str(message.sender.id),
                     'sender_name': message.sender.name,
+                    'sender_profile_image': profile_image_url,  # 🔧 추가: 프로필 이미지
                     'message_type': message.message_type,
                     'created_at': message.created_at.isoformat(),
                     'is_pinned': message.is_pinned,
