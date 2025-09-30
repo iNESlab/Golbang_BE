@@ -32,7 +32,7 @@ import uuid  # UUID 생성을 위한 import
 
 User = get_user_model()
 
-def create_user_and_login(response, email, user_id, name, provider):
+def create_user_and_login(response, email, user_id, name, provider, fcm_token=None):
     """
     새로운 사용자를 생성하고 JWT 토큰을 반환하는 헬퍼 함수
     """
@@ -43,7 +43,8 @@ def create_user_and_login(response, email, user_id, name, provider):
         name=name,
         login_type='social',
         provider=provider,
-        password=password
+        password=password,
+        fcm_token=fcm_token  # 🔧 추가: FCM 토큰 저장
     )
     user.save() # user 저장
     
@@ -152,13 +153,31 @@ def google_callback(request):
         try: # 기존 사용자인지 확인
             user = User.objects.get(email=email)
         except User.DoesNotExist:  # 사용자 정보가 없으면 회원가입 진행
-            response = Response(status=status.HTTP_200_OK)
-            # response, email, user_id, name, provider
-            # user_id 생성 (UUID + 이메일 앞부분으로 고유성 보장)
+            # 🔧 수정: 신규 사용자는 임시 ID로 생성하고 추가 정보 입력 페이지로 리다이렉트
             import uuid
-            unique_suffix = str(uuid.uuid4())[:8]  # UUID 앞 8자리만 사용
-            user_id = f"{email.split('@')[0]}_{unique_suffix}_google"
-            return create_user_and_login(response, email, user_id, name, 'google')
+            temp_user_id = f"temp_{str(uuid.uuid4())[:8]}_google"
+            
+            # 임시 사용자 생성 (추가 정보 입력 완료 후 실제 ID로 업데이트)
+            temp_user = User.objects.create(
+                user_id=temp_user_id,
+                email=email,
+                name=name,
+                provider='google',
+                fcm_token=fcm_token,
+                is_active=True
+            )
+            
+            return Response({
+                'status': status.HTTP_226_IM_USED,  # 226: 추가 정보 입력 필요
+                'message': '추가 정보 입력이 필요합니다',
+                'data': {
+                    'temp_user_id': temp_user_id,
+                    'email': email,
+                    'display_name': name,
+                    'provider': 'google',
+                    'requires_additional_info': True
+                }
+            }, status=status.HTTP_226_IM_USED)
 
         response = Response(status=status.HTTP_200_OK)
         
@@ -241,6 +260,7 @@ def mobile_google_login(request):
         access_token = request.data.get('access_token')
         email = request.data.get('email')
         display_name = request.data.get('display_name', 'Unknown')
+        fcm_token = request.data.get('fcm_token')  # 🔧 추가: FCM 토큰
         
         if not id_token or not email:
             return Response({
@@ -258,6 +278,12 @@ def mobile_google_login(request):
             # 🔧 수정: 이미 Google 계정과 통합된 사용자인지 확인
             if user.provider == 'google' or user.login_type == 'hybrid':
                 # 이미 통합된 계정이면 바로 로그인 처리
+                
+                # 🔧 추가: FCM 토큰 업데이트 (다를 때만)
+                if fcm_token and user.fcm_token != fcm_token:
+                    user.fcm_token = fcm_token
+                    user.save(update_fields=['fcm_token'])
+                
                 response = Response(status=status.HTTP_200_OK)
                 refresh = RefreshToken.for_user(user)
                 access_token = str(refresh.access_token)
@@ -303,21 +329,34 @@ def mobile_google_login(request):
                 }, content_type='application/json; charset=utf-8')
             
         except User.DoesNotExist:
-            # 새로운 사용자라면 생성 후 JWT 토큰 반환
-            response = Response(status=status.HTTP_201_CREATED)
-            
-            # user_id 생성 (UUID + 이메일 앞부분으로 고유성 보장)
+            # 새로운 사용자라면 임시 사용자 생성 후 226 응답
             import uuid
             unique_suffix = str(uuid.uuid4())[:8]  # UUID 앞 8자리만 사용
-            user_id = f"{email.split('@')[0]}_{unique_suffix}_google"
+            temp_user_id = f"temp_{unique_suffix}_google"
             
-            return create_user_and_login(
-                response, 
-                email, 
-                user_id, 
-                display_name, 
-                'google'
+            # 임시 사용자 생성
+            temp_user = User.objects.create(
+                email=email,
+                user_id=temp_user_id,
+                name=display_name,
+                login_type='social',
+                provider='google',
+                password=User.objects.make_random_password(),
+                fcm_token=fcm_token
             )
+            temp_user.save()
+            
+            return Response({
+                'status': status.HTTP_226_IM_USED,  # 226: 추가 정보 입력 필요
+                'message': '추가 정보 입력이 필요합니다',
+                'data': {
+                    'temp_user_id': temp_user_id,
+                    'email': email,
+                    'display_name': display_name,
+                    'provider': 'google',
+                    'requires_additional_info': True
+                }
+            }, status=status.HTTP_226_IM_USED)
             
     except Exception as e:
         return Response({
@@ -497,6 +536,7 @@ def mobile_apple_login(request):
         user_identifier = request.data.get('user_identifier')
         email = request.data.get('email')
         full_name = request.data.get('full_name', '애플 사용자')
+        fcm_token = request.data.get('fcm_token')  # 🔧 추가: FCM 토큰
         
         if not identity_token:
             return Response({
@@ -526,6 +566,12 @@ def mobile_apple_login(request):
             
             if user.provider == 'apple' or user.login_type == 'hybrid':
                 # 이미 애플 로그인으로 가입된 사용자 또는 통합된 사용자
+                
+                # 🔧 추가: FCM 토큰 업데이트 (다를 때만)
+                if fcm_token and user.fcm_token != fcm_token:
+                    user.fcm_token = fcm_token
+                    user.save(update_fields=['fcm_token'])
+                
                 response = Response(status=status.HTTP_200_OK)  # 200: 기존 사용자 로그인
                 refresh = RefreshToken.for_user(user)
                 access_token = str(refresh.access_token)
@@ -572,21 +618,31 @@ def mobile_apple_login(request):
                 }, content_type='application/json; charset=utf-8')
                 
         except User.DoesNotExist:
-            # 새로운 사용자라면 생성 후 JWT 토큰 반환
-            response = Response(status=status.HTTP_201_CREATED)
-            
-            # user_id 생성 (UUID + 이메일 앞부분으로 고유성 보장)
+            # 🔧 수정: 신규 사용자는 임시 ID로 생성하고 추가 정보 입력 페이지로 리다이렉트
             import uuid
-            unique_suffix = str(uuid.uuid4())[:8]  # UUID 앞 8자리만 사용
-            user_id = f"{apple_email.split('@')[0]}_{unique_suffix}_apple"
+            temp_user_id = f"temp_{str(uuid.uuid4())[:8]}_apple"
             
-            return create_user_and_login(
-                response, 
-                apple_email, 
-                user_id, 
-                full_name, 
-                'apple'
+            # 임시 사용자 생성 (추가 정보 입력 완료 후 실제 ID로 업데이트)
+            temp_user = User.objects.create(
+                user_id=temp_user_id,
+                email=apple_email,
+                name=full_name,
+                provider='apple',
+                fcm_token=fcm_token,
+                is_active=True
             )
+            
+            return Response({
+                'status': status.HTTP_226_IM_USED,  # 226: 추가 정보 입력 필요
+                'message': '추가 정보 입력이 필요합니다',
+                'data': {
+                    'temp_user_id': temp_user_id,
+                    'email': apple_email,
+                    'display_name': full_name,
+                    'provider': 'apple',
+                    'requires_additional_info': True
+                }
+            }, status=status.HTTP_226_IM_USED)
             
     except Exception as e:
         print(f"애플 로그인 오류: {e}")
@@ -658,4 +714,101 @@ def integrate_apple_account(request):
         return Response({
             'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
             'message': f'Internal server error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def check_user_id_availability(request):
+    """
+    사용자 ID 중복 확인
+    """
+    try:
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'user_id가 필요합니다'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 중복 확인
+        is_available = not User.objects.filter(user_id=user_id).exists()
+        
+        return Response({
+            'status': status.HTTP_200_OK,
+            'data': {
+                'user_id': user_id,
+                'is_available': is_available
+            }
+        })
+        
+    except Exception as e:
+        return Response({
+            'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+            'message': f'사용자 ID 확인 중 오류가 발생했습니다: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def complete_social_registration(request):
+    """
+    소셜 로그인 사용자의 추가 정보 입력 완료
+    """
+    try:
+        temp_user_id = request.data.get('temp_user_id')
+        final_user_id = request.data.get('user_id')
+        student_id = request.data.get('student_id')
+        name = request.data.get('name')  # 🔧 추가: 닉네임 받기
+        
+        if not temp_user_id or not final_user_id:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'temp_user_id와 user_id가 필요합니다'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 임시 사용자 조회
+        try:
+            temp_user = User.objects.get(user_id=temp_user_id)
+        except User.DoesNotExist:
+            return Response({
+                'status': status.HTTP_404_NOT_FOUND,
+                'message': '임시 사용자를 찾을 수 없습니다'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # 최종 사용자 ID 중복 확인
+        if User.objects.filter(user_id=final_user_id).exists():
+            return Response({
+                'status': status.HTTP_409_CONFLICT,
+                'message': '이미 사용 중인 사용자 ID입니다'
+            }, status=status.HTTP_409_CONFLICT)
+        
+        # 사용자 정보 업데이트
+        temp_user.user_id = final_user_id
+        temp_user.student_id = student_id
+        if name:  # 🔧 추가: 닉네임이 있으면 업데이트
+            temp_user.name = name
+        temp_user.save()
+        
+        # JWT 토큰 생성
+        refresh = RefreshToken.for_user(temp_user)
+        access_token = str(refresh.access_token)
+        
+        return Response({
+            'status': status.HTTP_201_CREATED,
+            'message': '회원가입이 완료되었습니다',
+            'data': {
+                'access_token': access_token,
+                'refresh_token': str(refresh),
+                'user_id': final_user_id,
+                'email': temp_user.email,
+                'name': temp_user.name,
+                'provider': temp_user.provider
+            }
+        })
+        
+    except Exception as e:
+        return Response({
+            'status': status.HTTP_500_INTERNAL_SERVER_ERROR,
+            'message': f'회원가입 완료 중 오류가 발생했습니다: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
