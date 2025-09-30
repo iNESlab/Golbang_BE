@@ -13,7 +13,7 @@ accounts/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from accounts.social_login import google_callback, google_login, mobile_google_login, integrate_google_account, mobile_apple_login, integrate_apple_account
+from accounts.social_login import google_callback, google_login, mobile_google_login, integrate_google_account, mobile_apple_login, integrate_apple_account, check_user_id_availability, complete_social_registration
 from .views import signup_first_step, signup_second_step, social_login, login_success, \
     PasswordManagementView, UserInfoViewSet
 from auth.api import LoginApi, RefreshJWTToken, LogoutApi
@@ -38,6 +38,10 @@ urlpatterns = [
     path('integrate-google-account/', integrate_google_account, name='integrate_google_account'),  # Google 계정 통합
     path('apple-login-mobile/', mobile_apple_login, name='mobile_apple_login'),  # 모바일용 애플 로그인
     path('integrate-apple-account/', integrate_apple_account, name='integrate_apple_account'),  # Apple 계정 통합
+    
+    # 🔧 추가: 소셜 로그인 추가 정보 입력 관련
+    path('check-user-id/', check_user_id_availability, name='check_user_id_availability'),  # 사용자 ID 중복 확인
+    path('complete-social-registration/', complete_social_registration, name='complete_social_registration'),  # 소셜 로그인 회원가입 완료
     # path('naver-login/', naver_login, name='naver_login'),  # 사용하지 않음
     # path('naver-callback/', naver_callback, name='naver_callback'),  # 사용하지 않음
     # path('kakao-login/', kakao_login, name='kakao_login'),  # 사용하지 않음

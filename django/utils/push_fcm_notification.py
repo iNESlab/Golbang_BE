@@ -86,40 +86,71 @@ def send_fcm_notifications(tokens, title, body, event_id=None, club_id=None):
 
 def send_club_invitation_notification(club, invited_user, inviter_name):
     """
-    클럽 초대 FCM 알림 전송
+    클럽 초대 FCM 알림 전송 및 Redis 저장
     
     :param club: 클럽 객체
     :param invited_user: 초대받은 사용자 객체
     :param inviter_name: 초대한 사용자 이름
     """
     try:
-        if not invited_user.fcm_token:
-            logger.warning(f"사용자 {invited_user.name}의 FCM 토큰이 없습니다.")
-            return
-            
         message_title = f"{club.name} 모임에 초대되었습니다"
         message_body = f"{inviter_name}님이 {club.name} 모임에 초대했습니다"
         
-        additional_data = {
-            "club_id": str(club.id),
-            "notification_type": "club_invitation"
-        }
+        # FCM 알림 전송
+        if invited_user.fcm_token:
+            additional_data = {
+                "club_id": str(club.id),
+                "notification_type": "club_invitation"
+            }
+            
+            message = messaging.Message(
+                data=additional_data,
+                notification=messaging.Notification(title=message_title, body=message_body),
+                token=invited_user.fcm_token,
+            )
+            
+            response = messaging.send(message)
+            logger.info(f'🔔 클럽 초대 알림이 {invited_user.name}에게 성공적으로 전송되었습니다. Response: {response}')
+        else:
+            logger.warning(f"사용자 {invited_user.name}의 FCM 토큰이 없습니다.")
         
-        message = messaging.Message(
-            data=additional_data,
-            notification=messaging.Notification(title=message_title, body=message_body),
-            token=invited_user.fcm_token,
-        )
-        
-        response = messaging.send(message)
-        logger.info(f'클럽 초대 알림이 {invited_user.name}에게 성공적으로 전송되었습니다.')
+        # 🔧 추가: Redis에 알림 저장
+        try:
+            from notifications.redis_interface import NotificationRedisInterface
+            from asgiref.sync import async_to_sync
+            import uuid
+            from datetime import datetime
+            
+            redis_interface = NotificationRedisInterface()
+            notification_id = str(uuid.uuid4())
+            
+            notification_data = {
+                "title": message_title,
+                "body": message_body,
+                "status": "success",
+                "timestamp": datetime.now().isoformat(),
+                "read": False,
+                "club_id": club.id,
+                "notification_type": "club_invitation"
+            }
+            
+            async_to_sync(redis_interface.save_notification)(
+                invited_user.id, 
+                notification_id, 
+                notification_data, 
+                club_id=club.id
+            )
+            logger.info(f'📝 클럽 초대 알림이 Redis에 저장되었습니다: {invited_user.name}')
+            
+        except Exception as redis_error:
+            logger.error(f'Redis 저장 실패: {redis_error}')
         
     except Exception as e:
         logger.error(f'클럽 초대 알림 전송 중 오류 발생: {e}')
 
 def send_club_application_notification(club, applicant_user):
     """
-    클럽 가입 신청 FCM 알림 전송 (관리자들에게)
+    클럽 가입 신청 FCM 알림 전송 및 Redis 저장 (관리자들에게)
     
     :param club: 클럽 객체
     :param applicant_user: 신청한 사용자 객체
@@ -133,44 +164,79 @@ def send_club_application_notification(club, applicant_user):
         
         admin_tokens = [token for token in admin_tokens if token]
         
-        if not admin_tokens:
-            logger.warning(f"클럽 {club.name}의 관리자 FCM 토큰이 없습니다.")
-            return
-            
         message_title = f"{club.name} 모임에 가입 신청이 있습니다"
         message_body = f"{applicant_user.name}님이 {club.name} 모임 가입을 신청했습니다"
         
-        additional_data = {
-            "club_id": str(club.id),
-            "notification_type": "club_application"
-        }
-        
-        for token in admin_tokens:
-            message = messaging.Message(
-                data=additional_data,
-                notification=messaging.Notification(title=message_title, body=message_body),
-                token=token,
-            )
+        # FCM 알림 전송
+        if admin_tokens:
+            additional_data = {
+                "club_id": str(club.id),
+                "notification_type": "club_application"
+            }
             
-            response = messaging.send(message)
-            logger.info(f'클럽 가입 신청 알림이 관리자에게 성공적으로 전송되었습니다.')
+            for token in admin_tokens:
+                message = messaging.Message(
+                    data=additional_data,
+                    notification=messaging.Notification(title=message_title, body=message_body),
+                    token=token,
+                )
+                
+                response = messaging.send(message)
+                logger.info(f'🔔 클럽 가입 신청 알림이 관리자에게 성공적으로 전송되었습니다. Response: {response}')
+        else:
+            logger.warning(f"클럽 {club.name}의 관리자 FCM 토큰이 없습니다.")
+        
+        # 🔧 추가: Redis에 알림 저장 (모든 관리자에게)
+        try:
+            from notifications.redis_interface import NotificationRedisInterface
+            from asgiref.sync import async_to_sync
+            import uuid
+            from datetime import datetime
+            
+            redis_interface = NotificationRedisInterface()
+            
+            # 관리자들 조회
+            admin_users = ClubMember.objects.filter(
+                club=club, 
+                role='admin'
+            ).select_related('user')
+            
+            for admin_member in admin_users:
+                notification_id = str(uuid.uuid4())
+                
+                notification_data = {
+                    "title": message_title,
+                    "body": message_body,
+                    "status": "success",
+                    "timestamp": datetime.now().isoformat(),
+                    "read": False,
+                    "club_id": club.id,
+                    "notification_type": "club_application"
+                }
+                
+                async_to_sync(redis_interface.save_notification)(
+                    admin_member.user.id, 
+                    notification_id, 
+                    notification_data, 
+                    club_id=club.id
+                )
+                logger.info(f'📝 클럽 신청 알림이 Redis에 저장되었습니다: {admin_member.user.name}')
+            
+        except Exception as redis_error:
+            logger.error(f'Redis 저장 실패: {redis_error}')
         
     except Exception as e:
         logger.error(f'클럽 가입 신청 알림 전송 중 오류 발생: {e}')
 
 def send_club_application_result_notification(club, applicant_user, is_approved):
     """
-    클럽 가입 신청 결과 FCM 알림 전송
+    클럽 가입 신청 결과 FCM 알림 전송 및 Redis 저장
     
     :param club: 클럽 객체
     :param applicant_user: 신청한 사용자 객체
     :param is_approved: 승인 여부 (True: 승인, False: 거절)
     """
     try:
-        if not applicant_user.fcm_token:
-            logger.warning(f"사용자 {applicant_user.name}의 FCM 토큰이 없습니다.")
-            return
-            
         if is_approved:
             message_title = f"{club.name} 모임 가입이 승인되었습니다"
             message_body = f"축하합니다! {club.name} 모임에 가입되었습니다"
@@ -178,20 +244,56 @@ def send_club_application_result_notification(club, applicant_user, is_approved)
             message_title = f"{club.name} 모임 가입이 거절되었습니다"
             message_body = f"죄송합니다. {club.name} 모임 가입이 거절되었습니다"
         
-        additional_data = {
-            "club_id": str(club.id),
-            "notification_type": "club_application_result",
-            "is_approved": str(is_approved)
-        }
+        # FCM 알림 전송
+        if applicant_user.fcm_token:
+            additional_data = {
+                "club_id": str(club.id),
+                "notification_type": "club_application_result",
+                "is_approved": str(is_approved)
+            }
+            
+            message = messaging.Message(
+                data=additional_data,
+                notification=messaging.Notification(title=message_title, body=message_body),
+                token=applicant_user.fcm_token,
+            )
+            
+            response = messaging.send(message)
+            logger.info(f'클럽 가입 신청 결과 알림이 {applicant_user.name}에게 성공적으로 전송되었습니다.')
+        else:
+            logger.warning(f"사용자 {applicant_user.name}의 FCM 토큰이 없습니다.")
         
-        message = messaging.Message(
-            data=additional_data,
-            notification=messaging.Notification(title=message_title, body=message_body),
-            token=applicant_user.fcm_token,
-        )
-        
-        response = messaging.send(message)
-        logger.info(f'클럽 가입 신청 결과 알림이 {applicant_user.name}에게 성공적으로 전송되었습니다.')
+        # 🔧 추가: Redis에 알림 저장
+        try:
+            from notifications.redis_interface import NotificationRedisInterface
+            from asgiref.sync import async_to_sync
+            import uuid
+            from datetime import datetime
+            
+            redis_interface = NotificationRedisInterface()
+            notification_id = str(uuid.uuid4())
+            
+            notification_data = {
+                "title": message_title,
+                "body": message_body,
+                "status": "success",
+                "timestamp": datetime.now().isoformat(),
+                "read": False,
+                "club_id": club.id,
+                "notification_type": "club_application_result",
+                "is_approved": is_approved
+            }
+            
+            async_to_sync(redis_interface.save_notification)(
+                applicant_user.id, 
+                notification_id, 
+                notification_data, 
+                club_id=club.id
+            )
+            logger.info(f'📝 클럽 신청 결과 알림이 Redis에 저장되었습니다: {applicant_user.name}')
+            
+        except Exception as redis_error:
+            logger.error(f'Redis 저장 실패: {redis_error}')
         
     except Exception as e:
         logger.error(f'클럽 가입 신청 결과 알림 전송 중 오류 발생: {e}')
@@ -244,26 +346,38 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
                 if token_data in processed_tokens:
                     continue  # 이미 처리된 토큰은 스킵
                     
-                # User 모델에서 FCM 토큰과 사용자 ID 매칭
+                # 🔧 수정: 클럽 멤버 중에서만 FCM 토큰과 사용자 매칭
                 from accounts.models import User
                 try:
-                    # get() 대신 filter() 사용하여 중복 처리
-                    users = User.objects.filter(fcm_token=token_data)
-                    if users.exists():
-                        user = users.first()  # 첫 번째 사용자만 선택
+                    # 클럽 멤버 중에서 해당 FCM 토큰을 가진 사용자만 조회
+                    club_members = ClubMember.objects.filter(
+                        club=club,
+                        user__fcm_token=token_data
+                    ).select_related('user')
+                    
+                    if club_members.exists():
+                        club_member = club_members.first()
+                        user = club_member.user
                         # 🔧 수정: 클럽 채팅방에서는 모든 클럽 멤버에게 알림 전송
-                        # 🔧 주석처리: 알림 설정 확인 (테스트용)
-                        # try:
-                        #     notification_setting = ChatNotificationSettings.objects.get(
-                        #         user=user,
-                        #         chat_room=chat_room
-                        #     )
-                        #     if not notification_setting.is_enabled:
-                        #         logger.info(f"🔕 사용자 {user.name}의 알림이 비활성화됨")
-                        #         continue
-                        # except ChatNotificationSettings.DoesNotExist:
-                        #     # 설정이 없으면 기본값(True)으로 처리
-                        #     logger.info(f"🔔 사용자 {user.name}의 알림 설정 없음, 기본값(활성화) 적용")
+                        # 🔧 활성화: 알림 설정 확인
+                        logger.info(f"🔍 알림 설정 조회 시도: 사용자={user.name}(ID:{user.id}), 채팅방={chat_room.chat_room_name}(ID:{chat_room.id})")
+                        try:
+                            notification_setting = ChatNotificationSettings.objects.get(
+                                user=user,
+                                chat_room=chat_room
+                            )
+                            logger.info(f"🔍 사용자 {user.name}의 알림 설정 조회: 활성화={notification_setting.is_enabled}")
+                            if not notification_setting.is_enabled:
+                                logger.info(f"🔕 사용자 {user.name}의 알림이 비활성화됨 - 알림 전송 안 함")
+                                continue
+                            else:
+                                logger.info(f"🔔 사용자 {user.name}의 알림이 활성화됨 - 알림 전송 진행")
+                        except ChatNotificationSettings.DoesNotExist:
+                            # 설정이 없으면 기본값(True)으로 처리
+                            logger.info(f"🔔 사용자 {user.name}의 알림 설정 없음, 기본값(활성화) 적용")
+                            # 🔧 추가: 모든 알림 설정 확인
+                            all_settings = ChatNotificationSettings.objects.filter(user=user)
+                            logger.info(f"🔍 사용자 {user.name}의 모든 알림 설정: {[(s.chat_room.chat_room_name, s.is_enabled) for s in all_settings]}")
                         
                         tokens.append(token_data)
                         processed_tokens.add(token_data)
@@ -294,26 +408,39 @@ def send_chat_message_notification(chat_room, sender_name, message_content, send
                 if token_data in processed_tokens:
                     continue  # 이미 처리된 토큰은 스킵
                     
-                # User 모델에서 FCM 토큰과 사용자 ID 매칭
+                # 🔧 수정: 이벤트 참가자 중에서만 FCM 토큰과 사용자 매칭
                 from accounts.models import User
+                from participants.models import Participant
                 try:
-                    # get() 대신 filter() 사용하여 중복 처리
-                    users = User.objects.filter(fcm_token=token_data)
-                    if users.exists():
-                        user = users.first()  # 첫 번째 사용자만 선택
+                    # 이벤트 참가자 중에서 해당 FCM 토큰을 가진 사용자만 조회
+                    event_participants = Participant.objects.filter(
+                        event=event,
+                        club_member__user__fcm_token=token_data
+                    ).select_related('club_member__user')
+                    
+                    if event_participants.exists():
+                        participant = event_participants.first()
+                        user = participant.club_member.user
                         if user.id not in participants:  # 참여하지 않은 사용자만
-                            # 🔧 주석처리: 알림 설정 확인 (테스트용)
-                            # try:
-                            #     notification_setting = ChatNotificationSettings.objects.get(
-                            #         user=user,
-                            #         chat_room=chat_room
-                            #     )
-                            #     if not notification_setting.is_enabled:
-                            #         logger.info(f"🔕 사용자 {user.name}의 알림이 비활성화됨")
-                            #         continue
-                            # except ChatNotificationSettings.DoesNotExist:
-                            #     # 설정이 없으면 기본값(True)으로 처리
-                            #     logger.info(f"🔔 사용자 {user.name}의 알림 설정 없음, 기본값(활성화) 적용")
+                            # 🔧 활성화: 알림 설정 확인
+                            logger.info(f"🔍 알림 설정 조회 시도: 사용자={user.name}(ID:{user.id}), 채팅방={chat_room.chat_room_name}(ID:{chat_room.id})")
+                            try:
+                                notification_setting = ChatNotificationSettings.objects.get(
+                                    user=user,
+                                    chat_room=chat_room
+                                )
+                                logger.info(f"🔍 사용자 {user.name}의 알림 설정 조회: 활성화={notification_setting.is_enabled}")
+                                if not notification_setting.is_enabled:
+                                    logger.info(f"🔕 사용자 {user.name}의 알림이 비활성화됨 - 알림 전송 안 함")
+                                    continue
+                                else:
+                                    logger.info(f"🔔 사용자 {user.name}의 알림이 활성화됨 - 알림 전송 진행")
+                            except ChatNotificationSettings.DoesNotExist:
+                                # 설정이 없으면 기본값(True)으로 처리
+                                logger.info(f"🔔 사용자 {user.name}의 알림 설정 없음, 기본값(활성화) 적용")
+                                # 🔧 추가: 모든 알림 설정 확인
+                                all_settings = ChatNotificationSettings.objects.filter(user=user)
+                                logger.info(f"🔍 사용자 {user.name}의 모든 알림 설정: {[(s.chat_room.chat_room_name, s.is_enabled) for s in all_settings]}")
                             
                             tokens.append(token_data)
                             processed_tokens.add(token_data)
