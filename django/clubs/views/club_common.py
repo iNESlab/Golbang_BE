@@ -38,21 +38,19 @@ class IsMemberOfClub(BasePermission):
     def has_permission(self, request, view):
         # 요청한 사용자가 어떤 모임의 멤버인지 확인 (뷰 수준, 리스트 뷰, 생성 뷰에 사용)
         # ex. 모임 목록 보기
-        # 🔧 수정: 거절됨을 제외한 모든 상태의 멤버가 클럽 목록을 볼 수 있도록 허용
+        # 🔧 수정: 현재 사용자가 거절되지 않은 상태의 멤버인 경우만 허용
         return ClubMember.objects.filter(
-            user=request.user
-        ).exclude(
-            status_type='rejected'
+            user=request.user,
+            status_type__in=['invited', 'applied', 'active']
         ).exists()
 
     def has_object_permission(self, request, view, obj):
-        # 🔧 수정: 거절됨을 제외한 모든 상태의 멤버가 클럽 정보를 볼 수 있도록 허용
-        # ex. 특정 모임 정보 보기 (초대됨, 신청함, 가입됨 모두 허용)
+        # 🔧 수정: 현재 사용자가 거절되지 않은 상태인 경우만 클럽 정보를 볼 수 있도록 허용
+        # ex. 특정 모임 정보 보기 (초대됨, 신청함, 가입됨만 허용)
         return ClubMember.objects.filter(
             club=obj, 
-            user=request.user
-        ).exclude(
-            status_type='rejected'
+            user=request.user,
+            status_type__in=['invited', 'applied', 'active']
         ).exists()
 
 # class IsClubAdmin(BasePermission):
@@ -113,11 +111,10 @@ class ClubViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self): # 데이터베이스로부터 가져온 객체 목록
         user = self.request.user
-        # 🔧 수정: 거절됨을 제외한 모든 상태의 클럽 반환 (초대됨, 신청함, 가입됨)
+        # 🔧 수정: 현재 사용자가 거절되지 않은 클럽만 반환
         return Club.objects.filter(
-            clubmember__user=user
-        ).exclude(
-            clubmember__status_type='rejected'
+            clubmember__user=user,
+            clubmember__status_type__in=['invited', 'applied', 'active']
         ).distinct()
 
 
